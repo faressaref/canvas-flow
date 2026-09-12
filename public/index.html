@@ -133,7 +133,7 @@
     }
     .tablet-rail-brand { display:none; }
     body.tablet-mode .tablet-rail-brand {
-      display:block; width:48px; flex:0 0 28px; line-height:28px;
+      display:block; width:48px; flex:0 0 28px; cursor:pointer; line-height:28px;
       font-size:11px; font-weight:800; letter-spacing:-.04em;
       text-align:center; white-space:nowrap; overflow:hidden;
       border-bottom:1px solid #e1e5eb; margin-bottom:2px;
@@ -145,6 +145,21 @@
       border-radius:8px; font-size:19px;
     }
     body.tablet-mode #topbar button.tool svg { width:20px; height:20px; }
+    body.tablet-mode #topbar .toolgroup::before {
+      content:none;
+      font-size:9px; font-weight:800; letter-spacing:-.04em; color:#18202a;
+      border-bottom:1px solid #e1e5eb;
+    }
+    body.tablet-mode #topbar .toolgroup::after { content:none; }
+    body.tablet-mode #topbar button[data-tool="ai"] {
+      display:inline-flex !important; background:#eef0ff; color:#5b63ff;
+      border:1px solid #d8dbff; font-weight:900;
+    }
+    body.tablet-mode #topbar button[data-tool="ai"]:hover,
+    body.tablet-mode #topbar button[data-tool="ai"].active {
+      background:#5b63ff; color:#fff; border-color:#5b63ff;
+    }
+
     body.tablet-mode #workspace { flex:1; min-height:0; }
     body.tablet-mode #canvasWrap,
     body.tablet-mode .canvas-container { /* canvas dimensions stay unchanged */ }
@@ -456,6 +471,7 @@
       <div class="toolgroup" aria-label="Tools">
         <div class="tablet-rail-brand">Canvas<span>Flow</span></div>
         <button class="tool active" data-tool="select" title="Select / move (V)">↖</button>
+        <button class="tool" id="aiToggle" data-tool="ai" title="AI Study Tutor">✦</button>
         <button class="tool" data-tool="pen" title="Pen (P)">✎</button>
         <button class="tool" data-tool="highlighter" title="Highlighter">▰</button>
         <button class="tool" data-tool="eraser" title="Eraser (E)">⌫</button>
@@ -466,7 +482,7 @@
         <button class="tool" data-tool="text" title="Text (T)">T</button>
         <button class="tool" data-tool="node" title="Mind map node">◇</button>
         <button class="tool" data-tool="image" title="Upload image">▧</button>
-<button class="tool" id="aiToggle" data-tool="ai" title="AI Study Tutor">✦</button>
+
       </div>
 
       <div class="separator"></div>
@@ -1598,6 +1614,7 @@ function returnToLanding(){
 document.getElementById("chooseAI").addEventListener("click", () => enterApp(true));
 document.getElementById("chooseBoard").addEventListener("click", () => enterApp(false));
 brandHome?.addEventListener("click", returnToLanding);
+document.querySelector(".tablet-rail-brand")?.addEventListener("click", returnToLanding);
 
 // Stay inside the app after refresh. The landing page is shown again only when
 // the user intentionally clicks the CanvasFlow brand.
