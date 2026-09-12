@@ -420,6 +420,37 @@
       }
     }
 
+    /* FINAL PHONE OVERRIDES — phone is automatic in both portrait and landscape. */
+    @media (max-width:760px) {
+      body #topbar > .device-switch { display:none !important; }
+      body #topbar .toolgroup { display:flex !important; visibility:visible !important; opacity:1 !important; }
+      body #topbar .toolgroup .tool { display:inline-flex !important; visibility:visible !important; }
+      body #topbar .tablet-rail-brand { display:block !important; visibility:visible !important; }
+      body.tablet-mode #topbar { height:48px !important; flex-basis:48px !important; min-height:48px !important; padding:0 10px !important; border:0 !important; box-shadow:none !important; overflow:visible !important; }
+      body.tablet-mode #topbar > .brand { display:block !important; }
+      body.tablet-mode #topbar .toolgroup {
+        position:absolute !important; left:8px !important; top:56px !important; right:auto !important; bottom:auto !important;
+        width:58px !important; max-width:none !important; max-height:calc(100dvh - 130px) !important;
+        flex-direction:column !important; overflow-y:auto !important; overflow-x:hidden !important;
+        transform:none !important; padding:5px !important; gap:3px !important;
+        background:rgba(255,255,255,.98) !important; border:1px solid #dfe4ea !important;
+        border-radius:11px !important; box-shadow:0 6px 20px rgba(0,0,0,.10) !important;
+      }
+      body.tablet-mode #topbar button.tool { width:46px !important; min-width:46px !important; height:40px !important; min-height:40px !important; flex:0 0 40px !important; }
+      body.tablet-mode #tabletAccount { display:none !important; }
+      body.tablet-mode #workspace { height:calc(100dvh - 48px) !important; }
+      @media (orientation:landscape) {
+        body.tablet-mode #topbar .toolgroup {
+          left:50% !important; top:auto !important; bottom:8px !important; width:auto !important;
+          max-width:calc(100vw - 16px) !important; max-height:58px !important;
+          flex-direction:row !important; overflow-x:auto !important; overflow-y:hidden !important;
+          transform:translateX(-50%) !important; padding:5px 7px !important; gap:4px !important;
+        }
+        body.tablet-mode #topbar .tablet-rail-brand { width:70px !important; height:40px !important; flex:0 0 70px !important; line-height:40px !important; border-bottom:0 !important; border-right:1px solid #e1e5eb !important; }
+        body.tablet-mode #topbar button.tool { width:42px !important; min-width:42px !important; height:42px !important; min-height:42px !important; flex:0 0 42px !important; }
+      }
+    }
+
     /* ================= MOBILE UX ================= */
     #mobileDock, #mobileQuick, #mobileAI, #mobilePages { display:none; }
     @media (max-width:760px) {
@@ -1019,6 +1050,8 @@ const tabletModeBtn = document.getElementById("tabletMode");
 
 function setDeviceMode(mode) {
   const tablet = mode === "tablet";
+  // Phones use the automatic mobile layout; PC/Tablet is only a desktop/tablet choice.
+  if (window.matchMedia("(max-width:760px)").matches) return;
   document.body.classList.toggle("tablet-mode", tablet);
   pcModeBtn.classList.toggle("active", !tablet);
   tabletModeBtn.classList.toggle("active", tablet);
@@ -1030,6 +1063,21 @@ function setDeviceMode(mode) {
 
 pcModeBtn.addEventListener("click", () => setDeviceMode("pc"));
 tabletModeBtn.addEventListener("click", () => setDeviceMode("tablet"));
+
+// Mobile is always automatic, including landscape. Never show or apply the PC/Tablet switch on phones.
+function syncAutomaticMobileLayout(){
+  const phone = window.matchMedia("(max-width:760px)").matches;
+  if(phone){
+    document.body.classList.remove("tablet-mode");
+  } else {
+    const savedMode = localStorage.getItem("canvasflow-device-mode") || "pc";
+    document.body.classList.toggle("tablet-mode", savedMode === "tablet");
+  }
+  requestAnimationFrame(() => { resizeCanvas(); canvas.requestRenderAll(); });
+}
+window.addEventListener("resize", syncAutomaticMobileLayout);
+window.addEventListener("orientationchange", () => setTimeout(syncAutomaticMobileLayout, 120));
+
 
 const canvas = new fabric.Canvas("board", {
   preserveObjectStacking: true,
