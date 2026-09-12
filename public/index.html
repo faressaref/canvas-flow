@@ -117,7 +117,7 @@
     body.tablet-mode #topbar > #saveBoardBtn,
     body.tablet-mode #topbar > #accountBar { display:none !important; }
     body.tablet-mode #topbar > .device-switch {
-      display:flex; position:absolute; right:10px; top:10px; z-index:26;
+      display:flex; position:fixed; right:10px; top:10px; z-index:26;
       background:rgba(255,255,255,.98); border:1px solid #dfe4ea;
       box-shadow:0 5px 18px rgba(0,0,0,.09); border-radius:9px;
     }
@@ -125,7 +125,7 @@
       min-width:48px; height:32px; padding:5px 7px; font-size:10px;
     }
     body.tablet-mode #topbar .toolgroup {
-      position:absolute; left:8px; top:8px; z-index:25;
+      position:fixed; left:8px; top:8px; z-index:25;
       width:60px; padding:5px; display:flex; flex-direction:column; gap:3px;
       max-height:calc(100dvh - 145px); overflow-y:auto; overflow-x:hidden;
       background:rgba(255,255,255,.98); border:1px solid #dfe4ea;
@@ -147,7 +147,7 @@
     /* Compact tablet controls below the tool rail. Scroll the rail if the phone is short. */
     #tabletControls { display:none; }
     body.tablet-mode #tabletControls {
-      display:flex; position:absolute; left:8px; bottom:62px; z-index:25;
+      display:flex; position:fixed; left:8px; bottom:62px; z-index:25;
       width:60px; flex-direction:column; gap:5px;
       max-height:calc(100dvh - 180px); overflow-y:auto; overflow-x:hidden;
       scrollbar-width:thin;
@@ -192,8 +192,12 @@
 
     /* ================= LANDING / MODE SELECTOR ================= */
     #landing {
-      position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
-      background:linear-gradient(145deg,#f8fafc 0%,#eef1f5 100%); padding:28px;
+      position:fixed; inset:0; z-index:100; display:flex; align-items:flex-start; justify-content:center;
+      background:linear-gradient(145deg,#f8fafc 0%,#eef1f5 100%);
+      padding:28px; overflow-y:auto;
+    }
+    @media (min-height: 600px) {
+      #landing { align-items:center; }
     }
     .landing-card { width:min(980px,100%); text-align:center; }
     .landing-brand { font-size:16px; font-weight:800; letter-spacing:-.03em; margin-bottom:46px; }
@@ -211,7 +215,15 @@
     .mode-card p { margin:0;color:#7a8490;font-size:13px;line-height:1.6; }
     .mode-card .mode-list { margin:17px 0 0;padding:0;list-style:none;color:#555f6d;font-size:12px;line-height:2; }
     #app.entered { display:flex; }
-    @media(max-width:700px){ .mode-cards{grid-template-columns:1fr;} .landing-card{max-width:500px;} .landing-brand{margin-bottom:28px;} .landing-title{font-size:38px;} }
+    @media(max-width:700px){
+  .mode-cards{grid-template-columns:1fr;}
+  .landing-card{max-width:500px;}
+  .landing-brand{margin-bottom:24px;}
+  .landing-title{font-size:clamp(28px,8vw,38px);}
+  .landing-sub{margin-bottom:22px;font-size:13px;}
+  .mode-card{min-height:auto;padding:20px;}
+  .mode-icon{margin-bottom:14px;}
+}
 
     /* ================= AI STUDY PANEL ================= */
     #aiPanel {
@@ -309,7 +321,12 @@
     #tabletAccount .tablet-account-actions button { width:27px; height:30px; border:0; border-radius:7px; background:#eef1f5; cursor:pointer; font-size:13px; }
     #tabletAccount .tablet-account-actions button:hover { background:#e4e8ee; }
     .tablet-user-dot { font-size:8px; color:#697383; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; margin-top:3px; text-align:center; }
-    body.tablet-mode #tabletAccount { display:flex; position:absolute; right:122px; top:10px; z-index:27; flex-direction:column; align-items:center; width:82px; padding:5px 4px; border-radius:9px; background:rgba(255,255,255,.98); border:1px solid #dfe4ea; box-shadow:0 5px 18px rgba(0,0,0,.09); }
+    body.tablet-mode #tabletAccount {
+      display:flex; position:fixed; right:122px; top:10px; z-index:27;
+      flex-direction:column; align-items:center; width:82px; padding:5px 4px;
+      border-radius:9px; background:rgba(255,255,255,.98);
+      border:1px solid #dfe4ea; box-shadow:0 5px 18px rgba(0,0,0,.09);
+    }
     @media(max-width:900px){ #accountBar { gap:3px; } #userEmail,#boardNameDisplay { display:none; } .account-btn,.save-btn { padding:6px 7px; } }
     body.tablet-mode #accountBar { display:none; }
 
@@ -317,11 +334,13 @@
     /* ================= MOBILE UX ================= */
     #mobileDock, #mobileQuick, #mobileAI, #mobilePages { display:none; }
     @media (max-width:760px) {
-      html, body { width:100%; height:100%; min-height:100dvh; }
-      #app.entered { min-height:100dvh; height:100dvh; }
-      #workspace { min-height:0; height:auto; padding-bottom:72px; }
-      #canvasWrap { inset:0; }
-      body:not(.tablet-mode) #topbar { height:48px; flex-basis:48px; padding:0 8px; gap:5px; }
+      html, body { width:100%; height:100%; min-height:100dvh; overflow:hidden; }
+      #app.entered { min-height:100dvh; height:100dvh; display:flex; flex-direction:column; }
+      #workspace { min-height:0; flex:1 1 auto; padding-bottom:80px; }
+      #canvasWrap { position:absolute; inset:0; bottom:0; }
+      body:not(.tablet-mode) #topbar {
+        height:48px; flex:0 0 48px; padding:0 10px; gap:5px; overflow:hidden;
+      }
       body:not(.tablet-mode) #topbar .brand { display:none; }
       body:not(.tablet-mode) #topbar .toolgroup { display:none; }
       body:not(.tablet-mode) #topbar .separator,
@@ -333,19 +352,22 @@
       body:not(.tablet-mode) #topbar #saveBoardBtn,
       body:not(.tablet-mode) #topbar #accountBar,
       body:not(.tablet-mode) #topbar #boardNameDisplay,
-      body:not(.tablet-mode) #topbar #saveState { display:none !important; }
+      body:not(.tablet-mode) #topbar #saveState,
+      body:not(.tablet-mode) #topbar #tabletAccount { display:none !important; }
       body:not(.tablet-mode) #topbar > .device-switch { margin-left:auto; }
       #mobileDock {
-        display:flex; position:fixed; left:8px; right:8px; bottom:max(8px, env(safe-area-inset-bottom));
+        display:flex; position:fixed;
+        left:8px; right:8px;
+        bottom:max(10px, env(safe-area-inset-bottom));
         z-index:80; height:62px; padding:5px; gap:4px; align-items:center;
-        background:rgba(255,255,255,.96); border:1px solid #dfe4ea; border-radius:15px;
+        background:rgba(255,255,255,.97); border:1px solid #dfe4ea; border-radius:15px;
         box-shadow:0 10px 35px rgba(0,0,0,.15); backdrop-filter:blur(12px);
       }
       .mobile-dock-btn { flex:1; min-width:0; height:50px; border:0; border-radius:11px; background:transparent; color:#4b5563; font-size:10px; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
       .mobile-dock-btn .mi { font-size:19px; line-height:20px; }
       .mobile-dock-btn.active { background:#18202a; color:#fff; }
       .mobile-dock-more { background:#eef1f5; }
-      #mobileQuick { display:flex; position:fixed; left:50%; transform:translateX(-50%); bottom:78px; z-index:79; gap:5px; }
+      #mobileQuick { display:flex; position:fixed; left:50%; transform:translateX(-50%); bottom:82px; z-index:79; gap:5px; }
       .mobile-float { width:38px; height:38px; border:1px solid #dfe4ea; background:rgba(255,255,255,.97); border-radius:11px; box-shadow:0 6px 20px rgba(0,0,0,.12); font-size:17px; cursor:pointer; }
       #mobileSaveState { position:fixed; left:12px; top:10px; z-index:75; padding:5px 8px; border:1px solid #dfe4ea; border-radius:9px; background:rgba(255,255,255,.92); font-size:9px; color:#697383; box-shadow:0 4px 14px rgba(0,0,0,.07); }
       #mobileSaveState.saving { color:#7c5cff; } #mobileSaveState.saved { color:#2d8a5b; } #mobileSaveState.error { color:#c33b3b; }
@@ -364,18 +386,25 @@
       #boardsModal.mobile-sheet .modal-card { width:100%; max-width:none; max-height:82dvh; overflow:auto; border-radius:20px 20px 0 0; padding:14px; }
       #authModal.mobile-sheet { align-items:flex-end; padding:0; }
       #authModal.mobile-sheet .modal-card { width:100%; max-width:none; border-radius:20px 20px 0 0; }
-      body.tablet-mode #tabletAccount { right:10px; top:10px; width:auto; padding:4px 5px; flex-direction:row; }
+      body.tablet-mode #tabletAccount { right:10px !important; top:50px !important; width:auto; padding:4px 5px; flex-direction:row; }
       body.tablet-mode #tabletAccount label { display:none; }
       body.tablet-mode #tabletAccount .tablet-user-dot { display:none; }
       body.tablet-mode #tabletAccount .tablet-account-actions { gap:3px; }
       body.tablet-mode #tabletAccount .tablet-account-actions button { width:32px; height:30px; }
-      body.tablet-mode #topbar > .device-switch { right:86px; }
-      body.tablet-mode #tabletControls { bottom:78px; max-height:calc(100dvh - 155px); }
+      body.tablet-mode #topbar > .device-switch { right:88px !important; top:10px !important; }
+      body.tablet-mode #tabletControls { bottom:82px; max-height:calc(100dvh - 155px); }
       body.tablet-mode #zoom { bottom:78px; right:8px; }
       body.tablet-mode #hint { display:none; }
+      body:not(.tablet-mode) #zoom { bottom:82px; right:10px; }
+      body:not(.tablet-mode) #hint { display:none; }
       #aiPanel {
+        position:fixed !important; left:8px !important; right:8px !important;
+        bottom:max(76px, calc(72px + env(safe-area-inset-bottom))) !important;
+        top:auto !important; width:auto !important; height:min(72dvh,640px) !important;
+        max-width:none !important; max-height:72dvh !important;
+        min-width:0 !important; min-height:200px !important;
+        border-radius:18px !important; z-index:130 !important; resize:none !important;
         display:none !important;
-        position:fixed; left:8px; right:8px; bottom:8px; top:auto; width:auto !important; height:min(78dvh,680px) !important; max-width:none !important; max-height:78dvh !important; min-width:0; min-height:0; border-radius:18px; z-index:130; resize:none;
       }
       #aiPanel.open { display:flex !important; }
       #aiPanel .ai-body { overflow:auto; -webkit-overflow-scrolling:touch; padding-bottom:12px; }
@@ -438,15 +467,6 @@
         <button id="tabletMode" class="device-btn" type="button">Tablet</button>
       </div>
 
-      <div id="tabletAccount" aria-label="Tablet account controls">
-        <label>ACCOUNT</label>
-        <div class="tablet-account-actions">
-          <button id="tabletSave" title="Save board" type="button">💾</button>
-          <button id="tabletBoards" title="Saved boards" type="button">▤</button>
-        </div>
-        <div class="tablet-user-dot" id="tabletUserDot">Guest</div>
-      </div>
-
       <div class="toolgroup" aria-label="Tools">
         <button class="tool active" data-tool="select" title="Select / move (V)">↖</button>
         <button class="tool" data-tool="pen" title="Pen (P)">✎</button>
@@ -503,6 +523,16 @@
           <button class="secondary" id="cancelText">Cancel</button>
           <button class="primary" id="addText">Add text</button>
         </div>
+      </div>
+
+      <!-- Tablet account — shown fixed top-right in tablet mode -->
+      <div id="tabletAccount" aria-label="Tablet account controls">
+        <label>ACCOUNT</label>
+        <div class="tablet-account-actions">
+          <button id="tabletSave" title="Save board" type="button">💾</button>
+          <button id="tabletBoards" title="Saved boards" type="button">▤</button>
+        </div>
+        <div class="tablet-user-dot" id="tabletUserDot">Guest</div>
       </div>
 
       <div id="tabletControls" aria-label="Tablet controls">
@@ -1415,10 +1445,12 @@ canvas.on("mouse:wheel", opt => {
 function updateZoom(){ document.getElementById("zoomValue").textContent=Math.round(canvas.getZoom()*100)+"%"; }
 
 function setSaveState(type, text) {
-  const el=document.getElementById("saveState");
-  el.className=type;
-  el.textContent=text || (type==="saving" ? "Saving..." : type==="saved" ? "Saved ✓" : type==="error" ? "Save failed" : type);
-  window.dispatchEvent(new CustomEvent("canvasflow:save-state", {detail:{type, text:text || el.textContent}}));
+  const label = text || (type==="saving" ? "Saving..." : type==="saved" ? "Saved ✓" : type==="error" ? "Save failed" : type);
+  const el = document.getElementById("saveState");
+  if (el) { el.className = type; el.textContent = label; }
+  const mel = document.getElementById("mobileSaveState");
+  if (mel) { mel.className = type; mel.textContent = label; }
+  window.dispatchEvent(new CustomEvent("canvasflow:save-state", {detail:{type, text:label}}));
 }
 function scheduleSave(major=false) {
   if(!suppressSave) saveLocalDraft();
@@ -1561,7 +1593,13 @@ function enterApp(openAI=false){
   localStorage.setItem(ENTRY_STATE_KEY, "1");
   landing.style.display = "none";
   app.classList.add("entered");
-  if(openAI) aiPanel.classList.add("open");
+  requestAnimationFrame(() => {
+    resizeCanvas();
+    if(openAI) {
+      aiPanel.classList.add("open");
+      if(aiToggle) aiToggle.classList.add("active");
+    }
+  });
 }
 
 function returnToLanding(){
@@ -1594,12 +1632,16 @@ const aiEndpoint = document.getElementById("aiEndpoint");
 const aiModel = document.getElementById("aiModel");
 
 // Manual AI panel resizing: drag the bottom-right corner.
+// On mobile (≤760px) skip setting inline size — CSS handles it.
 const savedAiWidth = parseInt(localStorage.getItem("canvasflow_ai_width") || "330", 10);
 const savedAiHeight = parseInt(localStorage.getItem("canvasflow_ai_height") || "590", 10);
-aiPanel.style.width = `${Math.max(280, Math.min(savedAiWidth, window.innerWidth - 110))}px`;
-aiPanel.style.height = `${Math.max(320, Math.min(savedAiHeight, window.innerHeight - 84))}px`;
+if (window.innerWidth > 760) {
+  aiPanel.style.width = `${Math.max(280, Math.min(savedAiWidth, window.innerWidth - 110))}px`;
+  aiPanel.style.height = `${Math.max(320, Math.min(savedAiHeight, window.innerHeight - 84))}px`;
+}
 let aiResizeTimer;
 const rememberAiSize = () => {
+  if (window.innerWidth <= 760) return; // mobile: CSS controls size
   clearTimeout(aiResizeTimer);
   aiResizeTimer = setTimeout(() => {
     const r = aiPanel.getBoundingClientRect();
@@ -1613,9 +1655,13 @@ aiEndpoint.value = localStorage.getItem("canvasflow-ai-endpoint") || "/api/study
 aiModel.value = localStorage.getItem("canvasflow-ai-model") || "";
 
 aiToggle.addEventListener("click", () => {
-  aiPanel.classList.toggle("open");
+  const isOpen = aiPanel.classList.toggle("open");
+  aiToggle.classList.toggle("active", isOpen);
 });
-aiClose.addEventListener("click", () => { aiPanel.classList.remove("open"); });
+aiClose.addEventListener("click", () => {
+  aiPanel.classList.remove("open");
+  aiToggle.classList.remove("active");
+});
 aiEndpoint.addEventListener("change", () => localStorage.setItem("canvasflow-ai-endpoint", aiEndpoint.value.trim()));
 aiModel.addEventListener("change", () => localStorage.setItem("canvasflow-ai-model", aiModel.value.trim()));
 
@@ -1823,6 +1869,7 @@ function addStudyTextToBoard(text) {
 
     // Show the actual board after inserting the note.
     aiPanel.classList.remove('open');
+    if (aiToggle) aiToggle.classList.remove('active');
   }, {crossOrigin:'anonymous'});
 }
 
@@ -2028,10 +2075,37 @@ updateZoom();
   });
   function openMobileAI(){ mobileAI?.classList.add('open'); mobileAI?.setAttribute('aria-hidden','false'); }
   function closeMobileAI(){ mobileAI?.classList.remove('open'); mobileAI?.setAttribute('aria-hidden','true'); }
-  mobileAIButton?.addEventListener('click',openMobileAI);
+  mobileAIButton?.addEventListener('click', () => {
+    // On mobile: directly open the AI panel (skip the intermediate sheet)
+    const panel = document.getElementById('aiPanel');
+    const tog = document.getElementById('aiToggle');
+    if (panel) {
+      panel.classList.add('open');
+      if (tog) tog.classList.add('active');
+    }
+  });
   mobileCloseAI?.addEventListener('click',closeMobileAI);
-  mobileOpenAI?.addEventListener('click',()=>{ closeMobileAI(); document.getElementById('aiPanel')?.classList.add('open'); });
+  mobileOpenAI?.addEventListener('click',()=>{
+    closeMobileAI();
+    const panel = document.getElementById('aiPanel');
+    if (panel) { panel.classList.add('open'); }
+    const tog = document.getElementById('aiToggle');
+    if (tog) tog.classList.add('active');
+  });
   mobileAI?.addEventListener('click',e=>{ if(e.target===mobileAI) closeMobileAI(); });
+
+  // Mobile: tapping aiPanel backdrop (the area outside panel) closes it
+  // Close button inside aiPanel already handled by aiClose listener above.
+  // Also sync dock AI button active state when panel opens/closes
+  const aiPanelEl = document.getElementById('aiPanel');
+  const mobileAIBtn = document.getElementById('mobileAIButton');
+  if (aiPanelEl && mobileAIBtn) {
+    const panelObserver = new MutationObserver(() => {
+      const open = aiPanelEl.classList.contains('open');
+      mobileAIBtn.classList.toggle('active', open);
+    });
+    panelObserver.observe(aiPanelEl, { attributes: true, attributeFilter: ['class'] });
+  }
 
   const boardsModalEl=document.getElementById('boardsModal');
   const authModalEl=document.getElementById('authModal');
