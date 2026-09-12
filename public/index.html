@@ -1465,7 +1465,7 @@ async function loadBoard() {
   } catch(err){ console.error(err); setSaveState("error"); }
 }
 
-const ENTRY_STATE_KEY = "canvasflow-app-entered";
+const ENTRY_STATE_KEY = "canvasflow-app-entered-v2";
 const LOCAL_DRAFT_KEY = "canvasflow-local-draft";
 
 function saveLocalDraft(){
@@ -1558,6 +1558,14 @@ function enterApp(openAI=false){
   localStorage.setItem(ENTRY_STATE_KEY, "1");
   landing.style.display = "none";
   app.classList.add("entered");
+  // The app starts hidden, so Fabric may have measured a 0x0 workspace.
+  // Resize it after making the app visible or drawing/touch input will have
+  // nowhere to render.
+  requestAnimationFrame(() => {
+    resizeCanvas();
+    canvas.calcOffset();
+    canvas.requestRenderAll();
+  });
   if(openAI) aiPanel.classList.add("open");
 }
 
@@ -1578,6 +1586,15 @@ brandHome?.addEventListener("click", returnToLanding);
 if(localStorage.getItem(ENTRY_STATE_KEY)==="1") {
   landing.style.display = "none";
   app.classList.add("entered");
+  requestAnimationFrame(() => {
+    resizeCanvas();
+    canvas.calcOffset();
+    canvas.requestRenderAll();
+  });
+} else {
+  // Keep the original landing page as the default entry screen.
+  landing.style.display = "flex";
+  app.classList.remove("entered");
 }
 
 // ===================== AI STUDY TUTOR =====================
