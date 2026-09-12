@@ -205,8 +205,8 @@
     }
 
     @media (max-width:760px) {
-      #topbar { overflow-x:auto; }
-      .brand { display:none; }
+      #topbar { overflow:hidden; }
+      body:not(.tablet-mode) #topbar .brand { display:block; }
       #saveState { display:none; }
       #hint { display:none; }
     }
@@ -335,6 +335,91 @@
     body.tablet-mode #accountBar { display:none; }
 
 
+    /* ================= MOBILE PHONE LAYOUT ================= */
+    #mobileFullscreen, #mobileBrandHome { }
+    .mobile-header-action { display:none; }
+    @media (max-width:760px) {
+      /* Phone has one automatic layout; no PC/Tablet selector. */
+      body:not(.tablet-mode) #topbar > .device-switch { display:none !important; }
+      body:not(.tablet-mode) #topbar {
+        position:relative; height:52px; flex:0 0 52px; min-height:52px;
+        padding:0 10px; overflow:visible; z-index:80;
+        display:flex; align-items:center;
+      }
+      body:not(.tablet-mode) #topbar .brand {
+        display:block; font-size:16px; font-weight:900; cursor:pointer;
+        user-select:none; -webkit-tap-highlight-color:transparent;
+      }
+      body:not(.tablet-mode) #topbar .brand span { color:#5b63ff; }
+      body:not(.tablet-mode) #mobileFullscreen {
+        display:flex; margin-left:auto; width:38px; height:36px; align-items:center;
+        justify-content:center; border:1px solid #dfe4ea; background:#fff;
+        border-radius:9px; color:#39424e; font-size:19px; cursor:pointer;
+        box-shadow:0 4px 14px rgba(0,0,0,.07);
+      }
+      body:not(.tablet-mode) #mobileFullscreen.active { background:#18202a; color:#fff; }
+
+      /* Reuse the tablet-style tool rail on phones. */
+      body:not(.tablet-mode) #topbar .toolgroup {
+        display:flex; position:absolute; left:8px; top:60px; z-index:75;
+        width:58px; max-height:calc(100dvh - 130px); overflow-y:auto; overflow-x:hidden;
+        padding:5px; flex-direction:column; gap:3px;
+        background:rgba(255,255,255,.98); border:1px solid #dfe4ea;
+        border-radius:11px; box-shadow:0 6px 20px rgba(0,0,0,.10);
+        scrollbar-width:thin;
+      }
+      body:not(.tablet-mode) #topbar .tablet-rail-brand {
+        display:block; width:46px; flex:0 0 30px; line-height:30px;
+        font-size:10px; font-weight:900; text-align:center; cursor:pointer;
+        white-space:nowrap; overflow:hidden; border-bottom:1px solid #e1e5eb;
+        margin-bottom:2px;
+      }
+      body:not(.tablet-mode) #topbar .tablet-rail-brand span { color:#5b63ff; }
+      body:not(.tablet-mode) #topbar button.tool {
+        display:inline-flex !important; width:46px; height:40px; min-width:46px;
+        min-height:40px; flex:0 0 40px; align-items:center; justify-content:center;
+        border-radius:8px; font-size:18px;
+      }
+      body:not(.tablet-mode) #topbar button[data-tool="ai"] {
+        display:inline-flex !important; background:#eef0ff; color:#5b63ff;
+        border:1px solid #d8dbff; font-weight:900;
+      }
+      body:not(.tablet-mode) #topbar button[data-tool="ai"].active { background:#5b63ff; color:#fff; }
+
+      /* Remove the duplicate bottom mobile dock; the full tool rail is the phone menu. */
+      body:not(.tablet-mode) #mobileDock { display:none !important; }
+      body:not(.tablet-mode) #mobileMore { display:none; }
+      body:not(.tablet-mode) #mobileQuick { left:74px; right:auto; transform:none; bottom:76px; }
+      body:not(.tablet-mode) #mobilePages { top:60px; left:50%; }
+      body:not(.tablet-mode) #mobileSaveState { top:60px; left:auto; right:10px; }
+      body:not(.tablet-mode) #mobileToolsMenu { left:74px !important; right:8px !important; bottom:76px !important; }
+      body:not(.tablet-mode) #workspace { height:calc(100dvh - 52px); min-height:0; }
+      body:not(.tablet-mode) #canvasWrap { inset:0; }
+
+      /* Landscape phone: toolbar becomes a bottom strip. */
+      @media (orientation:landscape) {
+        body:not(.tablet-mode) #topbar { height:48px; flex-basis:48px; min-height:48px; }
+        body:not(.tablet-mode) #topbar .toolgroup {
+          left:50%; right:auto; top:auto; bottom:8px; transform:translateX(-50%);
+          width:auto; max-width:calc(100vw - 16px); max-height:58px;
+          flex-direction:row; overflow-x:auto; overflow-y:hidden;
+          padding:5px 7px; gap:4px; border-radius:14px;
+        }
+        body:not(.tablet-mode) #topbar .tablet-rail-brand {
+          width:70px; height:40px; flex:0 0 70px; line-height:40px;
+          border-bottom:0; border-right:1px solid #e1e5eb; margin:0 2px 0 0;
+          font-size:11px;
+        }
+        body:not(.tablet-mode) #topbar button.tool {
+          width:42px; min-width:42px; height:42px; min-height:42px; flex:0 0 42px;
+        }
+        body:not(.tablet-mode) #mobilePages { top:56px; }
+        body:not(.tablet-mode) #mobileSaveState { top:56px; }
+        body:not(.tablet-mode) #mobileQuick { left:8px; bottom:72px; }
+        body:not(.tablet-mode) #workspace { height:calc(100dvh - 48px); }
+      }
+    }
+
     /* ================= MOBILE UX ================= */
     #mobileDock, #mobileQuick, #mobileAI, #mobilePages { display:none; }
     @media (max-width:760px) {
@@ -365,8 +450,8 @@
       body:not(.tablet-mode) #textDialog .row button {
         min-height:40px; padding:8px 14px; font-size:12px;
       }
-      body:not(.tablet-mode) #topbar { height:48px; flex-basis:48px; padding:0 8px; gap:5px; }
-      body:not(.tablet-mode) #topbar .brand { display:none; }
+      body:not(.tablet-mode) #topbar { height:48px; flex-basis:48px; padding:0 10px; gap:5px; overflow:hidden; }
+      body:not(.tablet-mode) #topbar .brand { display:block; flex:0 0 auto; margin-right:0; font-size:14px; line-height:1; }
       body:not(.tablet-mode) #topbar .toolgroup { display:none; }
       body:not(.tablet-mode) #topbar .separator,
       body:not(.tablet-mode) #topbar .control,
@@ -378,7 +463,9 @@
       body:not(.tablet-mode) #topbar #accountBar,
       body:not(.tablet-mode) #topbar #boardNameDisplay,
       body:not(.tablet-mode) #topbar #saveState { display:none !important; }
-      body:not(.tablet-mode) #topbar > .device-switch { margin-left:auto; }
+      body:not(.tablet-mode) #topbar > .device-switch { margin-left:auto; flex:0 0 auto; }
+      body:not(.tablet-mode) #mobilePages { top:56px; }
+      body:not(.tablet-mode) #mobileSaveState { top:56px; }
       body:not(.tablet-mode) #mobileDock {
         display:flex; position:fixed; left:8px; right:8px; bottom:max(8px, env(safe-area-inset-bottom));
         z-index:150; height:62px; padding:5px; gap:4px; align-items:center;
@@ -475,7 +562,8 @@
 
   <div id="app">
     <header id="topbar">
-      <div class="brand">Canvas<span>Flow</span></div>
+      <div class="brand" id="mobileBrandHome">Canvas<span>Flow</span></div>
+      <button id="mobileFullscreen" class="mobile-header-action" type="button" title="Full screen" aria-label="Full screen">⛶</button>
 
       <div class="device-switch" aria-label="Device layout">
         <button id="pcMode" class="device-btn active" type="button">PC</button>
@@ -1971,6 +2059,28 @@ updateZoom();
   const mobileFocus = document.getElementById('mobileFocus');
   const mobileZoomReset = document.getElementById('mobileZoomReset');
   const mobileMore = document.getElementById('mobileMore');
+  const mobileFullscreen = document.getElementById('mobileFullscreen');
+  const mobileBrandHome = document.getElementById('mobileBrandHome');
+
+  function syncFullscreenButton(){
+    if(!mobileFullscreen) return;
+    const active = !!document.fullscreenElement;
+    mobileFullscreen.classList.toggle('active', active);
+    mobileFullscreen.textContent = active ? '⛶' : '⛶';
+    mobileFullscreen.title = active ? 'Exit full screen' : 'Full screen';
+    mobileFullscreen.setAttribute('aria-label', active ? 'Exit full screen' : 'Full screen');
+  }
+  mobileFullscreen?.addEventListener('click', async()=>{
+    if(!isMobile()) return;
+    try {
+      if(document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch(err){ console.warn('Fullscreen unavailable', err); }
+    syncFullscreenButton();
+  });
+  document.addEventListener('fullscreenchange', syncFullscreenButton);
+  mobileBrandHome?.addEventListener('click', ()=>{ if(typeof returnToLanding==='function') returnToLanding(); });
+  syncFullscreenButton();
 
   function mobileSetState(type, text){
     if(!mobileSaveState) return;
