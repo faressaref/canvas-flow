@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CanvasFlow — Whiteboard</title>
+
+  <!-- Fabric.js + Firebase v9 compat SDK -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#eef1f5; color:#18202a; }
+    body { display:flex; flex-direction:column; min-width:0; }
+
+    #firebaseWarning {
+      display:none; flex:0 0 auto; background:#fff3cd; color:#6b4e00;
+      border-bottom:1px solid #efd98a; padding:10px 18px; font-size:13px; font-weight:600;
+      z-index:50;
+    }
+    #app { min-width:0; min-height:0; flex:1 1 auto; display:none; flex-direction:column; overflow:hidden; }
+    #topbar {
+      position:relative;
+      height:56px; flex:0 0 56px; background:rgba(255,255,255,.96); border-bottom:1px solid #dfe4ea;
+      display:flex; align-items:center; gap:10px; padding:0 14px; z-index:20; box-shadow:0 1px 8px rgba(0,0,0,.04);
+    }
+    .brand { font-weight:800; letter-spacing:-.03em; margin-right:8px; white-space:nowrap; cursor:pointer; user-select:none; }
+    .brand span { color:#5b63ff; }
+    .brand:hover { opacity:.78; }
+    .toolgroup { display:flex; align-items:center; gap:4px; padding:3px; border:1px solid #e1e5eb; border-radius:10px; background:#f7f8fa; }
+    button.tool, .iconbtn {
+      border:0; background:transparent; height:36px; min-width:36px; border-radius:8px; cursor:pointer;
+      color:#4b5563; display:inline-flex; align-items:center; justify-content:center; font-size:16px;
+    }
+    button.tool:hover, .iconbtn:hover { background:#e9edf3; }
+    .iconbtn:disabled { opacity:.38; cursor:not-allowed; }
+    button.tool.active { background:#18202a; color:white; }
+    button.tool svg { width:18px; height:18px; }
+    .separator { width:1px; height:26px; background:#dfe4ea; margin:0 2px; }
+    .control { display:flex; align-items:center; gap:7px; font-size:12px; color:#697383; }
+    input[type=color] { width:32px; height:30px; border:0; padding:2px; background:transparent; cursor:pointer; }
+    input[type=range] { width:88px; accent-color:#5b63ff; }
+    #saveState { margin-left:auto; font-size:12px; color:#697383; white-space:nowrap; }
+    #saveState.saving { color:#7c5cff; }
+    #saveState.saved { color:#2d8a5b; }
+    #saveState.error { color:#c33b3b; }
+
+    #workspace { position:relative; flex:1 1 auto; min-width:0; min-height:0; width:100%; height:auto; overflow:hidden; }
+    #canvasWrap { position:absolute; inset:0; background-color:#f4f6f8; background-image:radial-gradient(#cdd3da 1px, transparent 1px); background-size:24px 24px; }
+    #board { position:absolute; left:0; top:0; }
+    .canvas-container { position:absolute !important; left:0 !important; top:0 !important; }
+    .canvas-container, .canvas-container canvas { touch-action:none; }
+    button, input, textarea, summary { touch-action:manipulation; }
+
+    #hint {
+      position:absolute; left:18px; bottom:16px; z-index:10; padding:8px 11px; border-radius:8px;
+      background:rgba(255,255,255,.9); border:1px solid #dfe4ea; color:#7b8490; font-size:11px;
+      box-shadow:0 4px 15px rgba(0,0,0,.05); pointer-events:none;
+    }
+    #zoom { position:absolute; right:16px; bottom:16px; z-index:10; background:rgba(255,255,255,.95); border:1px solid #dfe4ea; border-radius:9px; display:flex; align-items:center; gap:3px; padding:3px; box-shadow:0 4px 15px rgba(0,0,0,.06); }
+    #zoom span { min-width:54px; text-align:center; font-size:12px; color:#697383; }
+
+    #textDialog {
+      display:none; position:absolute; z-index:30; width:280px; background:white; border:1px solid #dfe4ea;
+      border-radius:12px; padding:14px; box-shadow:0 14px 45px rgba(0,0,0,.15);
+    }
+    #textDialog textarea { width:100%; height:90px; resize:none; border:1px solid #dfe4ea; border-radius:8px; padding:9px; font:14px inherit; outline:none; }
+    #textDialog .row { display:flex; justify-content:flex-end; gap:6px; margin-top:9px; }
+    .primary { background:#18202a; color:white; border:0; border-radius:7px; padding:8px 12px; cursor:pointer; }
+    .secondary { background:#eef1f5; color:#39424e; border:0; border-radius:7px; padding:8px 12px; cursor:pointer; }
+
+    #fileInput { display:none; }
+    /* Drag & drop uploads */
+    #dropOverlay {
+      display:none; position:absolute; inset:12px; z-index:40; border:2px dashed #5b63ff;
+      border-radius:16px; background:rgba(255,255,255,.82); backdrop-filter:blur(3px);
+      align-items:center; justify-content:center; pointer-events:none;
+    }
+    #dropOverlay.active { display:flex; }
+    #dropOverlay .drop-card {
+      padding:18px 24px; border:1px solid #dfe4ea; border-radius:14px; background:#fff;
+      box-shadow:0 12px 35px rgba(0,0,0,.10); text-align:center; color:#39424e;
+    }
+    #dropOverlay .drop-icon { font-size:28px; margin-bottom:5px; }
+    #dropOverlay b { font-size:14px; }
+    #dropOverlay small { display:block; margin-top:4px; color:#7b8490; font-size:11px; }
+    .canvas-file-card {
+      display:flex; align-items:center; gap:8px; min-width:180px; padding:10px 12px;
+      border:1px solid #dfe4ea; border-radius:10px; background:#fff; box-shadow:0 5px 18px rgba(0,0,0,.08);
+    }
+
+    .device-switch { display:flex; align-items:center; gap:2px; padding:3px; border:1px solid #e1e5eb; border-radius:9px; background:#f7f8fa; }
+    .device-btn { border:0; background:transparent; color:#697383; font-size:11px; font-weight:700; padding:6px 9px; border-radius:6px; cursor:pointer; }
+    .device-btn.active { background:#18202a; color:#fff; }
+
+    /* Tablet layout: compact rail that fits phone screens while keeping every tool reachable. */
+    body.tablet-mode #topbar {
+      height:0; flex:0 0 0; border:0; box-shadow:none; padding:0; overflow:visible;
+    }
+    /* Tablet: the desktop topbar is collapsed, so hide ALL desktop-only controls.
+       Otherwise they remain inside the 0px header and get clipped at the top. */
+    body.tablet-mode #topbar > .brand,
+    body.tablet-mode #topbar > .separator,
+    body.tablet-mode #topbar > .control,
+    body.tablet-mode #topbar > #saveState,
+    body.tablet-mode #topbar > #boardNameDisplay,
+    body.tablet-mode #topbar > #undoBtn,
+    body.tablet-mode #topbar > #redoBtn,
+    body.tablet-mode #topbar > #clearSelection,
+    body.tablet-mode #topbar > #fit,
+    body.tablet-mode #topbar > #saveBoardBtn,
+    body.tablet-mode #topbar > #accountBar { display:none !important; }
+    body.tablet-mode #topbar > .device-switch {
+      display:flex; position:absolute; right:10px; top:10px; z-index:26;
+      background:rgba(255,255,255,.98); border:1px solid #dfe4ea;
+      box-shadow:0 5px 18px rgba(0,0,0,.09); border-radius:9px;
+    }
+    body.tablet-mode #topbar > .device-switch .device-btn {
+      min-width:48px; height:32px; padding:5px 7px; font-size:10px;
+    }
+    body.tablet-mode #topbar .toolgroup {
+      position:absolute; left:8px; top:8px; z-index:25;
+      width:60px; padding:5px; display:flex; flex-direction:column; gap:3px;
+      max-height:calc(100dvh - 145px); overflow-y:auto; overflow-x:hidden;
+      background:rgba(255,255,255,.98); border:1px solid #dfe4ea;
+      border-radius:11px; box-shadow:0 5px 18px rgba(0,0,0,.08);
+      scrollbar-width:thin;
+    }
+    body.tablet-mode #topbar button.tool {
+      width:48px; height:42px; min-width:48px; flex:0 0 42px;
+      border-radius:8px; font-size:19px;
+    }
+    body.tablet-mode #topbar button.tool svg { width:20px; height:20px; }
+    body.tablet-mode #workspace { flex:1; min-height:0; }
+    body.tablet-mode #canvasWrap,
+    body.tablet-mode .canvas-container { /* canvas dimensions stay unchanged */ }
+    body.tablet-mode #zoom { right:10px; bottom:10px; }
+    body.tablet-mode #hint { left:76px; }
+    body.tablet-mode #textDialog { left:76px !important; }
+
+    /* Compact tablet controls below the tool rail. Scroll the rail if the phone is short. */
+    #tabletControls { display:none; }
+    body.tablet-mode #tabletControls {
+      display:flex; position:absolute; left:8px; bottom:62px; z-index:25;
+      width:60px; flex-direction:column; gap:5px;
+      max-height:calc(100dvh - 180px); overflow-y:auto; overflow-x:hidden;
+      scrollbar-width:thin;
+    }
+    .tablet-control-card {
+      width:60px; padding:5px 4px; border-radius:9px; background:rgba(255,255,255,.98);
+      border:1px solid #dfe4ea; box-shadow:0 5px 18px rgba(0,0,0,.08); text-align:center;
+      flex:0 0 auto;
+    }
+    .tablet-control-card label { display:block; font-size:8px; font-weight:700; color:#697383; margin-bottom:3px; }
+    body.tablet-mode #tabletColor { width:34px; height:30px; padding:1px; }
+    body.tablet-mode #tabletSize { width:42px; height:60px; writing-mode:vertical-lr; direction:rtl; }
+    body.tablet-mode #tabletDelete {
+      width:42px; height:34px; border:0; border-radius:7px; background:#eef1f5; cursor:pointer; font-size:16px;
+    }
+    .tablet-scroll-card button {
+      width:42px; height:34px; border:0; border-radius:7px; background:#eef1f5;
+      cursor:pointer; font-size:17px; color:#39424e;
+    }
+    .tablet-scroll-card button.active { background:#18202a; color:#fff; }
+    .tablet-history-row { display:flex; justify-content:center; gap:3px; }
+    .tablet-history-row button {
+      width:27px; height:30px; border:0; border-radius:7px; background:#eef1f5;
+      cursor:pointer; font-size:16px; color:#39424e; padding:0;
+    }
+    .tablet-history-row button:hover { background:#e3e7ed; }
+    .tablet-history-row button:disabled { opacity:.35; cursor:not-allowed; }
+    @media (max-height:700px) {
+      body.tablet-mode #topbar .toolgroup { max-height:calc(100dvh - 125px); }
+      body.tablet-mode #topbar button.tool { height:36px; min-height:36px; flex-basis:36px; }
+      body.tablet-mode #tabletControls { bottom:48px; max-height:calc(100dvh - 145px); }
+    }
+
+    @media (max-width:760px) {
+      #topbar { overflow-x:auto; }
+      .brand { display:none; }
+      #saveState { display:none; }
+      #hint { display:none; }
+    }
+
+
+
+    /* ================= LANDING / MODE SELECTOR ================= */
+    #landing {
+      position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(145deg,#f8fafc 0%,#eef1f5 100%); padding:28px;
+    }
+    .landing-card { width:min(980px,100%); text-align:center; }
+    .landing-brand { font-size:16px; font-weight:800; letter-spacing:-.03em; margin-bottom:46px; }
+    .landing-brand span { color:#5b63ff; }
+    .landing-title { font-size:clamp(32px,5vw,58px); line-height:1.02; letter-spacing:-.055em; margin:0 0 14px; color:#151b24; }
+    .landing-sub { margin:0 auto 38px; max-width:600px; color:#747e8b; font-size:15px; line-height:1.6; }
+    .mode-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; text-align:left; }
+    .mode-card {
+      border:1px solid #dfe4ea; background:rgba(255,255,255,.92); border-radius:20px; padding:28px;
+      cursor:pointer; box-shadow:0 12px 40px rgba(0,0,0,.06); transition:.18s; min-height:250px;
+    }
+    .mode-card:hover { transform:translateY(-4px); border-color:#bfc4ff; box-shadow:0 18px 48px rgba(52,59,90,.12); }
+    .mode-icon { width:52px;height:52px;border-radius:14px;background:#eef0ff;display:flex;align-items:center;justify-content:center;font-size:25px;margin-bottom:25px; }
+    .mode-card h2 { margin:0 0 8px;font-size:22px;letter-spacing:-.03em; }
+    .mode-card p { margin:0;color:#7a8490;font-size:13px;line-height:1.6; }
+    .mode-card .mode-list { margin:17px 0 0;padding:0;list-style:none;color:#555f6d;font-size:12px;line-height:2; }
+    #app.entered { display:flex; }
+    @media(max-width:700px){ .mode-cards{grid-template-columns:1fr;} .landing-card{max-width:500px;} .landing-brand{margin-bottom:28px;} .landing-title{font-size:38px;} }
+
+    /* ================= AI STUDY PANEL ================= */
+    #aiPanel {
+      position:absolute; top:56px; right:14px; width:330px; height:min(590px, calc(100% - 84px));
+      min-width:280px; min-height:320px; max-width:calc(100% - 110px); max-height:calc(100% - 84px);
+      background:rgba(255,255,255,.98); border:1px solid #dfe4ea; border-radius:14px;
+      box-shadow:0 16px 50px rgba(0,0,0,.13); z-index:28; display:none; flex-direction:column;
+      resize:both; overflow:hidden;
+    }
+    #aiPanel.open { display:flex; }
+    #aiPanel::after { content:""; position:absolute; right:4px; bottom:4px; width:13px; height:13px; border-right:2px solid #b8bec7; border-bottom:2px solid #b8bec7; border-radius:0 0 3px 0; pointer-events:none; opacity:.9; }
+    .ai-head { padding:11px 12px; border-bottom:1px solid #e5e8ed; display:flex; align-items:center; gap:8px; }
+    .ai-title { font-weight:800; font-size:14px; letter-spacing:-.02em; }
+    .ai-subtitle { font-size:9px; color:#7b8490; margin-top:2px; }
+    .ai-resize-hint { font-size:8px; color:#a0a7b0; margin-top:3px; }
+    .ai-head-actions { margin-left:auto; display:flex; gap:5px; align-items:center; position:relative; }
+    .ai-size-btn, .ai-close { border:0; background:#eef1f5; width:26px; height:26px; border-radius:8px; cursor:pointer; }
+    .ai-size-btn:hover, .ai-close:hover { background:#e6eaf0; }
+    .ai-size-pop { position:absolute; top:36px; right:0; width:165px; padding:10px; background:#fff; border:1px solid #dfe4ea; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; z-index:5; }
+    .ai-size-pop.open { display:block; }
+    .ai-size-pop label { display:flex; justify-content:space-between; font-size:10px; font-weight:700; color:#596474; margin-bottom:6px; }
+    .ai-size-pop input { width:100%; accent-color:#5b63ff; margin:0; }
+    .ai-size-note { font-size:8px; color:#8a929d; margin-top:5px; text-align:center; }
+    .ai-body { padding:10px; overflow:auto; flex:1; min-height:0; }
+    .ai-label { font-size:10px; font-weight:800; color:#606b78; margin:0 0 5px; display:block; }
+    #lessonInput { width:100%; min-height:145px; resize:vertical; border:1px solid #dfe4ea; border-radius:10px; padding:11px; font:13px/1.55 inherit; outline:none; background:#fbfcfd; }
+    #lessonInput:focus { border-color:#8d93ff; box-shadow:0 0 0 3px rgba(91,99,255,.10); }
+    .ai-actions { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:7px; }
+    .ai-action { border:1px solid #dfe4ea; background:#fff; border-radius:8px; padding:7px 6px; cursor:pointer; text-align:left; font-size:10px; color:#303844; transition:.15s; }
+    .ai-action:hover { background:#f5f6ff; border-color:#cdd0ff; }
+    .ai-action b { display:block; font-size:10px; margin-bottom:1px; }
+    .ai-action span { color:#7a8490; font-size:8px; }
+    .ai-result { margin-top:8px; border:1px solid #e0e4ea; border-radius:10px; padding:9px; background:#fafbfc; min-height:70px; font-size:10px; line-height:1.65; white-space:pre-wrap; overflow:auto; max-height:42%; }
+    .ai-result.empty { color:#8a929d; }
+    .ai-footer { padding:8px 10px; border-top:1px solid #e5e8ed; display:flex; gap:5px; }
+    .ai-footer button { flex:1; min-width:0; border:0; border-radius:8px; padding:7px; cursor:pointer; font-size:10px; }
+    #pdfBtn { background:#18202a; color:#fff; }
+    #copyBtn { background:#eef1f5; color:#39424e; }
+    #aiStatus { font-size:8px; color:#7b8490; margin-top:5px; }
+    .ai-settings { margin-top:7px; border-top:1px solid #e5e8ed; padding-top:7px; }
+    .ai-settings summary { cursor:pointer; font-size:9px; font-weight:700; color:#697383; }
+    .ai-settings input { width:100%; margin-top:5px; padding:6px; border:1px solid #dfe4ea; border-radius:7px; font-size:9px; }
+    #lessonDrop { padding:11px !important; }
+    #lessonDrop > div:first-child { font-size:20px !important; margin-bottom:3px !important; }
+    #lessonDrop b { font-size:10px !important; }
+    #lessonDrop div:last-child { font-size:9px !important; }
+    body.tablet-mode #aiPanel { left:auto; right:10px; top:50px; width:300px; max-width:calc(100% - 120px); height:min(520px, calc(100% - 70px)); max-height:calc(100% - 70px); }
+    @media (max-width:760px) {
+      #aiPanel { left:auto; right:8px; top:50px; width:300px; max-width:calc(100% - 92px); height:min(520px, calc(100% - 70px)); max-height:calc(100% - 70px); }
+    }
+
+    /* ================= ACCOUNT / BOARDS ================= */
+    #accountBar { display:flex; align-items:center; gap:6px; margin-left:auto; }
+    .account-btn { border:1px solid #dfe3ea; background:#fff; color:#18202a; border-radius:8px; padding:7px 9px; font-size:10px; font-weight:800; cursor:pointer; }
+    .account-btn.primary { background:#18202a; color:#fff; border-color:#18202a; }
+    .account-btn:hover { transform:translateY(-1px); }
+    #authModal, #boardsModal { position:fixed; inset:0; background:rgba(12,16,22,.42); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; z-index:100; padding:18px; }
+    #authModal.open, #boardsModal.open { display:flex; }
+    .modal-card { width:min(420px,100%); background:#fff; border:1px solid #dfe3ea; border-radius:16px; box-shadow:0 24px 70px rgba(0,0,0,.22); padding:20px; }
+    .modal-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:15px; }
+    .modal-head h3 { margin:0; font-size:17px; color:#18202a; }
+    .modal-close { border:0; background:#f1f3f6; border-radius:8px; width:30px; height:30px; cursor:pointer; font-size:15px; }
+    .auth-tabs { display:flex; gap:5px; background:#f3f5f8; padding:4px; border-radius:9px; margin-bottom:12px; }
+    .auth-tab { flex:1; border:0; background:transparent; padding:8px; border-radius:7px; cursor:pointer; font-size:10px; font-weight:800; }
+    .auth-tab.active { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+    .auth-form input, .board-name-input { width:100%; box-sizing:border-box; border:1px solid #dfe3ea; border-radius:9px; padding:10px; margin:5px 0; outline:none; font:inherit; font-size:11px; }
+    .auth-form button, .board-action { width:100%; border:0; background:#5b63ff; color:#fff; border-radius:9px; padding:10px; margin-top:8px; cursor:pointer; font-size:11px; font-weight:800; }
+    .auth-divider { display:flex; align-items:center; gap:8px; margin:12px 0 8px; color:#9aa2ad; font-size:9px; font-weight:700; }
+    .auth-divider::before, .auth-divider::after { content:""; flex:1; height:1px; background:#e5e8ed; }
+    #googleSignInBtn { width:100%; border:1px solid #dfe3ea; background:#fff; color:#18202a; border-radius:9px; padding:10px; margin-top:0; cursor:pointer; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:8px; }
+    #googleSignInBtn:hover { background:#f7f8fa; }
+    #googleSignInBtn:disabled { opacity:.65; cursor:wait; }
+    .google-icon { width:16px; height:16px; flex:0 0 16px; }
+    #authMessage { min-height:16px; margin-top:8px; font-size:10px; color:#697383; }
+    #userEmail { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; color:#697383; }
+    .boards-toolbar { display:flex; gap:6px; margin-bottom:10px; }
+    .boards-toolbar button { flex:1; }
+    .board-item { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 8px; border:1px solid #e2e5eb; border-radius:10px; margin:6px 0; cursor:pointer; background:#fafbfc; }
+    .board-item:hover, .board-item.active { border-color:#8b90ff; background:#f5f6ff; }
+    .board-item strong { font-size:11px; color:#18202a; display:block; }
+    .board-item small { font-size:8px; color:#8a929d; display:block; margin-top:3px; }
+    .board-item .delete-board { flex:0 0 auto; border:0; background:#eef0f3; border-radius:7px; width:28px; height:28px; cursor:pointer; }
+    .board-item-actions { display:flex; align-items:center; gap:5px; flex:0 0 auto; }
+    .board-item-actions button { border:0; background:#eef0f3; border-radius:7px; width:28px; height:28px; cursor:pointer; font-size:13px; }
+    .board-item-actions button:hover { background:#e4e7ec; }
+    #boardsList { max-height:330px; overflow:auto; }
+    #boardNameDisplay { max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; color:#697383; }
+    .save-btn { border:1px solid #dfe3ea; background:#fff; color:#18202a; border-radius:8px; padding:7px 9px; cursor:pointer; font-size:10px; font-weight:800; }
+    .save-btn.primary { background:#5b63ff; border-color:#5b63ff; color:#fff; }
+    #tabletAccount { display:none; }
+    #tabletAccount label { display:block; font-size:8px; font-weight:700; color:#697383; margin-bottom:3px; }
+    #tabletAccount .tablet-account-actions { display:flex; gap:3px; justify-content:center; }
+    #tabletAccount .tablet-account-actions button { width:27px; height:30px; border:0; border-radius:7px; background:#eef1f5; cursor:pointer; font-size:13px; }
+    #tabletAccount .tablet-account-actions button:hover { background:#e4e8ee; }
+    .tablet-user-dot { font-size:8px; color:#697383; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; margin-top:3px; text-align:center; }
+    body.tablet-mode #tabletAccount { display:flex; position:absolute; right:122px; top:10px; z-index:27; flex-direction:column; align-items:center; width:82px; padding:5px 4px; border-radius:9px; background:rgba(255,255,255,.98); border:1px solid #dfe4ea; box-shadow:0 5px 18px rgba(0,0,0,.09); }
+    @media(max-width:900px){ #accountBar { gap:3px; } #userEmail,#boardNameDisplay { display:none; } .account-btn,.save-btn { padding:6px 7px; } }
+    body.tablet-mode #accountBar { display:none; }
+
+
+    /* ================= MOBILE UX ================= */
+    #mobileDock, #mobileQuick, #mobileAI, #mobilePages { display:none; }
+    @media (max-width:760px) {
+      html, body { width:100%; height:100%; min-height:100dvh; }
+      #app.entered { min-height:100dvh; height:100dvh; }
+      #workspace { min-height:0; height:auto; padding-bottom:72px; }
+      #canvasWrap { inset:0; }
+      body:not(.tablet-mode) #topbar { height:48px; flex-basis:48px; padding:0 8px; gap:5px; }
+      body:not(.tablet-mode) #topbar .brand { display:none; }
+      body:not(.tablet-mode) #topbar .toolgroup { display:none; }
+      body:not(.tablet-mode) #topbar .separator,
+      body:not(.tablet-mode) #topbar .control,
+      body:not(.tablet-mode) #topbar #undoBtn,
+      body:not(.tablet-mode) #topbar #redoBtn,
+      body:not(.tablet-mode) #topbar #clearSelection,
+      body:not(.tablet-mode) #topbar #fit,
+      body:not(.tablet-mode) #topbar #saveBoardBtn,
+      body:not(.tablet-mode) #topbar #accountBar,
+      body:not(.tablet-mode) #topbar #boardNameDisplay,
+      body:not(.tablet-mode) #topbar #saveState { display:none !important; }
+      body:not(.tablet-mode) #topbar > .device-switch { margin-left:auto; }
+      #mobileDock {
+        display:flex; position:fixed; left:8px; right:8px; bottom:max(8px, env(safe-area-inset-bottom));
+        z-index:80; height:62px; padding:5px; gap:4px; align-items:center;
+        background:rgba(255,255,255,.96); border:1px solid #dfe4ea; border-radius:15px;
+        box-shadow:0 10px 35px rgba(0,0,0,.15); backdrop-filter:blur(12px);
+      }
+      .mobile-dock-btn { flex:1; min-width:0; height:50px; border:0; border-radius:11px; background:transparent; color:#4b5563; font-size:10px; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+      .mobile-dock-btn .mi { font-size:19px; line-height:20px; }
+      .mobile-dock-btn.active { background:#18202a; color:#fff; }
+      .mobile-dock-more { background:#eef1f5; }
+      #mobileQuick { display:flex; position:fixed; left:50%; transform:translateX(-50%); bottom:78px; z-index:79; gap:5px; }
+      .mobile-float { width:38px; height:38px; border:1px solid #dfe4ea; background:rgba(255,255,255,.97); border-radius:11px; box-shadow:0 6px 20px rgba(0,0,0,.12); font-size:17px; cursor:pointer; }
+      #mobileSaveState { position:fixed; left:12px; top:10px; z-index:75; padding:5px 8px; border:1px solid #dfe4ea; border-radius:9px; background:rgba(255,255,255,.92); font-size:9px; color:#697383; box-shadow:0 4px 14px rgba(0,0,0,.07); }
+      #mobileSaveState.saving { color:#7c5cff; } #mobileSaveState.saved { color:#2d8a5b; } #mobileSaveState.error { color:#c33b3b; }
+      #mobilePages { display:flex; position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:75; align-items:center; gap:4px; padding:4px 6px; background:rgba(255,255,255,.92); border:1px solid #dfe4ea; border-radius:9px; box-shadow:0 4px 14px rgba(0,0,0,.07); }
+      #mobilePages button { border:0; background:transparent; width:26px; height:25px; border-radius:6px; cursor:pointer; color:#39424e; }
+      #mobilePageLabel { font-size:9px; font-weight:800; color:#697383; min-width:62px; text-align:center; }
+      #mobileAI { display:none; position:fixed; inset:0; z-index:120; background:rgba(12,16,22,.32); align-items:flex-end; }
+      #mobileAI.open { display:flex; }
+      #mobileAI .mobile-ai-sheet { width:100%; max-height:82dvh; background:#fff; border-radius:20px 20px 0 0; padding:10px 12px max(14px, env(safe-area-inset-bottom)); box-shadow:0 -16px 50px rgba(0,0,0,.18); }
+      #mobileAI .grab { width:38px; height:4px; border-radius:5px; background:#d8dde4; margin:0 auto 9px; }
+      #mobileAI h3 { margin:0 0 5px; font-size:14px; }
+      #mobileAI p { margin:0 0 9px; font-size:9px; color:#7b8490; }
+      #mobileAI button { border:1px solid #dfe4ea; background:#fff; border-radius:9px; padding:8px; font-size:10px; cursor:pointer; }
+      #mobileAI .ai-mobile-actions { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; }
+      #boardsModal.mobile-sheet { align-items:flex-end; padding:0; }
+      #boardsModal.mobile-sheet .modal-card { width:100%; max-width:none; max-height:82dvh; overflow:auto; border-radius:20px 20px 0 0; padding:14px; }
+      #authModal.mobile-sheet { align-items:flex-end; padding:0; }
+      #authModal.mobile-sheet .modal-card { width:100%; max-width:none; border-radius:20px 20px 0 0; }
+      body.tablet-mode #tabletAccount { right:10px; top:10px; width:auto; padding:4px 5px; flex-direction:row; }
+      body.tablet-mode #tabletAccount label { display:none; }
+      body.tablet-mode #tabletAccount .tablet-user-dot { display:none; }
+      body.tablet-mode #tabletAccount .tablet-account-actions { gap:3px; }
+      body.tablet-mode #tabletAccount .tablet-account-actions button { width:32px; height:30px; }
+      body.tablet-mode #topbar > .device-switch { right:86px; }
+      body.tablet-mode #tabletControls { bottom:78px; max-height:calc(100dvh - 155px); }
+      body.tablet-mode #zoom { bottom:78px; right:8px; }
+      body.tablet-mode #hint { display:none; }
+      #aiPanel { display:none !important; }
+    }
+
+    @media (max-width:760px) {
+      body.mobile-focus #mobileDock, body.mobile-focus #mobileQuick, body.mobile-focus #mobilePages, body.mobile-focus #mobileSaveState, body.mobile-focus #topbar, body.mobile-focus #tabletAccount, body.mobile-focus #zoom { opacity:0; pointer-events:none; transition:opacity .18s; }
+      body.mobile-focus #workspace { padding-bottom:0; }
+    }
+    @media (max-width:390px) {
+      #mobileDock { left:5px; right:5px; height:58px; }
+      .mobile-dock-btn { height:47px; font-size:8px; }
+      .mobile-dock-btn .mi { font-size:17px; }
+      #mobileQuick { bottom:72px; }
+      #mobilePages { top:8px; }
+    }
+
+  </style>
+</head>
+<body>
+  <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
+
+  
+  <section id="landing">
+    <div class="landing-card">
+      <div class="landing-brand">Canvas<span>Flow</span> Study</div>
+      <h1 class="landing-title">What do you want to do?</h1>
+      <p class="landing-sub">اختار طريقة الشغل. لو عندك درس من الكتاب، ارفع صور الصفحات والـ AI يحولها لمذاكرة كاملة.</p>
+      <div class="mode-cards">
+        <div class="mode-card" id="chooseAI">
+          <div class="mode-icon">✦</div>
+          <h2>AI Study Tutor</h2>
+          <p>ارفع صور الدرس بدل ما تكتبه، وخلي الـ AI يستخرج المحتوى ويعملك مذاكرة كاملة.</p>
+          <ul class="mode-list">
+            <li>📷 صور من الكتاب</li><li>📚 ملخص + شرح</li><li>📝 امتحان + Flashcards</li><li>📄 PDF جاهز</li>
+          </ul>
+        </div>
+        <div class="mode-card" id="chooseBoard">
+          <div class="mode-icon">✎</div>
+          <h2>Whiteboard</h2>
+          <p>افتح مساحة الرسم والمذاكرة التفاعلية وارسم، اكتب، اعمل Mind Maps وحط الصور.</p>
+          <ul class="mode-list">
+            <li>✏️ Pen & Stylus</li><li>🧩 Mind Maps</li><li>🖼️ Images</li><li>🔍 Pan & Zoom</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="app">
+    <header id="topbar">
+      <div class="brand">Canvas<span>Flow</span></div>
+
+      <div class="device-switch" aria-label="Device layout">
+        <button id="pcMode" class="device-btn active" type="button">PC</button>
+        <button id="tabletMode" class="device-btn" type="button">Tablet</button>
+      </div>
+
+      <div id="tabletAccount" aria-label="Tablet account controls">
+        <label>ACCOUNT</label>
+        <div class="tablet-account-actions">
+          <button id="tabletSave" title="Save board" type="button">💾</button>
+          <button id="tabletBoards" title="Saved boards" type="button">▤</button>
+        </div>
+        <div class="tablet-user-dot" id="tabletUserDot">Guest</div>
+      </div>
+
+      <div class="toolgroup" aria-label="Tools">
+        <button class="tool active" data-tool="select" title="Select / move (V)">↖</button>
+        <button class="tool" data-tool="pen" title="Pen (P)">✎</button>
+        <button class="tool" data-tool="highlighter" title="Highlighter">▰</button>
+        <button class="tool" data-tool="eraser" title="Eraser (E)">⌫</button>
+        <button class="tool" data-tool="rect" title="Rectangle">▱</button>
+        <button class="tool" data-tool="circle" title="Circle">○</button>
+        <button class="tool" data-tool="line" title="Line">╱</button>
+        <button class="tool" data-tool="arrow" title="Arrow">➜</button>
+        <button class="tool" data-tool="text" title="Text (T)">T</button>
+        <button class="tool" data-tool="node" title="Mind map node">◇</button>
+        <button class="tool" data-tool="image" title="Upload image">▧</button>
+<button class="tool" id="aiToggle" data-tool="ai" title="AI Study Tutor">✦</button>
+      </div>
+
+      <div class="separator"></div>
+      <div class="control" title="Stroke color">
+        <span>Color</span><input id="color" type="color" value="#18202a" />
+      </div>
+      <div class="control" title="Brush / stroke size">
+        <span>Size</span><input id="size" type="range" min="1" max="40" value="4" /><b id="sizeValue">4</b>
+      </div>
+
+      <div class="separator"></div>
+      <button class="iconbtn" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+      <button class="iconbtn" id="redoBtn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" aria-label="Redo">↷</button>
+      <button class="iconbtn" id="clearSelection" title="Delete selected (Delete)">⌫</button>
+      <button class="iconbtn" id="fit" title="Fit canvas">⌗</button>
+      <div id="saveState">Saved ✓</div>
+      <div id="boardNameDisplay">Unsaved board</div>
+      <button class="save-btn primary" id="saveBoardBtn" type="button" title="Save board">💾 Save</button>
+      <div id="accountBar">
+        <span id="userEmail">Not signed in</span>
+        <button class="account-btn" id="boardsBtn" type="button">Boards</button>
+        <button class="account-btn primary" id="authBtn" type="button">Log in</button>
+      </div>
+    </header>
+
+    <main id="workspace">
+      <div id="canvasWrap">
+        <canvas id="board"></canvas>
+      </div>
+      <div id="dropOverlay" aria-hidden="true">
+        <div class="drop-card">
+          <div class="drop-icon">📥</div>
+          <b>Drop files here</b>
+          <small>Images will be added to the board · Other files become attachments</small>
+        </div>
+      </div>
+
+      <div id="textDialog">
+        <textarea id="textValue" placeholder="Type something..."></textarea>
+        <div class="row">
+          <button class="secondary" id="cancelText">Cancel</button>
+          <button class="primary" id="addText">Add text</button>
+        </div>
+      </div>
+
+      <div id="tabletControls" aria-label="Tablet controls">
+        <div class="tablet-control-card tablet-history-card">
+          <label>HISTORY</label>
+          <div class="tablet-history-row">
+            <button id="tabletUndo" type="button" title="Undo" aria-label="Undo">↶</button>
+            <button id="tabletRedo" type="button" title="Redo" aria-label="Redo">↷</button>
+          </div>
+        </div>
+        <div class="tablet-control-card tablet-scroll-card">
+          <label>SCROLL</label>
+          <button id="tabletScroll" type="button" title="Scroll / move board">↕</button>
+          <div id="tabletScrollValue" style="font-size:8px;color:#697383;margin-top:2px;">OFF</div>
+        </div>
+        <div class="tablet-control-card">
+          <label>COLOR</label>
+          <input id="tabletColor" type="color" value="#18202a" />
+        </div>
+        <div class="tablet-control-card">
+          <label>SIZE</label>
+          <input id="tabletSize" type="range" min="1" max="40" value="4" />
+          <div id="tabletSizeValue" style="font-size:10px;color:#697383;margin-top:3px;">4</div>
+        </div>
+        <div class="tablet-control-card">
+          <button id="tabletDelete" title="Delete selected">⌫</button>
+        </div>
+      </div>
+
+
+      <aside id="aiPanel" aria-label="AI Study Tutor">
+        <div class="ai-head">
+          <div>
+            <div class="ai-title">✦ AI Study Tutor</div>
+            <div class="ai-subtitle">حط الدرس هنا وأنا أحوله لمذاكرة كاملة</div>
+            <div class="ai-resize-hint">↘ اسحب من الركن لتغيير الحجم</div>
+          </div>
+          <div class="ai-head-actions">
+            <button class="ai-close" id="aiClose">×</button>
+          </div>
+        </div>
+        <div class="ai-body">
+          <label class="ai-label">📷 صور الدرس من الكتاب</label>
+          <div id="lessonDrop" style="border:1.5px dashed #cfd5dd;border-radius:11px;padding:18px;text-align:center;background:#fbfcfd;cursor:pointer;">
+            <div style="font-size:25px;margin-bottom:5px;">📚</div>
+            <b style="font-size:12px;">ارفع صور صفحات الدرس</b>
+            <div style="font-size:10px;color:#89919d;margin-top:4px;">تقدر ترفع أكتر من صورة</div>
+            <input id="lessonImages" type="file" accept="image/*" multiple style="display:none;">
+          </div>
+          <div id="lessonPreviews" style="display:flex;gap:7px;overflow:auto;margin-top:8px;"></div>
+          <textarea id="lessonInput" style="display:none;" aria-hidden="true"></textarea>
+
+          <div class="ai-actions">
+            <button class="ai-action" data-ai="summary"><b>📚 ملخص كامل</b><span>مرتب بعناوين ونقاط</span></button>
+            <button class="ai-action" data-ai="explain"><b>🧑‍🏫 اشرحلي</b><span>شرح بسيط وواضح</span></button>
+            <button class="ai-action" data-ai="important"><b>🎯 المهم</b><span>الحاجات اللي لازم تركز فيها</span></button>
+            <button class="ai-action" data-ai="quiz"><b>📝 امتحان</b><span>أسئلة وإجابات نموذجية</span></button>
+            <button class="ai-action" data-ai="flashcards"><b>🗂️ Flashcards</b><span>سؤال / إجابة للمراجعة</span></button>
+            <button class="ai-action" data-ai="recall"><b>🔄 Active Recall</b><span>أسئلة واحدة واحدة</span></button>
+            <button class="ai-action" data-ai="mindmap"><b>🧩 Mind Map</b><span>هيكل جاهز للوايت بورد</span></button>
+            <button class="ai-action" data-ai="studyplan"><b>📅 Study Plan</b><span>خطة مذاكرة للدرس</span></button>
+          </div>
+
+          <div id="aiResult" class="ai-result empty">النتيجة هتظهر هنا...</div>
+          <div id="aiStatus">AI غير متصل لحد ما تضيف Endpoint للـ AI.</div>
+
+          <details class="ai-settings">
+            <summary>⚙️ إعدادات AI</summary>
+            <input id="aiEndpoint" placeholder="AI Endpoint — مثال: /api/chat" />
+            <input id="aiModel" placeholder="Model (اختياري) — مثال: gpt-5" />
+            <div style="font-size:9px;color:#8a929d;margin-top:5px;">
+              للأمان: متحطش OpenAI API key في ملف الـ HTML. خلي الـ endpoint على backend يحمي المفتاح.
+            </div>
+          </details>
+        </div>
+        <div class="ai-footer">
+          <button id="boardBtn">📌 حط المذكرة على البورد</button>
+          <button id="copyBtn">نسخ</button>
+          <button id="pdfBtn">📄 تصدير PDF</button>
+        </div>
+      </aside>
+
+      <div id="hint">Space + drag to pan · Wheel to zoom · Delete to remove</div>
+      <div id="zoom">
+        <button class="iconbtn" id="zoomOut">−</button>
+        <span id="zoomValue">100%</span>
+        <button class="iconbtn" id="zoomIn">+</button>
+      </div>
+    </main>
+  </div>
+
+
+  <!-- Mobile-only controls -->
+  <div id="mobileSaveState">Saved ✓</div>
+  <div id="mobilePages" aria-label="Board pages">
+    <button id="mobilePrevPage" title="Previous page">‹</button>
+    <span id="mobilePageLabel">Page 1 / 1</span>
+    <button id="mobileNextPage" title="Next page">›</button>
+    <button id="mobileAddPage" title="Add page">＋</button>
+  </div>
+  <div id="mobileQuick">
+    <button class="mobile-float" id="mobileUndo" title="Undo">↶</button>
+    <button class="mobile-float" id="mobileRedo" title="Redo">↷</button>
+    <button class="mobile-float" id="mobileFocus" title="Focus mode">⛶</button>
+    <button class="mobile-float" id="mobileZoomReset" title="Reset zoom">100%</button>
+  </div>
+  <div id="mobileDock" aria-label="Mobile toolbar">
+    <button class="mobile-dock-btn active" data-mobile-tool="select"><span class="mi">↖</span><span>Select</span></button>
+    <button class="mobile-dock-btn" data-mobile-tool="pen"><span class="mi">✎</span><span>Pen</span></button>
+    <button class="mobile-dock-btn" data-mobile-tool="highlighter"><span class="mi">▰</span><span>Highlight</span></button>
+    <button class="mobile-dock-btn" id="mobileAIButton"><span class="mi">✦</span><span>AI</span></button>
+    <button class="mobile-dock-btn mobile-dock-more" id="mobileMore"><span class="mi">⋯</span><span>More</span></button>
+  </div>
+  <div id="mobileAI" aria-hidden="true">
+    <div class="mobile-ai-sheet">
+      <div class="grab"></div>
+      <h3>✦ AI Study Tutor</h3>
+      <p>افتح لوحة الـAI واستخدمها كمذكرة سحب من أسفل.</p>
+      <div class="ai-mobile-actions">
+        <button id="mobileOpenAI">Open AI Tutor</button>
+        <button id="mobileCloseAI">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <input id="fileInput" type="file" accept="image/*" />
+
+
+  <div id="authModal">
+    <div class="modal-card">
+      <div class="modal-head"><h3>CanvasFlow Account</h3><button class="modal-close" id="authClose">×</button></div>
+      <div class="auth-tabs"><button class="auth-tab active" id="loginTab">Log in</button><button class="auth-tab" id="signupTab">Create account</button></div>
+      <form class="auth-form" id="authForm">
+        <input id="authEmail" type="email" autocomplete="email" placeholder="Email" required>
+        <input id="authPassword" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" minlength="6" required>
+        <button id="authSubmit" type="submit">Log in</button>
+      </form>
+      <div class="auth-divider"><span>OR</span></div>
+      <button id="googleSignInBtn" type="button" aria-label="Continue with Google">
+        <svg class="google-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.23c0-.79-.07-1.55-.23-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42z"/><path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.29v2.53A9.75 9.75 0 0 0 12 21.75z"/><path fill="#FBBC05" d="M6.54 13.83A5.86 5.86 0 0 1 6.23 12c0-.64.11-1.26.31-1.83V7.64H3.29A9.74 9.74 0 0 0 2.25 12c0 1.57.38 3.05 1.04 4.36l3.25-2.53z"/><path fill="#EA4335" d="M12 6.14c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.13 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.71 5.39l3.25 2.53c.77-2.31 2.92-4.03 5.46-4.03z"/></svg>
+        Continue with Google
+      </button>
+      <div id="authMessage"></div>
+    </div>
+  </div>
+
+  <div id="boardsModal">
+    <div class="modal-card">
+      <div class="modal-head"><h3>My saved boards</h3><button class="modal-close" id="boardsClose">×</button></div>
+      <div class="boards-toolbar">
+        <button class="board-action" id="newBoardBtn">＋ New board</button>
+        <button class="board-action" id="saveBoardFromModal">💾 Save current</button>
+      </div>
+      <input class="board-name-input" id="newBoardName" placeholder="Board name (when creating a new board)">
+      <div id="boardsList"></div>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+// 🔥 PASTE YOUR FIREBASE CONFIG HERE
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBvZEGWhTBGt6qS5i74nLwKO5s7n8gSVIQ",
+  authDomain: "canvasflow-study.firebaseapp.com",
+  projectId: "canvasflow-study",
+  storageBucket: "canvasflow-study.firebasestorage.app",
+  messagingSenderId: "722746963581",
+  appId: "1:722746963581:web:f3392e39dd7bb7f9e86314",
+  measurementId: "G-HMV90Q9432"
+};
+// ============================================================
+// END FIREBASE CONFIG
+// ============================================================
+
+const FIREBASE_READY = !Object.values(firebaseConfig).some(v =>
+  !v || String(v).startsWith("YOUR_")
+);
+
+let db = null, storage = null, auth = null;
+let currentUser = null;
+let currentBoardId = null;
+let currentBoardName = "Unsaved board";
+const DEFAULT_BOARD_NAME = "My first board";
+let suppressSave = false;
+let saveTimer = null;
+let saveInProgress = false;
+let saveQueued = false;
+const FIREBASE_APP_READY = FIREBASE_READY;
+
+if (FIREBASE_READY) {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    storage = firebase.storage();
+    auth = firebase.auth();
+  } catch (err) {
+    console.error(err);
+    document.getElementById("firebaseWarning").style.display = "block";
+  }
+} else {
+  document.getElementById("firebaseWarning").style.display = "block";
+}
+
+function boardsCollection() {
+  return currentUser ? db.collection("users").doc(currentUser.uid).collection("boards") : null;
+}
+function boardRef(id=currentBoardId) {
+  return id && boardsCollection() ? boardsCollection().doc(id) : null;
+}
+function updateAccountUI() {
+  const logged = !!currentUser;
+  document.getElementById("authBtn").textContent = logged ? "Log out" : "Log in";
+  document.getElementById("userEmail").textContent = logged ? currentUser.email : "Not signed in";
+  document.getElementById("boardNameDisplay").textContent = logged ? currentBoardName : "Login to save";
+  document.getElementById("tabletUserDot").textContent = logged ? (currentUser.email || "Account").split("@")[0] : "Guest";
+}
+function requireLogin() {
+  if (!currentUser) { openAuthModal(); return false; }
+  return true;
+}
+
+const authModal = document.getElementById("authModal");
+const boardsModal = document.getElementById("boardsModal");
+const authMessage = document.getElementById("authMessage");
+let authMode = "login";
+function openAuthModal(mode="login") { authMode=mode; authModal.classList.add("open"); updateAuthMode(); setTimeout(()=>document.getElementById("authEmail").focus(),50); }
+function closeAuthModal(){ authModal.classList.remove("open"); }
+function updateAuthMode(){
+  document.getElementById("loginTab").classList.toggle("active",authMode==="login");
+  document.getElementById("signupTab").classList.toggle("active",authMode==="signup");
+  document.getElementById("authSubmit").textContent=authMode==="login"?"Log in":"Create account";
+  authMessage.textContent="";
+}
+document.getElementById("authClose").onclick=closeAuthModal;
+document.getElementById("loginTab").onclick=()=>{authMode="login";updateAuthMode();};
+document.getElementById("signupTab").onclick=()=>{authMode="signup";updateAuthMode();};
+document.getElementById("authForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!auth){authMessage.textContent="Firebase is not available.";return;}
+  const email=document.getElementById("authEmail").value.trim();
+  const password=document.getElementById("authPassword").value;
+  authMessage.textContent="Loading...";
+  try {
+    if(authMode==="login") await auth.signInWithEmailAndPassword(email,password);
+    else await auth.createUserWithEmailAndPassword(email,password);
+    closeAuthModal();
+  } catch(err){ console.error(err); authMessage.textContent=err.message.replace("Firebase: ",""); }
+});
+
+document.getElementById("googleSignInBtn").addEventListener("click",async ()=>{
+  if(!auth){authMessage.textContent="Firebase is not available.";return;}
+  const btn=document.getElementById("googleSignInBtn");
+  btn.disabled=true;
+  authMessage.textContent="Opening Google sign-in...";
+  try {
+    const provider=new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:"select_account"});
+    await auth.signInWithPopup(provider);
+    closeAuthModal();
+  } catch(err){
+    console.error(err);
+    let msg=err.message || "Google sign-in failed.";
+    if(err.code==="auth/popup-blocked") msg="Google sign-in popup was blocked by the browser. Allow popups for this site and try again.";
+    else if(err.code==="auth/popup-closed-by-user") msg="Google sign-in was cancelled.";
+    else if(err.code==="auth/unauthorized-domain") msg="This website domain is not authorized in Firebase Authentication.";
+    else if(err.code==="auth/operation-not-allowed") msg="Google sign-in is not enabled in Firebase Authentication.";
+    authMessage.textContent=msg.replace("Firebase: ","");
+  } finally {
+    btn.disabled=false;
+  }
+});
+document.getElementById("authBtn").onclick=()=> currentUser ? auth.signOut() : openAuthModal();
+
+function openBoardsModal(){ if(!requireLogin()) return; boardsModal.classList.add("open"); renderBoards(); }
+document.getElementById("boardsBtn").onclick=openBoardsModal;
+document.getElementById("tabletBoards").onclick=openBoardsModal;
+document.getElementById("boardsClose").onclick=()=>boardsModal.classList.remove("open");
+
+async function renderBoards(){
+  const list=document.getElementById("boardsList");
+  if(!currentUser){list.innerHTML='<div style="font-size:10px;color:#697383;padding:10px">Log in to see your boards.</div>';return;}
+  list.innerHTML='<div style="font-size:10px;color:#697383;padding:10px">Loading boards...</div>';
+  try {
+    const snap=await boardsCollection().orderBy("updatedAt","desc").get();
+    if(snap.empty){ list.innerHTML='<div style="font-size:10px;color:#697383;padding:10px">No saved boards yet.</div>'; return; }
+    list.innerHTML="";
+    snap.forEach(doc=>{
+      const d=doc.data()||{};
+      const item=document.createElement("div"); item.className="board-item"+(doc.id===currentBoardId?" active":"");
+      const left=document.createElement("div");
+      const title=document.createElement("strong"); title.textContent=d.name||"Untitled board";
+      const date=document.createElement("small"); date.textContent=d.updatedAt?.toDate ? d.updatedAt.toDate().toLocaleString() : "Saved board";
+      left.append(title,date);
+      const actions=document.createElement("div"); actions.className="board-item-actions";
+      const rename=document.createElement("button"); rename.className="rename-board"; rename.textContent="✎"; rename.title="Rename board"; rename.setAttribute("aria-label","Rename board");
+      rename.onclick=async ev=>{ ev.stopPropagation(); await renameBoard(doc.id, d.name||"Untitled board"); };
+      const del=document.createElement("button"); del.className="delete-board"; del.textContent="🗑"; del.title="Delete board"; del.setAttribute("aria-label","Delete board");
+      del.onclick=async ev=>{ ev.stopPropagation(); if(confirm(`Delete “${d.name||"Untitled board"}”?`)){ await deleteBoard(doc.id); } };
+      actions.append(rename,del);
+      item.append(left,actions);
+      item.onclick=()=>loadBoardById(doc.id);
+      list.appendChild(item);
+    });
+  } catch(err){ console.error(err); list.innerHTML='<div style="font-size:10px;color:#b33;padding:10px">Could not load boards. Check Firestore rules.</div>'; }
+}
+
+async function createNewBoard(){
+  if(!requireLogin()) return;
+  const name=(document.getElementById("newBoardName").value||"").trim() || `Board ${new Date().toLocaleDateString()}`;
+  canvas.clear(); canvas.requestRenderAll();
+  currentBoardId=null; currentBoardName=name; updateAccountUI();
+  historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons();
+  setSaveState("saved","Unsaved");
+  await saveNow(true,name);
+  document.getElementById("newBoardName").value="";
+  await renderBoards();
+}
+document.getElementById("newBoardBtn").onclick=createNewBoard;
+document.getElementById("saveBoardFromModal").onclick=()=>saveNow(true);
+
+async function renameBoard(id, oldName="Untitled board"){
+  if(!currentUser || !id) return;
+  const nextName = prompt("New board name:", oldName);
+  if(nextName === null) return;
+  const name = nextName.trim();
+  if(!name){ alert("Board name cannot be empty."); return; }
+  if(name === oldName) return;
+  try {
+    await boardsCollection().doc(id).set({name, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    if(id === currentBoardId){
+      currentBoardName = name;
+      updateAccountUI();
+      saveLocalDraft();
+    }
+    await renderBoards();
+  } catch(err){
+    console.error(err);
+    alert("Could not rename board.");
+  }
+}
+
+document.getElementById("saveBoardBtn").onclick=()=>saveNow(true);
+document.getElementById("tabletSave").onclick=()=>saveNow(true);
+
+async function deleteBoard(id){
+  if(!currentUser) return;
+  try {
+    await boardsCollection().doc(id).delete();
+    if(id===currentBoardId){ currentBoardId=null; currentBoardName="Unsaved board"; canvas.clear(); canvas.requestRenderAll(); updateAccountUI(); }
+    await renderBoards();
+  } catch(err){ console.error(err); alert("Could not delete board."); }
+}
+
+async function loadBoardById(id){
+  if(!currentUser) return;
+  const ref=boardRef(id); if(!ref) return;
+  try {
+    const snap=await ref.get();
+    if(!snap.exists) return;
+    const d=snap.data();
+    currentBoardId=id; currentBoardName=d.name||"Untitled board"; updateAccountUI(); localStorage.setItem("canvasflow-last-board-"+currentUser.uid,id);
+    if(d.canvas){
+      suppressSave=true;
+      const data=JSON.parse(d.canvas);
+      canvas.loadFromJSON(data,()=>{
+        canvas.requestRenderAll(); suppressSave=false; historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons(); setSaveState("saved");
+      });
+    } else { canvas.clear(); canvas.requestRenderAll(); setSaveState("saved"); }
+    boardsModal.classList.remove("open");
+  } catch(err){ console.error(err); suppressSave=false; setSaveState("error"); }
+}
+
+
+
+const pcModeBtn = document.getElementById("pcMode");
+const tabletModeBtn = document.getElementById("tabletMode");
+
+function setDeviceMode(mode) {
+  const tablet = mode === "tablet";
+  document.body.classList.toggle("tablet-mode", tablet);
+  pcModeBtn.classList.toggle("active", !tablet);
+  tabletModeBtn.classList.toggle("active", tablet);
+  localStorage.setItem("canvasflow-device-mode", mode);
+  // Keep the exact same canvas dimensions; only redraw after UI changes.
+  resizeCanvas();
+  canvas.requestRenderAll();
+}
+
+pcModeBtn.addEventListener("click", () => setDeviceMode("pc"));
+tabletModeBtn.addEventListener("click", () => setDeviceMode("tablet"));
+
+const canvas = new fabric.Canvas("board", {
+  preserveObjectStacking: true,
+  selection: true,
+  fireRightClick: false,
+  stopContextMenu: true
+});
+
+const workspace = document.getElementById("workspace");
+const wrap = document.getElementById("canvasWrap");
+let tool = "select";
+let panMode = false;
+let lastPan = {x:0, y:0};
+let spaceDown = false;
+let pendingTextPoint = null;
+
+// Undo / redo history. Snapshots contain only the whiteboard objects, not the viewport.
+const HISTORY_LIMIT = 80;
+let undoStack = [];
+let redoStack = [];
+let historyReady = false;
+let restoringHistory = false;
+let historyTimer = null;
+
+function canvasSnapshot() {
+  return JSON.stringify(canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]));
+}
+
+function updateHistoryButtons() {
+  const u = document.getElementById("undoBtn");
+  const r = document.getElementById("redoBtn");
+  if (u) u.disabled = undoStack.length === 0;
+  if (r) r.disabled = redoStack.length === 0;
+  const tu = document.getElementById("tabletUndo");
+  const tr = document.getElementById("tabletRedo");
+  if (tu) tu.disabled = undoStack.length === 0;
+  if (tr) tr.disabled = redoStack.length === 0;
+}
+
+function pushHistorySnapshot() {
+  if (!historyReady || restoringHistory || suppressSave) return;
+  const snap = canvasSnapshot();
+  if (undoStack[undoStack.length - 1] === snap) return;
+  undoStack.push(snap);
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  redoStack = [];
+  updateHistoryButtons();
+}
+
+function scheduleHistorySnapshot() {
+  if (!historyReady || restoringHistory || suppressSave) return;
+  clearTimeout(historyTimer);
+  historyTimer = setTimeout(pushHistorySnapshot, 30);
+}
+
+function restoreHistorySnapshot(snapshot) {
+  if (!snapshot) return;
+  restoringHistory = true;
+  suppressSave = true;
+  canvas.loadFromJSON(JSON.parse(snapshot), () => {
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    suppressSave = false;
+    restoringHistory = false;
+    updateHistoryButtons();
+    scheduleSave(true);
+  });
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  const current = canvasSnapshot();
+  const previous = undoStack.pop();
+  redoStack.push(current);
+  restoreHistorySnapshot(previous);
+  updateHistoryButtons();
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  const current = canvasSnapshot();
+  const next = redoStack.pop();
+  undoStack.push(current);
+  restoreHistorySnapshot(next);
+  updateHistoryButtons();
+}
+
+document.getElementById("undoBtn").addEventListener("click", undo);
+document.getElementById("redoBtn").addEventListener("click", redo);
+const tabletUndo = document.getElementById("tabletUndo");
+const tabletRedo = document.getElementById("tabletRedo");
+if (tabletUndo) tabletUndo.addEventListener("click", undo);
+if (tabletRedo) tabletRedo.addEventListener("click", redo);
+
+function resizeCanvas() {
+  canvas.setWidth(workspace.clientWidth);
+  canvas.setHeight(workspace.clientHeight);
+  canvas.requestRenderAll();
+}
+let resizeFrame = null;
+function requestCanvasResize() {
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(resizeCanvas);
+}
+window.addEventListener("resize", requestCanvasResize, {passive:true});
+window.visualViewport?.addEventListener("resize", requestCanvasResize, {passive:true});
+resizeCanvas();
+
+// Start history from the current blank canvas when no saved board is loaded.
+historyReady = true;
+updateHistoryButtons();
+
+let tabletScrollMode = false;
+let touchPan = null;
+const tabletScrollBtn = document.getElementById("tabletScroll");
+const tabletScrollValue = document.getElementById("tabletScrollValue");
+function hexToRgba(hex, alpha) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0,2),16);
+  const g = parseInt(h.slice(2,4),16);
+  const b = parseInt(h.slice(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function applyBrushSettings() {
+  const baseColor = document.getElementById("color").value;
+  const size = +document.getElementById("size").value;
+  if (tool === "highlighter") {
+    canvas.freeDrawingBrush.color = hexToRgba(baseColor, 0.30);
+    canvas.freeDrawingBrush.width = Math.max(14, size * 3.2);
+  } else {
+    canvas.freeDrawingBrush.color = baseColor;
+    canvas.freeDrawingBrush.width = size;
+  }
+}
+
+function setTabletScrollMode(enabled) {
+  tabletScrollMode = !!enabled;
+  tabletScrollBtn.classList.toggle("active", tabletScrollMode);
+  tabletScrollValue.textContent = tabletScrollMode ? "ON" : "OFF";
+  // Scroll mode temporarily takes over touch dragging. When it is turned OFF,
+  // restore the currently selected drawing tool so stylus/touch drawing works again.
+  canvas.isDrawingMode = !tabletScrollMode && (tool === "pen" || tool === "highlighter");
+  canvas.selection = !tabletScrollMode && (tool === "select" || tool === "eraser");
+  canvas.defaultCursor = tabletScrollMode ? "grab" : (tool === "select" ? "default" : "crosshair");
+  if (!tabletScrollMode && (tool === "pen" || tool === "highlighter")) applyBrushSettings();
+}
+tabletScrollBtn.addEventListener("click", () => setTabletScrollMode(!tabletScrollMode));
+
+function setTool(next) {
+  if (!next || next === "ai") return;
+  tool = next;
+  document.querySelectorAll(".tool").forEach(b => b.classList.toggle("active", b.dataset.tool === next));
+  canvas.isDrawingMode = !tabletScrollMode && (next === "pen" || next === "highlighter");
+  canvas.selection = !tabletScrollMode && (next === "select" || next === "eraser");
+  canvas.defaultCursor = next === "select" ? "default" : "crosshair";
+
+  if (next === "pen" || next === "highlighter") applyBrushSettings();
+}
+document.querySelectorAll(".tool").forEach(b => b.addEventListener("click", () => {
+  const t = b.dataset.tool;
+  if (t === "image") { document.getElementById("fileInput").click(); return; }
+  if (t === "ai") { document.getElementById("aiToggle")?.click(); return; }
+  setTool(t);
+}));
+
+
+const tabletColor = document.getElementById("tabletColor");
+const tabletSize = document.getElementById("tabletSize");
+const tabletSizeValue = document.getElementById("tabletSizeValue");
+
+tabletColor.addEventListener("input", e => {
+  document.getElementById("color").value = e.target.value;
+  document.getElementById("color").dispatchEvent(new Event("input", {bubbles:true}));
+});
+tabletSize.addEventListener("input", e => {
+  document.getElementById("size").value = e.target.value;
+  document.getElementById("size").dispatchEvent(new Event("input", {bubbles:true}));
+  tabletSizeValue.textContent = e.target.value;
+});
+document.getElementById("tabletDelete").addEventListener("click", () => {
+  document.getElementById("clearSelection").click();
+});
+
+
+document.getElementById("color").addEventListener("input", e => {
+  const c = e.target.value;
+  if (tabletColor) tabletColor.value = c;
+  if (tool === "pen" || tool === "highlighter") applyBrushSettings();
+  if (canvas.getActiveObject() && canvas.getActiveObject().type !== "i-text") {
+    canvas.getActiveObject().set({stroke:c});
+    canvas.requestRenderAll();
+    scheduleSave(true);
+  }
+});
+document.getElementById("size").addEventListener("input", e => {
+  document.getElementById("sizeValue").textContent = e.target.value;
+  if (tabletSize) { tabletSize.value = e.target.value; tabletSizeValue.textContent = e.target.value; }
+  if (tool === "pen" || tool === "highlighter") applyBrushSettings();
+});
+
+function pointFromEvent(opt) {
+  return canvas.getScenePoint(opt.e);
+}
+
+function addShape(kind, p) {
+  const color = document.getElementById("color").value;
+  const size = +document.getElementById("size").value;
+  let obj;
+  if (kind === "rect") {
+    obj = new fabric.Rect({left:p.x, top:p.y, width:150, height:90, fill:"rgba(255,255,255,.75)", stroke:color, strokeWidth:size, rx:10, ry:10});
+  } else if (kind === "circle") {
+    obj = new fabric.Circle({left:p.x, top:p.y, radius:55, fill:"rgba(255,255,255,.75)", stroke:color, strokeWidth:size});
+  } else if (kind === "line" || kind === "arrow") {
+    const dx = 160, dy = 80;
+    if (kind === "arrow") {
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+      const line = new fabric.Line([0, 0, dx, dy], {stroke:color, strokeWidth:size, originX:"left", originY:"top"});
+      const head = new fabric.Triangle({left:dx, top:dy, width:16 + size * 1.5, height:16 + size * 1.5, fill:color, angle, originX:"center", originY:"center"});
+      obj = new fabric.Group([line, head], {left:p.x, top:p.y, originX:"left", originY:"top", selectable:true, objectRole:"arrow", arrowHead:true});
+    } else {
+      obj = new fabric.Line([p.x,p.y,p.x+dx,p.y+dy], {stroke:color, strokeWidth:size, selectable:true, objectRole:"line"});
+    }
+  }
+  obj.set({ objectRole: kind });
+  canvas.add(obj);
+  canvas.setActiveObject(obj);
+  canvas.requestRenderAll();
+  scheduleSave(true);
+}
+
+function addMindNode(p) {
+  const color = document.getElementById("color").value;
+  const group = new fabric.Group([
+    new fabric.Rect({left:-85, top:-32, width:170, height:64, rx:12, ry:12, fill:"#ffffff", stroke:color, strokeWidth:2}),
+    new fabric.Textbox("New idea", {left:-70, top:-13, width:140, fontSize:16, fill:"#18202a", textAlign:"center", originX:"left"})
+  ], {left:p.x, top:p.y, originX:"center", originY:"center", objectRole:"mindNode", nodeId:"node_"+Date.now()});
+  canvas.add(group);
+  canvas.setActiveObject(group);
+  canvas.requestRenderAll();
+  scheduleSave(true);
+}
+
+function showTextDialog(p) {
+  pendingTextPoint = p;
+  const d = document.getElementById("textDialog");
+  d.style.display = "block";
+  d.style.left = Math.min(Math.max(12, p.x), workspace.clientWidth-292) + "px";
+  d.style.top = Math.min(Math.max(12, p.y), workspace.clientHeight-150) + "px";
+  const ta = document.getElementById("textValue");
+  ta.value = "";
+  ta.focus();
+}
+document.getElementById("cancelText").onclick = () => document.getElementById("textDialog").style.display="none";
+document.getElementById("addText").onclick = () => {
+  const val = document.getElementById("textValue").value.trim();
+  if (!val || !pendingTextPoint) return document.getElementById("textDialog").style.display="none";
+  const obj = new fabric.IText(val, {
+    left: pendingTextPoint.x, top: pendingTextPoint.y, fill:document.getElementById("color").value,
+    fontSize:22, fontFamily:"Inter, Arial, sans-serif", objectRole:"text"
+  });
+  canvas.add(obj); canvas.setActiveObject(obj); canvas.requestRenderAll();
+  document.getElementById("textDialog").style.display="none";
+  scheduleSave(true);
+};
+
+async function addImageFileToCanvas(file) {
+  const localUrl = URL.createObjectURL(file);
+  await new Promise((resolve) => {
+    fabric.Image.fromURL(localUrl, async img => {
+      img.set({left:canvas.getCenter().left-150, top:canvas.getCenter().top-100, objectRole:"image", fileName:file.name});
+      const maxW=420, maxH=300;
+      const scale=Math.min(maxW/img.width, maxH/img.height, 1);
+      img.scale(scale);
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.requestRenderAll();
+
+      if (FIREBASE_READY && storage) {
+        try {
+          setSaveState("saving");
+          const ref = storage.ref("whiteboard-images/" + Date.now() + "_" + file.name.replace(/[^\w.-]/g,"_"));
+          await ref.put(file);
+          const url = await ref.getDownloadURL();
+          img.set({srcUrl:url});
+          URL.revokeObjectURL(localUrl);
+          scheduleSave(true);
+        } catch (err) {
+          console.error(err);
+          img.set({srcUrl:localUrl});
+          setSaveState("error", "Image kept locally — Firebase Storage failed");
+          scheduleSave(true);
+        }
+      } else {
+        img.set({srcUrl:localUrl});
+        scheduleSave(true);
+      }
+      resolve();
+    }, {crossOrigin:"anonymous"});
+  });
+}
+
+async function addFileAttachment(file) {
+  let url = URL.createObjectURL(file);
+  let persistentUrl = url;
+  if (FIREBASE_READY && storage) {
+    try {
+      setSaveState("saving");
+      const ref = storage.ref("whiteboard-files/" + Date.now() + "_" + file.name.replace(/[^\w.-]/g,"_"));
+      await ref.put(file);
+      persistentUrl = await ref.getDownloadURL();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      setSaveState("error", "File kept locally — Firebase Storage failed");
+    }
+  }
+
+  const label = `${file.name} · ${Math.max(1, Math.round(file.size/1024))} KB`;
+  const text = new fabric.Textbox(`📎 ${label}`, {
+    left:canvas.getCenter().left-110, top:canvas.getCenter().top-35, width:220,
+    fontSize:13, fill:"#18202a", backgroundColor:"#ffffff", padding:10,
+    borderColor:"#dfe4ea", cornerColor:"#5b63ff", cornerSize:7,
+    objectRole:"file", fileName:file.name, fileType:file.type || "application/octet-stream", fileSize:file.size, srcUrl:persistentUrl
+  });
+  text.set({shadow:"0 4px 12px rgba(0,0,0,.08)"});
+  canvas.add(text);
+  canvas.setActiveObject(text);
+  canvas.requestRenderAll();
+  scheduleSave(true);
+}
+
+async function handleDroppedFiles(files) {
+  for (const file of Array.from(files)) {
+    if (file.type && file.type.startsWith("image/")) await addImageFileToCanvas(file);
+    else await addFileAttachment(file);
+  }
+}
+
+document.getElementById("fileInput").addEventListener("change", async e => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = "";
+  await handleDroppedFiles(files);
+});
+
+// Drag files from the desktop/file manager directly onto the whiteboard.
+const dropOverlay = document.getElementById("dropOverlay");
+let dragDepth = 0;
+function hasFiles(e) { return e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files"); }
+wrap.addEventListener("dragenter", e => {
+  if (!hasFiles(e)) return;
+  dragDepth++;
+  dropOverlay.classList.add("active");
+  e.preventDefault();
+});
+wrap.addEventListener("dragover", e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+});
+wrap.addEventListener("dragleave", e => {
+  if (!hasFiles(e)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) dropOverlay.classList.remove("active");
+});
+wrap.addEventListener("drop", async e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth = 0;
+  dropOverlay.classList.remove("active");
+  await handleDroppedFiles(e.dataTransfer.files);
+});
+document.addEventListener("dragover", e => { if (hasFiles(e)) e.preventDefault(); });
+document.addEventListener("drop", e => { if (hasFiles(e) && e.target !== wrap && !wrap.contains(e.target)) e.preventDefault(); });
+
+
+wrap.addEventListener("pointerdown", e => {
+  if (!tabletScrollMode || e.pointerType === "pen") return;
+  touchPan = { id:e.pointerId, x:e.clientX, y:e.clientY, v:canvas.viewportTransform.slice() };
+  wrap.setPointerCapture?.(e.pointerId);
+  e.preventDefault();
+}, {capture:true, passive:false});
+wrap.addEventListener("pointermove", e => {
+  if (!tabletScrollMode || !touchPan || e.pointerId !== touchPan.id) return;
+  const v = canvas.viewportTransform;
+  v[4] = touchPan.v[4] + (e.clientX - touchPan.x);
+  v[5] = touchPan.v[5] + (e.clientY - touchPan.y);
+  canvas.requestRenderAll();
+  e.preventDefault();
+}, {capture:true, passive:false});
+function finishTouchPan(e) { if (touchPan && e.pointerId === touchPan.id) touchPan = null; }
+wrap.addEventListener("pointerup", finishTouchPan, {capture:true});
+wrap.addEventListener("pointercancel", finishTouchPan, {capture:true});
+
+canvas.on("mouse:down", opt => {
+  const e = opt.e;
+  if (tabletScrollMode) return;
+
+  // Space / middle mouse = pan.
+  if (spaceDown || e.button === 1) {
+    panMode = true;
+    lastPan = {x:e.clientX, y:e.clientY};
+    canvas.selection = false;
+    return;
+  }
+
+  if (tool === "eraser") {
+    const target = opt.target;
+    if (target) { canvas.remove(target); canvas.requestRenderAll(); scheduleSave(true); }
+    return;
+  }
+  if (e.altKey || e.button === 1) return;
+
+  if (tool === "rect" || tool === "circle" || tool === "line" || tool === "arrow") {
+    addShape(tool, pointFromEvent(opt));
+    setTool("select");
+  } else if (tool === "text") {
+    showTextDialog(pointFromEvent(opt));
+    setTool("select");
+  } else if (tool === "node") {
+    addMindNode(pointFromEvent(opt));
+    setTool("select");
+  }
+});
+
+canvas.on("path:created", e => {
+  e.path.set({objectRole:"freehand"});
+  scheduleHistorySnapshot();
+  scheduleSave(true);
+});
+
+canvas.on("object:modified", () => {
+  scheduleHistorySnapshot();
+  scheduleSave(true);
+});
+canvas.on("object:added", () => {
+  if (!suppressSave) { scheduleHistorySnapshot(); scheduleSave(false); }
+});
+canvas.on("object:removed", () => {
+  scheduleHistorySnapshot();
+  scheduleSave(true);
+});
+
+document.addEventListener("keydown", e => {
+  const active = document.activeElement;
+  const tag = active?.tagName || "";
+  const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || !!active?.isContentEditable;
+
+  if (e.code === "Space") {
+    if (typing) return;
+    if (!spaceDown) {
+      spaceDown = true;
+      canvas.defaultCursor = "grab";
+      e.preventDefault();
+    }
+    return;
+  }
+
+  if (typing) return;
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+    e.preventDefault();
+    redo();
+    return;
+  }
+
+  if (e.key === "Delete" || e.key === "Backspace") {
+    const activeObjects = canvas.getActiveObjects();
+    if (activeObjects.length) {
+      activeObjects.forEach(o => canvas.remove(o));
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+      scheduleHistorySnapshot();
+      scheduleSave(true);
+    }
+    return;
+  }
+
+  if (e.key.toLowerCase() === "v") setTool("select");
+  if (e.key.toLowerCase() === "p") setTool("pen");
+  if (e.key.toLowerCase() === "e") setTool("eraser");
+  if (e.key.toLowerCase() === "t") setTool("text");
+});
+
+document.addEventListener("keyup", e => {
+  if (e.code === "Space") {
+    spaceDown = false;
+    canvas.defaultCursor = tool === "select" ? "default" : "crosshair";
+  }
+});
+
+function zoomAt(factor) {
+  const z = Math.max(0.2, Math.min(4, canvas.getZoom()*factor));
+  canvas.zoomToPoint(new fabric.Point(canvas.getWidth()/2, canvas.getHeight()/2), z);
+  updateZoom();
+}
+document.getElementById("zoomIn").onclick=()=>zoomAt(1.15);
+document.getElementById("zoomOut").onclick=()=>zoomAt(1/1.15);
+document.getElementById("fit").onclick=()=>{ canvas.setViewportTransform([1,0,0,1,0,0]); updateZoom(); };
+
+canvas.on("mouse:wheel", opt => {
+  if (opt.e.ctrlKey || opt.e.metaKey) {
+    const delta=opt.e.deltaY;
+    let z=canvas.getZoom()*(0.999**delta);
+    z=Math.max(.2,Math.min(4,z));
+    canvas.zoomToPoint(new fabric.Point(opt.e.offsetX,opt.e.offsetY),z);
+    updateZoom();
+    opt.e.preventDefault(); opt.e.stopPropagation();
+  }
+});
+
+function updateZoom(){ document.getElementById("zoomValue").textContent=Math.round(canvas.getZoom()*100)+"%"; }
+
+function setSaveState(type, text) {
+  const el=document.getElementById("saveState");
+  el.className=type;
+  el.textContent=text || (type==="saving" ? "Saving..." : type==="saved" ? "Saved ✓" : type==="error" ? "Save failed" : type);
+  window.dispatchEvent(new CustomEvent("canvasflow:save-state", {detail:{type, text:text || el.textContent}}));
+}
+function scheduleSave(major=false) {
+  if(!suppressSave) saveLocalDraft();
+  if (!FIREBASE_READY || !db || suppressSave || !currentUser) return;
+  if (major) saveNow(true);
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>saveNow(false),30000);
+}
+async function saveNow(force=false, forcedName=null) {
+  if (!FIREBASE_READY || !db || suppressSave) return;
+  if (!currentUser) { if(force) openAuthModal(); return; }
+  if (saveInProgress) { saveQueued=true; return; }
+  saveInProgress=true; setSaveState("saving");
+  try {
+    if(!currentBoardId){
+      let name=(forcedName||currentBoardName||"").trim();
+      if(!name || name==="Unsaved board") name=prompt("Name your board:", "My first board") || "My first board";
+      name=name.trim() || "My first board";
+      const ref=await boardsCollection().add({name, canvas:"", createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      currentBoardId=ref.id; currentBoardName=name; updateAccountUI();
+    }
+    const json=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
+    await boardRef().set({
+      name: currentBoardName,
+      canvas: JSON.stringify(json),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+    setSaveState("saved");
+    if(currentUser && currentBoardId) localStorage.setItem("canvasflow-last-board-"+currentUser.uid,currentBoardId);
+  } catch(err) {
+    console.error(err); setSaveState("error");
+  } finally {
+    saveInProgress=false;
+    if(saveQueued){saveQueued=false; setTimeout(()=>saveNow(false),250);}
+  }
+}
+async function loadBoard() {
+  if (!FIREBASE_READY || !db || !currentUser) return;
+  try {
+    const savedId=localStorage.getItem("canvasflow-last-board-"+currentUser.uid);
+    if(savedId){
+      const snap=await boardsCollection().doc(savedId).get();
+      if(snap.exists){ await loadBoardById(savedId); return; }
+    }
+    const snap=await boardsCollection().orderBy("updatedAt","desc").limit(1).get();
+    if(!snap.empty){ await loadBoardById(snap.docs[0].id); }
+  } catch(err){ console.error(err); setSaveState("error"); }
+}
+
+const ENTRY_STATE_KEY = "canvasflow-app-entered";
+const LOCAL_DRAFT_KEY = "canvasflow-local-draft";
+
+function saveLocalDraft(){
+  try {
+    const payload = {
+      canvas: canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]),
+      boardId: currentBoardId || null,
+      boardName: currentBoardName || "Unsaved board",
+      savedAt: Date.now()
+    };
+    localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(payload));
+  } catch(err) { console.warn("Could not save local draft", err); }
+}
+
+function clearLocalBoard(){
+  suppressSave=true; canvas.clear(); canvas.requestRenderAll(); suppressSave=false;
+  currentBoardId=null; currentBoardName="Unsaved board"; updateAccountUI();
+  historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons(); setSaveState("saved","Not saved");
+}
+
+function restoreLocalDraft(){
+  try {
+    const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+    if(!raw) return false;
+    const draft = JSON.parse(raw);
+    if(!draft || !draft.canvas) return false;
+    suppressSave=true;
+    canvas.loadFromJSON(draft.canvas, () => {
+      currentBoardId = draft.boardId || null;
+      currentBoardName = draft.boardName || "Unsaved board";
+      updateAccountUI();
+      canvas.requestRenderAll();
+      suppressSave=false;
+      historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons();
+      setSaveState("saved", "Restored ✓");
+    });
+    return true;
+  } catch(err) {
+    console.warn("Could not restore local draft", err);
+    suppressSave=false;
+    return false;
+  }
+}
+
+window.addEventListener("beforeunload", saveLocalDraft);
+
+if(auth){
+  auth.onAuthStateChanged(async user=>{
+    currentUser=user||null;
+    updateAccountUI();
+    if(user){
+      const beforeLoad = currentBoardId;
+      await loadBoard();
+      localStorage.setItem("canvasflow-auth-seen","1");
+      // If this account has no cloud board yet, keep the current local draft.
+      if(!currentBoardId && beforeLoad) {
+        restoreLocalDraft();
+      }
+    } else {
+      // On refresh, keep the current board/draft instead of wiping the canvas.
+      if(localStorage.getItem(ENTRY_STATE_KEY)==="1") {
+        if(!canvas.getObjects().length) restoreLocalDraft();
+        else updateAccountUI();
+      } else {
+        clearLocalBoard();
+      }
+    }
+  });
+}
+
+document.getElementById("clearSelection").onclick=()=>{
+  const a=canvas.getActiveObjects();
+  if(a.length){
+    a.forEach(o=>canvas.remove(o));
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    pushHistorySnapshot();
+    scheduleSave(true);
+  }
+};
+
+
+
+// ================= LANDING =================
+const landing = document.getElementById("landing");
+const app = document.getElementById("app");
+const brandHome = document.querySelector("#topbar .brand");
+
+function enterApp(openAI=false){
+  localStorage.setItem(ENTRY_STATE_KEY, "1");
+  landing.style.display = "none";
+  app.classList.add("entered");
+  if(openAI) aiPanel.classList.add("open");
+}
+
+function returnToLanding(){
+  saveLocalDraft();
+  localStorage.removeItem(ENTRY_STATE_KEY);
+  landing.style.display = "flex";
+  app.classList.remove("entered");
+  aiPanel.classList.remove("open");
+}
+
+document.getElementById("chooseAI").addEventListener("click", () => enterApp(true));
+document.getElementById("chooseBoard").addEventListener("click", () => enterApp(false));
+brandHome?.addEventListener("click", returnToLanding);
+
+// Stay inside the app after refresh. The landing page is shown again only when
+// the user intentionally clicks the CanvasFlow brand.
+if(localStorage.getItem(ENTRY_STATE_KEY)==="1") {
+  landing.style.display = "none";
+  app.classList.add("entered");
+}
+
+// ===================== AI STUDY TUTOR =====================
+const aiPanel = document.getElementById("aiPanel");
+const aiToggle = document.getElementById("aiToggle");
+const aiClose = document.getElementById("aiClose");
+const lessonInput = document.getElementById("lessonInput");
+const aiResult = document.getElementById("aiResult");
+const aiStatus = document.getElementById("aiStatus");
+const aiEndpoint = document.getElementById("aiEndpoint");
+const aiModel = document.getElementById("aiModel");
+
+// Manual AI panel resizing: drag the bottom-right corner.
+const savedAiWidth = parseInt(localStorage.getItem("canvasflow_ai_width") || "330", 10);
+const savedAiHeight = parseInt(localStorage.getItem("canvasflow_ai_height") || "590", 10);
+aiPanel.style.width = `${Math.max(280, Math.min(savedAiWidth, window.innerWidth - 110))}px`;
+aiPanel.style.height = `${Math.max(320, Math.min(savedAiHeight, window.innerHeight - 84))}px`;
+let aiResizeTimer;
+const rememberAiSize = () => {
+  clearTimeout(aiResizeTimer);
+  aiResizeTimer = setTimeout(() => {
+    const r = aiPanel.getBoundingClientRect();
+    localStorage.setItem("canvasflow_ai_width", String(Math.round(r.width)));
+    localStorage.setItem("canvasflow_ai_height", String(Math.round(r.height)));
+  }, 120);
+};
+new ResizeObserver(rememberAiSize).observe(aiPanel);
+
+aiEndpoint.value = localStorage.getItem("canvasflow-ai-endpoint") || "/api/study";
+aiModel.value = localStorage.getItem("canvasflow-ai-model") || "";
+
+aiToggle.addEventListener("click", () => {
+  aiPanel.classList.toggle("open");
+});
+aiClose.addEventListener("click", () => { aiPanel.classList.remove("open"); });
+aiEndpoint.addEventListener("change", () => localStorage.setItem("canvasflow-ai-endpoint", aiEndpoint.value.trim()));
+aiModel.addEventListener("change", () => localStorage.setItem("canvasflow-ai-model", aiModel.value.trim()));
+
+const aiPrompts = {
+  summary: `اعمل ملخص مذاكرة شامل للدرس. رتبه بعناوين رئيسية وفرعية ونقاط. لا تحذف الأفكار المهمة. استخدم عربي واضح وبسيط، وحافظ على المصطلحات العلمية/الإنجليزية المهمة.`,
+  explain: `اشرح الدرس كأنك مدرس خصوصي. ابدأ بالفكرة الأساسية ثم اشرح كل جزء ببساطة، مع أمثلة عند الحاجة، ونبهني لأي نقطة ممكن تتلخبط.`,
+  important: `استخرج أهم النقاط التي يجب حفظها وفهمها للامتحان. قسمها إلى: لازم أفهمه، لازم أحفظه، أخطاء شائعة، ومصطلحات مهمة.`,
+  quiz: `اعمل امتحان قوي من الدرس بنفس أسلوب مدرس حقيقي. اجعل فيه اختيار من متعدد، صح/غلط، وأسئلة قصيرة. في النهاية ضع نموذج الإجابة والتفسير المختصر.`,
+  flashcards: `حوّل الدرس إلى Flashcards للمراجعة النشطة. كل بطاقة تكون بصيغة سؤال ثم إجابة قصيرة ودقيقة. ركز على المعلومات المهمة.`,
+  recall: `حوّل الدرس إلى جلسة Active Recall. اسألني سؤالًا واحدًا في كل مرة من السهل للصعب، وانتظر إجابتي قبل السؤال التالي. في البداية لا تعرض الإجابات.`,
+  mindmap: `حوّل الدرس إلى Mind Map نصية هرمية. اكتب المركز ثم الفروع ثم الفروع الفرعية، بحيث أستطيع تحويلها بسهولة إلى Nodes على الـ Whiteboard.`,
+  studyplan: `اعمل خطة مذاكرة عملية لهذا الدرس: تقسيم الجلسات، ماذا أذاكر أولًا، أسئلة Active Recall، مراجعة متباعدة، واختبار نهائي. اجعلها قابلة للتنفيذ.`
+};
+
+function cleanAIText(text) {
+  return String(text || "").replace(/^```(?:text|markdown)?/i,"").replace(/```$/i,"").trim();
+}
+
+function setAIResult(text, status="") {
+  aiResult.classList.remove("empty");
+  aiResult.textContent = cleanAIText(text);
+  aiStatus.textContent = status;
+}
+
+let lessonImageFiles = [];
+document.getElementById("lessonDrop").addEventListener("click", () => document.getElementById("lessonImages").click());
+document.getElementById("lessonImages").addEventListener("change", e => {
+  lessonImageFiles = [...e.target.files];
+  const box = document.getElementById("lessonPreviews");
+  box.innerHTML = "";
+  lessonImageFiles.forEach(file => {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    img.style.cssText = "width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #dfe4ea;flex:none;";
+    box.appendChild(img);
+  });
+  aiStatus.textContent = lessonImageFiles.length + " صورة جاهزة للـ AI ✓";
+});
+
+function fileToDataURL(file) {
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const maxSide=1800;
+        const scale=Math.min(1,maxSide/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
+        const w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale));
+        const h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+        const c=document.createElement("canvas");
+        c.width=w; c.height=h;
+        const ctx=c.getContext("2d",{alpha:false});
+        ctx.fillStyle="#fff";
+        ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img,0,0,w,h);
+        resolve(c.toDataURL("image/jpeg",0.72));
+      };
+      img.onerror=()=>reject(new Error("Could not read one of the lesson images."));
+      img.src=r.result;
+    };
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+
+const MAX_AI_REQUEST_BYTES = 3.7 * 1024 * 1024;
+
+async function runAI(mode) {
+  const lesson = lessonInput.value.trim();
+  if (!lesson && !lessonImageFiles.length) {
+    setAIResult("ارفع صورة أو أكتر من صفحات الدرس الأول 📷", "محتاج صور الدرس.");
+    return;
+  }
+  const endpoint = aiEndpoint.value.trim() || "/api/study";
+  setAIResult("جاري قراءة صفحات الدرس وتجهيز النتيجة...", "Thinking...");
+  try {
+    const images = [];
+    let estimatedBytes = 0;
+    for (const file of lessonImageFiles) {
+      const dataUrl = await fileToDataURL(file);
+      estimatedBytes += Math.ceil(dataUrl.length * 0.75);
+      if (estimatedBytes > MAX_AI_REQUEST_BYTES) {
+        throw new Error("الصور كبيرة على Vercel. قلل عدد الصفحات أو حجم الصور وحاول تاني.");
+      }
+      images.push(dataUrl);
+    }
+    const payload = {
+      mode,
+      lesson,
+      images,
+      model: aiModel.value.trim() || undefined
+    };
+    const res = await fetch(endpoint, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    const text = data.output_text || data.text || data.response || JSON.stringify(data, null, 2);
+    setAIResult(text, "تم ✓");
+  } catch (err) {
+    console.error(err);
+    setAIResult("حصل خطأ في الاتصال بالـ AI.\n\n" + (err.message || "راجع الـ backend."), "AI connection failed.");
+  }
+}
+
+function wrapTextByWidth(ctx, text, maxWidth, direction) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [''];
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const candidate = line ? line + ' ' + word : word;
+    if (ctx.measureText(candidate).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function addStudyTextToBoard(text) {
+  const raw = cleanAIText(text).replace(/\r/g, '');
+  const paragraphs = raw.split('\n');
+
+  // One normal study-sheet instead of many cards.
+  // It is rendered by the browser canvas text engine first, so Arabic shaping/RTL works.
+  const W = 820;
+  const padX = 44;
+  const topPad = 38;
+  const bottomPad = 44;
+  const bodyMaxW = W - padX * 2;
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const titleFont = '700 26px Arial, "Noto Sans Arabic", sans-serif';
+  const headingFont = '700 20px Arial, "Noto Sans Arabic", sans-serif';
+  const bodyFont = '17px Arial, "Noto Sans Arabic", sans-serif';
+  const lineH = 30;
+  const headingH = 34;
+  const paragraphGap = 12;
+
+  // First pass: calculate wrapped lines and their visual type.
+  const rows = [];
+  const measure = document.createElement('canvas').getContext('2d');
+  measure.font = bodyFont;
+  for (const paragraph of paragraphs) {
+    const trimmed = paragraph.trim();
+    if (!trimmed) { rows.push({type:'gap'}); continue; }
+
+    const isHeading = /^#{1,3}\s+/.test(trimmed);
+    const clean = trimmed.replace(/^#{1,3}\s+/, '').replace(/^[-*]\s+/, '• ');
+    measure.font = isHeading ? headingFont : bodyFont;
+    const wrapped = wrapTextByWidth(measure, clean, bodyMaxW, 'rtl');
+    rows.push({type:isHeading ? 'heading' : 'body', lines:wrapped});
+  }
+
+  let H = topPad + 54 + 24;
+  for (const row of rows) {
+    if (row.type === 'gap') H += paragraphGap;
+    else if (row.type === 'heading') H += row.lines.length * headingH + 10;
+    else H += row.lines.length * lineH + 8;
+  }
+  H += bottomPad;
+  H = Math.max(320, Math.min(H, 4200));
+
+  const c = document.createElement('canvas');
+  c.width = W * dpr;
+  c.height = H * dpr;
+  c.style.width = W + 'px';
+  c.style.height = H + 'px';
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.textBaseline = 'top';
+  ctx.direction = 'rtl';
+
+  // Paper background.
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#d8dee7';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, W - 2, H - 2);
+
+  // Header band.
+  ctx.fillStyle = '#f5f6ff';
+  ctx.fillRect(1, 1, W - 2, 78);
+  ctx.fillStyle = '#18202a';
+  ctx.font = titleFont;
+  ctx.textAlign = 'right';
+  ctx.direction = 'rtl';
+  ctx.fillText('✦ CanvasFlow — مذكرة شرح الدرس', W - padX, 25);
+  ctx.strokeStyle = '#e2e5ef';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padX, 79); ctx.lineTo(W-padX, 79); ctx.stroke();
+
+  let y = 104;
+  for (const row of rows) {
+    if (row.type === 'gap') { y += paragraphGap; continue; }
+    const isHeading = row.type === 'heading';
+    ctx.font = isHeading ? headingFont : bodyFont;
+    ctx.fillStyle = isHeading ? '#202735' : '#303844';
+    ctx.textAlign = 'right';
+    ctx.direction = 'rtl';
+    for (const line of row.lines) {
+      ctx.fillText(line, W - padX, y);
+      y += isHeading ? headingH : lineH;
+    }
+    y += isHeading ? 10 : 8;
+  }
+
+  const src = c.toDataURL('image/png');
+  const left = Math.max(90, canvas.getCenter().left - W / 2);
+  const top = Math.max(80, canvas.getCenter().top - Math.min(350, H / 2));
+
+  fabric.Image.fromURL(src, img => {
+    img.set({
+      left,
+      top,
+      objectRole: 'studyNote',
+      selectable: true,
+      evented: true,
+      cornerStyle: 'circle',
+      transparentCorners: false
+    });
+    canvas.add(img);
+    canvas.setActiveObject(img);
+    canvas.requestRenderAll();
+    scheduleSave(true);
+    aiStatus.textContent = 'المذكرة اتحطت على البورد ✓';
+
+    // Show the actual board after inserting the note.
+    aiPanel.classList.remove('open');
+  }, {crossOrigin:'anonymous'});
+}
+
+document.querySelectorAll(".ai-action").forEach(btn => {
+  btn.addEventListener("click", () => runAI(btn.dataset.ai));
+});
+
+document.getElementById("boardBtn").addEventListener("click", () => {
+  const text = aiResult.textContent.trim();
+  if (!text || aiResult.classList.contains("empty")) { aiStatus.textContent = "اعمل نتيجة بالـ AI الأول."; return; }
+  addStudyTextToBoard(text);
+});
+
+document.getElementById("copyBtn").addEventListener("click", async () => {
+  const text = aiResult.textContent.trim();
+  if (!text || aiResult.classList.contains("empty")) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    aiStatus.textContent = "اتنسخ ✓";
+  } catch { aiStatus.textContent = "مش قادر أنسخ تلقائيًا — اعمل Ctrl+C."; }
+});
+
+document.getElementById("pdfBtn").addEventListener("click", () => {
+  const text = aiResult.textContent.trim();
+  if (!text || aiResult.classList.contains("empty")) return;
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({unit:"pt", format:"a4"});
+  const margin = 42, pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
+  const usableW = pageW - margin*2;
+  let y = 48;
+
+  pdf.setFont("helvetica","bold");
+  pdf.setFontSize(18);
+  pdf.text("CanvasFlow - Study Notes", margin, y);
+  y += 28;
+
+  pdf.setFont("helvetica","normal");
+  pdf.setFontSize(10);
+
+  // Browser PDF fonts don't reliably support Arabic shaping.
+  // Export is intentionally readable for Latin/English content; Arabic remains in the source text area.
+  const lines = pdf.splitTextToSize(text, usableW);
+  for (const line of lines) {
+    if (y > pageH - margin) { pdf.addPage(); y = margin; }
+    pdf.text(line, margin, y);
+    y += 14;
+  }
+  pdf.save("CanvasFlow-Study-Notes.pdf");
+  aiStatus.textContent = "PDF اتعمل ✓";
+});
+
+// Put selected whiteboard text into the lesson box with one click from the browser console/UI later.
+// Also provide a small helper for future integrations.
+window.CanvasFlowStudy = {
+  getLesson: () => lessonInput.value,
+  setLesson: (text) => { lessonInput.value = text || ""; },
+  getCanvasJSON: () => canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"])
+};
+
+setTool("select");
+updateZoom();
+
+// ================= MOBILE UX =================
+(function initMobileUX(){
+  const isMobile = () => window.matchMedia('(max-width:760px)').matches;
+  const mobileAI = document.getElementById('mobileAI');
+  const mobileAIButton = document.getElementById('mobileAIButton');
+  const mobileOpenAI = document.getElementById('mobileOpenAI');
+  const mobileCloseAI = document.getElementById('mobileCloseAI');
+  const mobileSaveState = document.getElementById('mobileSaveState');
+  const mobileUndo = document.getElementById('mobileUndo');
+  const mobileRedo = document.getElementById('mobileRedo');
+  const mobileFocus = document.getElementById('mobileFocus');
+  const mobileZoomReset = document.getElementById('mobileZoomReset');
+  const mobileMore = document.getElementById('mobileMore');
+
+  function mobileSetState(type, text){
+    if(!mobileSaveState) return;
+    mobileSaveState.className=type||'';
+    mobileSaveState.textContent=text || (type==='saving'?'Saving...':type==='error'?'Save failed':'Saved ✓');
+  }
+  window.addEventListener('canvasflow:save-state', e=>mobileSetState(e.detail?.type,e.detail?.text));
+
+  document.querySelectorAll('[data-mobile-tool]').forEach(btn=>btn.addEventListener('click',()=>{
+    if(!isMobile()) return;
+    const t=btn.dataset.mobileTool;
+    if(typeof setTool==='function') setTool(t);
+    document.querySelectorAll('[data-mobile-tool]').forEach(x=>x.classList.toggle('active',x===btn));
+  }));
+  mobileUndo?.addEventListener('click',()=>typeof undo==='function'&&undo());
+  mobileRedo?.addEventListener('click',()=>typeof redo==='function'&&redo());
+  mobileZoomReset?.addEventListener('click',()=>{ if(typeof canvas!=='undefined'){ canvas.setViewportTransform([1,0,0,1,0,0]); if(typeof updateZoom==='function')updateZoom(); }});
+  mobileFocus?.addEventListener('click',()=>document.body.classList.toggle('mobile-focus'));
+  mobileMore?.addEventListener('click',()=>{
+    if(typeof openBoardsModal==='function') openBoardsModal();
+    else document.getElementById('boardsModal')?.classList.add('open');
+  });
+  function openMobileAI(){ mobileAI?.classList.add('open'); mobileAI?.setAttribute('aria-hidden','false'); }
+  function closeMobileAI(){ mobileAI?.classList.remove('open'); mobileAI?.setAttribute('aria-hidden','true'); }
+  mobileAIButton?.addEventListener('click',openMobileAI);
+  mobileCloseAI?.addEventListener('click',closeMobileAI);
+  mobileOpenAI?.addEventListener('click',()=>{ closeMobileAI(); document.getElementById('aiPanel')?.classList.add('open'); });
+  mobileAI?.addEventListener('click',e=>{ if(e.target===mobileAI) closeMobileAI(); });
+
+  const boardsModalEl=document.getElementById('boardsModal');
+  const authModalEl=document.getElementById('authModal');
+  function sheetClass(){
+    const m=isMobile();
+    boardsModalEl?.classList.toggle('mobile-sheet',m);
+    authModalEl?.classList.toggle('mobile-sheet',m);
+  }
+  sheetClass(); window.addEventListener('resize',sheetClass,{passive:true});
+
+  // Simple two-finger pinch + pan on mobile. Pen remains dedicated to drawing.
+  const target=document.getElementById('canvasWrap');
+  const pointers=new Map();
+  let pinch=null;
+  function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+  function mid(a,b){ return {x:(a.x+b.x)/2,y:(a.y+b.y)/2}; }
+  target?.addEventListener('pointerdown',e=>{
+    if(!isMobile() || e.pointerType==='pen' || typeof canvas==='undefined') return;
+    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pointers.size===2){
+      const pts=[...pointers.values()], m=mid(pts[0],pts[1]);
+      pinch={distance:dist(pts[0],pts[1]), zoom:canvas.getZoom(), center:m, vt:canvas.viewportTransform.slice()};
+      e.preventDefault();
+    }
+  },{passive:false,capture:true});
+  target?.addEventListener('pointermove',e=>{
+    if(!isMobile() || !pointers.has(e.pointerId) || typeof canvas==='undefined') return;
+    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pointers.size===2 && pinch){
+      const pts=[...pointers.values()], d=Math.max(1,dist(pts[0],pts[1])), m=mid(pts[0],pts[1]);
+      const z=Math.max(.2,Math.min(4,pinch.zoom*(d/pinch.distance)));
+      const factor=z/pinch.zoom;
+      const v=pinch.vt.slice();
+      v[4]=m.x-(pinch.center.x-v[4])*factor;
+      v[5]=m.y-(pinch.center.y-v[5])*factor;
+      canvas.setViewportTransform(v); canvas.setZoom(z); canvas.requestRenderAll();
+      if(typeof updateZoom==='function')updateZoom();
+      e.preventDefault();
+    }
+  },{passive:false,capture:true});
+  function endPointer(e){ pointers.delete(e.pointerId); if(pointers.size<2) pinch=null; }
+  target?.addEventListener('pointerup',endPointer,{capture:true});
+  target?.addEventListener('pointercancel',endPointer,{capture:true});
+
+  // Double-tap resets zoom.
+  let lastTap=0;
+  target?.addEventListener('pointerup',e=>{
+    if(!isMobile() || e.pointerType==='pen' || typeof canvas==='undefined') return;
+    const now=Date.now();
+    if(now-lastTap<280){ canvas.setViewportTransform([1,0,0,1,0,0]); if(typeof updateZoom==='function')updateZoom(); }
+    lastTap=now;
+  },{passive:true});
+
+  // Page UI: a safe lightweight page count/state. Actual multi-page persistence can be added without changing canvas data.
+  let pageCount=1, pageIndex=1;
+  const label=document.getElementById('mobilePageLabel');
+  function renderPage(){ if(label) label.textContent=`Page ${pageIndex} / ${pageCount}`; }
+  document.getElementById('mobileAddPage')?.addEventListener('click',()=>{ pageCount++; pageIndex=pageCount; renderPage(); });
+  document.getElementById('mobileNextPage')?.addEventListener('click',()=>{ pageIndex=Math.min(pageCount,pageIndex+1); renderPage(); });
+  document.getElementById('mobilePrevPage')?.addEventListener('click',()=>{ pageIndex=Math.max(1,pageIndex-1); renderPage(); });
+  renderPage();
+})();
+
+</script>
+</body>
+</html>
