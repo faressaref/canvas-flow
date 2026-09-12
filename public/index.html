@@ -131,6 +131,15 @@
       border-radius:11px; box-shadow:0 5px 18px rgba(0,0,0,.08);
       scrollbar-width:thin;
     }
+    .tablet-rail-brand { display:none; }
+    body.tablet-mode .tablet-rail-brand {
+      display:block; width:48px; flex:0 0 28px; line-height:28px;
+      font-size:11px; font-weight:800; letter-spacing:-.04em;
+      text-align:center; white-space:nowrap; overflow:hidden;
+      border-bottom:1px solid #e1e5eb; margin-bottom:2px;
+    }
+    body.tablet-mode .tablet-rail-brand span { color:#5b63ff; }
+
     body.tablet-mode #topbar button.tool {
       width:48px; height:42px; min-width:48px; flex:0 0 42px;
       border-radius:8px; font-size:19px;
@@ -445,6 +454,7 @@
       </div>
 
       <div class="toolgroup" aria-label="Tools">
+        <div class="tablet-rail-brand">Canvas<span>Flow</span></div>
         <button class="tool active" data-tool="select" title="Select / move (V)">↖</button>
         <button class="tool" data-tool="pen" title="Pen (P)">✎</button>
         <button class="tool" data-tool="highlighter" title="Highlighter">▰</button>
@@ -910,12 +920,13 @@ let spaceDown = false;
 let pendingTextPoint = null;
 
 // Undo / redo history. Snapshots contain only the whiteboard objects, not the viewport.
-const HISTORY_LIMIT = 80;
+const HISTORY_LIMIT = Infinity;
 let undoStack = [];
 let redoStack = [];
 let historyReady = false;
 let restoringHistory = false;
 let historyTimer = null;
+let lastHistorySnapshot = null;
 
 function canvasSnapshot() {
   return JSON.stringify(canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]));
@@ -934,10 +945,15 @@ function updateHistoryButtons() {
 
 function pushHistorySnapshot() {
   if (!historyReady || restoringHistory || suppressSave) return;
-  const snap = canvasSnapshot();
-  if (undoStack[undoStack.length - 1] === snap) return;
-  undoStack.push(snap);
-  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  const current = canvasSnapshot();
+  if (lastHistorySnapshot === null) {
+    lastHistorySnapshot = current;
+    updateHistoryButtons();
+    return;
+  }
+  if (lastHistorySnapshot === current) return;
+  undoStack.push(lastHistorySnapshot);
+  lastHistorySnapshot = current;
   redoStack = [];
   updateHistoryButtons();
 }
@@ -955,6 +971,7 @@ function restoreHistorySnapshot(snapshot) {
   canvas.loadFromJSON(JSON.parse(snapshot), () => {
     canvas.discardActiveObject();
     canvas.requestRenderAll();
+    lastHistorySnapshot = snapshot;
     suppressSave = false;
     restoringHistory = false;
     updateHistoryButtons();
@@ -1003,6 +1020,7 @@ resizeCanvas();
 
 // Start history from the current blank canvas when no saved board is loaded.
 historyReady = true;
+lastHistorySnapshot = canvasSnapshot();
 updateHistoryButtons();
 
 let tabletScrollMode = false;
