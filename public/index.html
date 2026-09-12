@@ -265,6 +265,8 @@
     .ai-actions { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:7px; }
     .ai-action { border:1px solid #dfe4ea; background:#fff; border-radius:8px; padding:7px 6px; cursor:pointer; text-align:left; font-size:10px; color:#303844; transition:.15s; }
     .ai-action:hover { background:#f5f6ff; border-color:#cdd0ff; }
+    .ai-action.selected { background:#5b63ff; border-color:#5b63ff; color:#fff; box-shadow:0 0 0 2px rgba(91,99,255,.14); }
+    .ai-action.selected span { color:rgba(255,255,255,.82); }
     .ai-action b { display:block; font-size:10px; margin-bottom:1px; }
     .ai-action span { color:#7a8490; font-size:8px; }
     .ai-result { margin-top:8px; border:1px solid #e0e4ea; border-radius:10px; padding:9px; background:#fafbfc; min-height:70px; font-size:10px; line-height:1.65; white-space:pre-wrap; overflow:auto; max-height:42%; }
@@ -2072,9 +2074,43 @@ function addStudyTextToBoard(text) {
   }, {crossOrigin:'anonymous'});
 }
 
-document.querySelectorAll(".ai-action").forEach(btn => {
-  btn.addEventListener("click", () => runAI(btn.dataset.ai));
+// AI mode buttons: make selection reliable on both mouse and touch.
+const aiActionLabels = {
+  summary:"ملخص كامل", explain:"اشرحلي", important:"المهم", quiz:"امتحان",
+  flashcards:"Flashcards", recall:"Active Recall", mindmap:"Mind Map", studyplan:"Study Plan"
+};
+let selectedAIMode = null;
+function selectAIMode(btn){
+  if(!btn) return;
+  selectedAIMode = btn.dataset.ai || null;
+  document.querySelectorAll(".ai-action").forEach(x => {
+    const active = x === btn;
+    x.classList.toggle("selected", active);
+    x.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  if(selectedAIMode){
+    aiStatus.textContent = `اختارت: ${aiActionLabels[selectedAIMode] || selectedAIMode} ✓`;
+  }
+}
+
+// Event delegation prevents mobile touch/canvas layers from swallowing individual buttons.
+aiPanel.addEventListener("click", e => {
+  const btn = e.target.closest?.(".ai-action");
+  if(!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  selectAIMode(btn);
+  runAI(btn.dataset.ai);
 });
+
+// Also select immediately on touch/pointer down so the choice is visible even if the keyboard/browser
+// changes focus during the request.
+aiPanel.addEventListener("pointerdown", e => {
+  const btn = e.target.closest?.(".ai-action");
+  if(!btn) return;
+  e.stopPropagation();
+  selectAIMode(btn);
+}, {passive:false});
 
 document.getElementById("boardBtn").addEventListener("click", () => {
   const text = aiResult.textContent.trim();
