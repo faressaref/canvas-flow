@@ -385,6 +385,8 @@
         border:1px solid #d8dbff; font-weight:900;
       }
       body:not(.tablet-mode) #topbar button[data-tool="ai"].active { background:#5b63ff; color:#fff; }
+      body:not(.tablet-mode) #mobileScrollToggle { background:#f3f5f8; color:#39424e; border:1px solid #dfe4ea; }
+      body:not(.tablet-mode) #mobileScrollToggle.active { background:#18202a; color:#fff; border-color:#18202a; }
 
       /* Remove the duplicate bottom mobile dock; the full tool rail is the phone menu. */
       body:not(.tablet-mode) #mobileDock { display:none !important; }
@@ -614,6 +616,7 @@
         <div class="tablet-rail-brand">Canvas<span>Flow</span></div>
         <button class="tool active" data-tool="select" title="Select / move (V)">↖</button>
         <button class="tool" id="aiToggle" data-tool="ai" title="AI Study Tutor">✦</button>
+        <button class="tool mobile-scroll-tool" id="mobileScrollToggle" type="button" title="Scroll / move board">↕</button>
         <button class="tool" data-tool="pen" title="Pen (P)">✎</button>
         <button class="tool" data-tool="highlighter" title="Highlighter">▰</button>
         <button class="tool" data-tool="eraser" title="Eraser (E)">⌫</button>
@@ -1226,6 +1229,11 @@ function setTabletScrollMode(enabled) {
   tabletScrollMode = !!enabled;
   tabletScrollBtn.classList.toggle("active", tabletScrollMode);
   tabletScrollValue.textContent = tabletScrollMode ? "ON" : "OFF";
+  const mobileScrollToggleEl = document.getElementById("mobileScrollToggle");
+  if (mobileScrollToggleEl) {
+    mobileScrollToggleEl.classList.toggle("active", tabletScrollMode);
+    mobileScrollToggleEl.title = tabletScrollMode ? "Drawing mode" : "Scroll / move board";
+  }
   // Scroll mode temporarily takes over touch dragging. When it is turned OFF,
   // restore the currently selected drawing tool so stylus/touch drawing works again.
   canvas.isDrawingMode = !tabletScrollMode && (tool === "pen" || tool === "highlighter");
@@ -2108,13 +2116,14 @@ updateZoom();
   const mobileZoomReset = document.getElementById('mobileZoomReset');
   const mobileMore = document.getElementById('mobileMore');
   const mobileFullscreen = document.getElementById('mobileFullscreen');
+  const mobileScrollToggle = document.getElementById('mobileScrollToggle');
   const mobileBrandHome = document.getElementById('mobileBrandHome');
 
   function syncFullscreenButton(){
     if(!mobileFullscreen) return;
     const active = !!document.fullscreenElement;
     mobileFullscreen.classList.toggle('active', active);
-    mobileFullscreen.textContent = active ? '⛶' : '⛶';
+    mobileFullscreen.textContent = active ? '✕' : '⛶';
     mobileFullscreen.title = active ? 'Exit full screen' : 'Full screen';
     mobileFullscreen.setAttribute('aria-label', active ? 'Exit full screen' : 'Full screen');
   }
@@ -2127,6 +2136,13 @@ updateZoom();
     syncFullscreenButton();
   });
   document.addEventListener('fullscreenchange', syncFullscreenButton);
+  mobileScrollToggle?.addEventListener('click', ()=>{
+    if(!isMobile()) return;
+    setTabletScrollMode(!tabletScrollMode);
+    mobileScrollToggle.classList.toggle('active', tabletScrollMode);
+    mobileScrollToggle.title = tabletScrollMode ? 'Drawing mode' : 'Scroll / move board';
+    mobileScrollToggle.setAttribute('aria-label', tabletScrollMode ? 'Drawing mode' : 'Scroll / move board');
+  });
   mobileBrandHome?.addEventListener('click', ()=>{ if(typeof returnToLanding==='function') returnToLanding(); });
   syncFullscreenButton();
 
