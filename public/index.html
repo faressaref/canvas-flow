@@ -424,6 +424,8 @@
 
     /* FINAL PHONE OVERRIDES — phone is automatic in both portrait and landscape. */
     @media (max-width:760px) {
+      /* Phones never expose the PC/Tablet layout switch, including landscape. */
+      #topbar > .device-switch { display:none !important; visibility:hidden !important; pointer-events:none !important; }
       body #topbar > .device-switch { display:none !important; }
       body #topbar .toolgroup { display:flex !important; visibility:visible !important; opacity:1 !important; }
       body #topbar .toolgroup .tool { display:inline-flex !important; visibility:visible !important; }
@@ -1227,19 +1229,27 @@ function applyBrushSettings() {
 
 function setTabletScrollMode(enabled) {
   tabletScrollMode = !!enabled;
-  tabletScrollBtn.classList.toggle("active", tabletScrollMode);
-  tabletScrollValue.textContent = tabletScrollMode ? "ON" : "OFF";
+  if (tabletScrollBtn) {
+    tabletScrollBtn.classList.toggle("active", tabletScrollMode);
+    if (tabletScrollValue) tabletScrollValue.textContent = tabletScrollMode ? "ON" : "OFF";
+  }
   const mobileScrollToggleEl = document.getElementById("mobileScrollToggle");
   if (mobileScrollToggleEl) {
     mobileScrollToggleEl.classList.toggle("active", tabletScrollMode);
+    mobileScrollToggleEl.textContent = tabletScrollMode ? "✋" : "↕";
     mobileScrollToggleEl.title = tabletScrollMode ? "Drawing mode" : "Scroll / move board";
+    mobileScrollToggleEl.setAttribute("aria-label", tabletScrollMode ? "Drawing mode" : "Scroll / move board");
   }
-  // Scroll mode temporarily takes over touch dragging. When it is turned OFF,
-  // restore the currently selected drawing tool so stylus/touch drawing works again.
   canvas.isDrawingMode = !tabletScrollMode && (tool === "pen" || tool === "highlighter");
   canvas.selection = !tabletScrollMode && (tool === "select" || tool === "eraser");
+  canvas.skipTargetFind = tabletScrollMode;
   canvas.defaultCursor = tabletScrollMode ? "grab" : (tool === "select" ? "default" : "crosshair");
+  const upper = canvas.upperCanvasEl;
+  if (upper) upper.style.touchAction = tabletScrollMode ? "none" : "none";
+  const wrapEl = document.getElementById("canvasWrap");
+  if (wrapEl) wrapEl.style.touchAction = tabletScrollMode ? "none" : "none";
   if (!tabletScrollMode && (tool === "pen" || tool === "highlighter")) applyBrushSettings();
+  canvas.requestRenderAll();
 }
 tabletScrollBtn.addEventListener("click", () => setTabletScrollMode(!tabletScrollMode));
 
@@ -1472,6 +1482,7 @@ document.addEventListener("drop", e => { if (hasFiles(e) && e.target !== wrap &&
 
 wrap.addEventListener("pointerdown", e => {
   if (!tabletScrollMode || e.pointerType === "pen") return;
+  if (window.matchMedia("(max-width:760px)").matches) { e.stopPropagation(); }
   touchPan = { id:e.pointerId, x:e.clientX, y:e.clientY, v:canvas.viewportTransform.slice() };
   wrap.setPointerCapture?.(e.pointerId);
   e.preventDefault();
@@ -2155,6 +2166,23 @@ updateZoom();
 
   // Keep the phone canvas perfectly sized after browser chrome/orientation changes.
   let mobileResizeFrame = null;
+  function enforcePhoneLayout(){
+    const phone = isMobile();
+    if (phone) {
+      document.body.classList.remove("tablet-mode");
+      document.getElementById("tabletMode")?.classList.remove("active");
+      document.getElementById("pcMode")?.classList.remove("active");
+      document.getElementById("tabletMode")?.setAttribute("aria-hidden","true");
+      document.getElementById("pcMode")?.setAttribute("aria-hidden","true");
+    } else {
+      const savedMode = localStorage.getItem("canvasflow-device-mode") || "pc";
+      document.body.classList.toggle("tablet-mode", savedMode === "tablet");
+    }
+  }
+  enforcePhoneLayout();
+  window.addEventListener('resize', enforcePhoneLayout, {passive:true});
+  window.addEventListener('orientationchange', enforcePhoneLayout, {passive:true});
+
   function resizePhoneCanvas(){
     if(!isMobile() || typeof canvas==='undefined' || typeof resizeCanvas!=='function') return;
     cancelAnimationFrame(mobileResizeFrame);
