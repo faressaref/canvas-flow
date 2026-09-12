@@ -1,6 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
-
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+const DEFAULT_MODEL = "gemini-3.8-flash";
+const configuredModel = String(process.env.GEMINI_MODEL || "").trim();
+const MODEL = (/^(AQ\.|AIza)/i.test(configuredModel) || !/^gemini-[a-z0-9.-]+$/i.test(configuredModel))
+  ? DEFAULT_MODEL
+  : configuredModel;
 const MAX_IMAGES = Number(process.env.MAX_IMAGES || 12);
 const MAX_IMAGE_MB = Number(process.env.MAX_IMAGE_MB || 3);
 
@@ -106,25 +108,54 @@ export default async function handler(req, res) {
       });
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: MODEL,
+    const requestBody = {
+      systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: [{ role: "user", parts: contents }],
-      config: {
-        systemInstruction,
-        temperature: 0.35
-      }
+      generationConfig: { temperature: 0.35 }
+    };
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`;
+    let googleResponse = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": process.env.GEMINI_API_KEY
+      },
+      body: JSON.stringify(requestBody)
     });
+
+    // Some newly issued Google auth/AQ keys can behave differently depending on
+    // how the key is transported. Retry once using the documented ?key= form.
+    if (googleResponse.status === 401) {
+      googleResponse = await fetch(`${apiUrl}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
+    }
+
+    const googleData = await googleResponse.json().catch(() => ({}));
+    if (!googleResponse.ok) {
+      const message = googleData?.error?.message || `Gemini API request failed (${googleResponse.status}).`;
+      const err = new Error(message);
+      err.status = googleResponse.status;
+      throw err;
+    }
+
+    const outputText = googleData?.candidates?.[0]?.content?.parts
+      ?.map(part => part?.text || "")
+      .join("\n")
+      .trim() || "The AI returned no text.";
 
     return res.status(200).json({
       ok: true,
       mode,
       model: MODEL,
-      output_text: response.text || "The AI returned no text."
+      output_text: outputText
     });
   } catch (error) {
     console.error(error);
-    const status = /quota|rate|resource exhausted/i.test(error?.message || "") ? 429 : 500;
+    const status = Number.isInteger(error?.status) ? error.status : (/quota|rate|resource exhausted/i.test(error?.message || "") ? 429 : 500);
     return res.status(status).json({
       error: error?.message || "AI request failed."
     });
