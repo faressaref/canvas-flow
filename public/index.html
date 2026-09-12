@@ -236,7 +236,7 @@
     .ai-size-note { font-size:8px; color:#8a929d; margin-top:5px; text-align:center; }
     .ai-body { padding:10px; overflow:auto; flex:1; min-height:0; }
     .ai-label { font-size:10px; font-weight:800; color:#606b78; margin:0 0 5px; display:block; }
-    #lessonInput { width:100%; min-height:145px; resize:vertical; border:1px solid #dfe4ea; border-radius:10px; padding:11px; font:13px/1.55 inherit; outline:none; background:#fbfcfd; }
+    #lessonInput { width:100%; min-height:145px; resize:vertical; border:1px solid #dfe4ea; border-radius:10px; padding:11px; font:13px/1.55 inherit; outline:none; background:#fbfcfd; display:block !important; visibility:visible !important; opacity:1 !important; box-sizing:border-box; color:#18202a; }
     #lessonInput:focus { border-color:#8d93ff; box-shadow:0 0 0 3px rgba(91,99,255,.10); }
     .ai-actions { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:7px; }
     .ai-action { border:1px solid #dfe4ea; background:#fff; border-radius:8px; padding:7px 6px; cursor:pointer; text-align:left; font-size:10px; color:#303844; transition:.15s; }
@@ -370,7 +370,16 @@
       body.tablet-mode #tabletControls { bottom:78px; max-height:calc(100dvh - 155px); }
       body.tablet-mode #zoom { bottom:78px; right:8px; }
       body.tablet-mode #hint { display:none; }
-      #aiPanel { display:none !important; }
+      #aiPanel {
+        display:none !important;
+        position:fixed; left:8px; right:8px; bottom:8px; top:auto; width:auto !important; height:min(78dvh,680px) !important; max-width:none !important; max-height:78dvh !important; min-width:0; min-height:0; border-radius:18px; z-index:130; resize:none;
+      }
+      #aiPanel.open { display:flex !important; }
+      #aiPanel .ai-body { overflow:auto; -webkit-overflow-scrolling:touch; padding-bottom:12px; }
+      #aiPanel .ai-head { flex:0 0 auto; }
+      #aiPanel .ai-footer { flex:0 0 auto; }
+      #aiPanel #lessonInput { min-height:120px; max-height:220px; resize:vertical; font-size:14px; }
+      #aiPanel .ai-actions { grid-template-columns:1fr 1fr; }
     }
 
     @media (max-width:760px) {
@@ -541,7 +550,9 @@
             <input id="lessonImages" type="file" accept="image/*" multiple style="display:none;">
           </div>
           <div id="lessonPreviews" style="display:flex;gap:7px;overflow:auto;margin-top:8px;"></div>
-          <textarea id="lessonInput" style="display:none;" aria-hidden="true"></textarea>
+          <textarea id="lessonInput" placeholder="اكتب أو الصق محتوى الدرس هنا...
+
+أو ارفع صور صفحات الدرس من فوق." aria-label="Lesson text"></textarea>
 
           <div class="ai-actions">
             <button class="ai-action" data-ai="summary"><b>📚 ملخص كامل</b><span>مرتب بعناوين ونقاط</span></button>
@@ -1644,30 +1655,11 @@ document.getElementById("lessonImages").addEventListener("change", e => {
 function fileToDataURL(file) {
   return new Promise((resolve,reject)=>{
     const r=new FileReader();
-    r.onload=()=>{
-      const img=new Image();
-      img.onload=()=>{
-        const maxSide=1800;
-        const scale=Math.min(1,maxSide/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
-        const w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale));
-        const h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
-        const c=document.createElement("canvas");
-        c.width=w; c.height=h;
-        const ctx=c.getContext("2d",{alpha:false});
-        ctx.fillStyle="#fff";
-        ctx.fillRect(0,0,w,h);
-        ctx.drawImage(img,0,0,w,h);
-        resolve(c.toDataURL("image/jpeg",0.72));
-      };
-      img.onerror=()=>reject(new Error("Could not read one of the lesson images."));
-      img.src=r.result;
-    };
+    r.onload=()=>resolve(r.result);
     r.onerror=reject;
     r.readAsDataURL(file);
   });
 }
-
-const MAX_AI_REQUEST_BYTES = 3.7 * 1024 * 1024;
 
 async function runAI(mode) {
   const lesson = lessonInput.value.trim();
@@ -1679,15 +1671,7 @@ async function runAI(mode) {
   setAIResult("جاري قراءة صفحات الدرس وتجهيز النتيجة...", "Thinking...");
   try {
     const images = [];
-    let estimatedBytes = 0;
-    for (const file of lessonImageFiles) {
-      const dataUrl = await fileToDataURL(file);
-      estimatedBytes += Math.ceil(dataUrl.length * 0.75);
-      if (estimatedBytes > MAX_AI_REQUEST_BYTES) {
-        throw new Error("الصور كبيرة على Vercel. قلل عدد الصفحات أو حجم الصور وحاول تاني.");
-      }
-      images.push(dataUrl);
-    }
+    for (const file of lessonImageFiles) images.push(await fileToDataURL(file));
     const payload = {
       mode,
       lesson,
@@ -1931,8 +1915,20 @@ updateZoom();
   mobileZoomReset?.addEventListener('click',()=>{ if(typeof canvas!=='undefined'){ canvas.setViewportTransform([1,0,0,1,0,0]); if(typeof updateZoom==='function')updateZoom(); }});
   mobileFocus?.addEventListener('click',()=>document.body.classList.toggle('mobile-focus'));
   mobileMore?.addEventListener('click',()=>{
-    if(typeof openBoardsModal==='function') openBoardsModal();
-    else document.getElementById('boardsModal')?.classList.add('open');
+    const tools=['eraser','rect','circle','line','arrow','text','node','image'];
+    const labels={eraser:'⌫ Eraser',rect:'▱ Rectangle',circle:'○ Circle',line:'╱ Line',arrow:'➜ Arrow',text:'T Text',node:'◇ Node',image:'▧ Image'};
+    let menu=document.getElementById('mobileToolsMenu');
+    if(!menu){
+      menu=document.createElement('div'); menu.id='mobileToolsMenu';
+      menu.style.cssText='position:fixed;left:8px;right:8px;bottom:76px;z-index:125;background:#fff;border:1px solid #dfe4ea;border-radius:15px;padding:8px;box-shadow:0 12px 35px rgba(0,0,0,.16);display:grid;grid-template-columns:repeat(4,1fr);gap:6px;';
+      tools.forEach(t=>{
+        const b=document.createElement('button'); b.type='button'; b.textContent=labels[t];
+        b.style.cssText='border:1px solid #dfe4ea;background:#fff;border-radius:9px;padding:9px 4px;font-size:10px;cursor:pointer;';
+        b.addEventListener('click',()=>{ if(t==='image'){ document.getElementById('fileInput')?.click(); setTool('select'); } else setTool(t); menu.remove(); });
+        menu.appendChild(b);
+      });
+      document.body.appendChild(menu);
+    } else menu.remove();
   });
   function openMobileAI(){ mobileAI?.classList.add('open'); mobileAI?.setAttribute('aria-hidden','false'); }
   function closeMobileAI(){ mobileAI?.classList.remove('open'); mobileAI?.setAttribute('aria-hidden','true'); }
