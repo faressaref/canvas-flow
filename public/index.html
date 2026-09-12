@@ -8,6 +8,7 @@
   <!-- Fabric.js + Firebase v9 compat SDK -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
@@ -131,35 +132,11 @@
       border-radius:11px; box-shadow:0 5px 18px rgba(0,0,0,.08);
       scrollbar-width:thin;
     }
-    .tablet-rail-brand { display:none; }
-    body.tablet-mode .tablet-rail-brand {
-      display:block; width:48px; flex:0 0 28px; cursor:pointer; line-height:28px;
-      font-size:11px; font-weight:800; letter-spacing:-.04em;
-      text-align:center; white-space:nowrap; overflow:hidden;
-      border-bottom:1px solid #e1e5eb; margin-bottom:2px;
-    }
-    body.tablet-mode .tablet-rail-brand span { color:#5b63ff; }
-
     body.tablet-mode #topbar button.tool {
       width:48px; height:42px; min-width:48px; flex:0 0 42px;
       border-radius:8px; font-size:19px;
     }
     body.tablet-mode #topbar button.tool svg { width:20px; height:20px; }
-    body.tablet-mode #topbar .toolgroup::before {
-      content:none;
-      font-size:9px; font-weight:800; letter-spacing:-.04em; color:#18202a;
-      border-bottom:1px solid #e1e5eb;
-    }
-    body.tablet-mode #topbar .toolgroup::after { content:none; }
-    body.tablet-mode #topbar button[data-tool="ai"] {
-      display:inline-flex !important; background:#eef0ff; color:#5b63ff;
-      border:1px solid #d8dbff; font-weight:900;
-    }
-    body.tablet-mode #topbar button[data-tool="ai"]:hover,
-    body.tablet-mode #topbar button[data-tool="ai"].active {
-      background:#5b63ff; color:#fff; border-color:#5b63ff;
-    }
-
     body.tablet-mode #workspace { flex:1; min-height:0; }
     body.tablet-mode #canvasWrap,
     body.tablet-mode .canvas-container { /* canvas dimensions stay unchanged */ }
@@ -205,8 +182,8 @@
     }
 
     @media (max-width:760px) {
-      #topbar { overflow:hidden; }
-      body:not(.tablet-mode) #topbar .brand { display:block; }
+      #topbar { overflow-x:auto; }
+      .brand { display:none; }
       #saveState { display:none; }
       #hint { display:none; }
     }
@@ -265,8 +242,8 @@
     .ai-actions { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:7px; }
     .ai-action { border:1px solid #dfe4ea; background:#fff; border-radius:8px; padding:7px 6px; cursor:pointer; text-align:left; font-size:10px; color:#303844; transition:.15s; }
     .ai-action:hover { background:#f5f6ff; border-color:#cdd0ff; }
-    .ai-action.selected { background:#5b63ff; border-color:#5b63ff; color:#fff; box-shadow:0 0 0 2px rgba(91,99,255,.14); }
-    .ai-action.selected span { color:rgba(255,255,255,.82); }
+    .ai-action.selected { background:#eef0ff; border-color:#5b63ff; box-shadow:0 0 0 2px rgba(91,99,255,.10); }
+    .ai-action:active { transform:translateY(1px); }
     .ai-action b { display:block; font-size:10px; margin-bottom:1px; }
     .ai-action span { color:#7a8490; font-size:8px; }
     .ai-result { margin-top:8px; border:1px solid #e0e4ea; border-radius:10px; padding:9px; background:#fafbfc; min-height:70px; font-size:10px; line-height:1.65; white-space:pre-wrap; overflow:auto; max-height:42%; }
@@ -337,159 +314,16 @@
     body.tablet-mode #accountBar { display:none; }
 
 
-    /* ================= MOBILE PHONE LAYOUT ================= */
-    #mobileFullscreen, #mobileBrandHome { }
-    .mobile-header-action { display:none; }
-    @media (max-width:760px) {
-      /* Phone has one automatic layout; no PC/Tablet selector. */
-      body:not(.tablet-mode) #topbar > .device-switch { display:none !important; }
-      body:not(.tablet-mode) #topbar {
-        position:relative; height:52px; flex:0 0 52px; min-height:52px;
-        padding:0 10px; overflow:visible; z-index:80;
-        display:flex; align-items:center;
-      }
-      body:not(.tablet-mode) #topbar .brand {
-        display:block; font-size:16px; font-weight:900; cursor:pointer;
-        user-select:none; -webkit-tap-highlight-color:transparent;
-      }
-      body:not(.tablet-mode) #topbar .brand span { color:#5b63ff; }
-      body:not(.tablet-mode) #mobileFullscreen {
-        display:flex; margin-left:auto; width:38px; height:36px; align-items:center;
-        justify-content:center; border:1px solid #dfe4ea; background:#fff;
-        border-radius:9px; color:#39424e; font-size:19px; cursor:pointer;
-        box-shadow:0 4px 14px rgba(0,0,0,.07);
-      }
-      body:not(.tablet-mode) #mobileFullscreen.active { background:#18202a; color:#fff; }
-
-      /* Reuse the tablet-style tool rail on phones. */
-      body:not(.tablet-mode) #topbar .toolgroup {
-        display:flex; position:absolute; left:8px; top:60px; z-index:75;
-        width:58px; max-height:calc(100dvh - 130px); overflow-y:auto; overflow-x:hidden;
-        padding:5px; flex-direction:column; gap:3px;
-        background:rgba(255,255,255,.98); border:1px solid #dfe4ea;
-        border-radius:11px; box-shadow:0 6px 20px rgba(0,0,0,.10);
-        scrollbar-width:thin;
-      }
-      body:not(.tablet-mode) #topbar .tablet-rail-brand {
-        display:block; width:46px; flex:0 0 30px; line-height:30px;
-        font-size:10px; font-weight:900; text-align:center; cursor:pointer;
-        white-space:nowrap; overflow:hidden; border-bottom:1px solid #e1e5eb;
-        margin-bottom:2px;
-      }
-      body:not(.tablet-mode) #topbar .tablet-rail-brand span { color:#5b63ff; }
-      body:not(.tablet-mode) #topbar button.tool {
-        display:inline-flex !important; width:46px; height:40px; min-width:46px;
-        min-height:40px; flex:0 0 40px; align-items:center; justify-content:center;
-        border-radius:8px; font-size:18px;
-      }
-      body:not(.tablet-mode) #topbar button[data-tool="ai"] {
-        display:inline-flex !important; background:#eef0ff; color:#5b63ff;
-        border:1px solid #d8dbff; font-weight:900;
-      }
-      body:not(.tablet-mode) #topbar button[data-tool="ai"].active { background:#5b63ff; color:#fff; }
-      body:not(.tablet-mode) #mobileScrollToggle { background:#f3f5f8; color:#39424e; border:1px solid #dfe4ea; }
-      body:not(.tablet-mode) #mobileScrollToggle.active { background:#18202a; color:#fff; border-color:#18202a; }
-
-      /* Remove the duplicate bottom mobile dock; the full tool rail is the phone menu. */
-      body:not(.tablet-mode) #mobileDock { display:none !important; }
-      body:not(.tablet-mode) #mobileMore { display:none; }
-      body:not(.tablet-mode) #mobileQuick { left:74px; right:auto; transform:none; bottom:76px; }
-      body:not(.tablet-mode) #mobilePages { top:60px; left:50%; }
-      body:not(.tablet-mode) #mobileSaveState { top:60px; left:auto; right:10px; }
-      body:not(.tablet-mode) #mobileToolsMenu { left:74px !important; right:8px !important; bottom:76px !important; }
-      body:not(.tablet-mode) #workspace { height:calc(100dvh - 52px); min-height:0; }
-      body:not(.tablet-mode) #canvasWrap { inset:0; }
-
-      /* Landscape phone: toolbar becomes a bottom strip. */
-      @media (orientation:landscape) {
-        body:not(.tablet-mode) #topbar { height:48px; flex-basis:48px; min-height:48px; }
-        body:not(.tablet-mode) #topbar .toolgroup {
-          left:50%; right:auto; top:auto; bottom:8px; transform:translateX(-50%);
-          width:auto; max-width:calc(100vw - 16px); max-height:58px;
-          flex-direction:row; overflow-x:auto; overflow-y:hidden;
-          padding:5px 7px; gap:4px; border-radius:14px;
-        }
-        body:not(.tablet-mode) #topbar .tablet-rail-brand {
-          width:70px; height:40px; flex:0 0 70px; line-height:40px;
-          border-bottom:0; border-right:1px solid #e1e5eb; margin:0 2px 0 0;
-          font-size:11px;
-        }
-        body:not(.tablet-mode) #topbar button.tool {
-          width:42px; min-width:42px; height:42px; min-height:42px; flex:0 0 42px;
-        }
-        body:not(.tablet-mode) #mobilePages { top:56px; }
-        body:not(.tablet-mode) #mobileSaveState { top:56px; }
-        body:not(.tablet-mode) #mobileQuick { left:8px; bottom:72px; }
-        body:not(.tablet-mode) #workspace { height:calc(100dvh - 48px); }
-      }
-    }
-
-    /* FINAL PHONE OVERRIDES — phone is automatic in both portrait and landscape. */
-    @media (max-width:760px) {
-      /* Phones never expose the PC/Tablet layout switch, including landscape. */
-      #topbar > .device-switch { display:none !important; visibility:hidden !important; pointer-events:none !important; }
-      body #topbar > .device-switch { display:none !important; }
-      body #topbar .toolgroup { display:flex !important; visibility:visible !important; opacity:1 !important; }
-      body #topbar .toolgroup .tool { display:inline-flex !important; visibility:visible !important; }
-      body #topbar .tablet-rail-brand { display:block !important; visibility:visible !important; }
-      body.tablet-mode #topbar { height:48px !important; flex-basis:48px !important; min-height:48px !important; padding:0 10px !important; border:0 !important; box-shadow:none !important; overflow:visible !important; }
-      body.tablet-mode #topbar > .brand { display:block !important; }
-      body.tablet-mode #topbar .toolgroup {
-        position:absolute !important; left:8px !important; top:56px !important; right:auto !important; bottom:auto !important;
-        width:58px !important; max-width:none !important; max-height:calc(100dvh - 130px) !important;
-        flex-direction:column !important; overflow-y:auto !important; overflow-x:hidden !important;
-        transform:none !important; padding:5px !important; gap:3px !important;
-        background:rgba(255,255,255,.98) !important; border:1px solid #dfe4ea !important;
-        border-radius:11px !important; box-shadow:0 6px 20px rgba(0,0,0,.10) !important;
-      }
-      body.tablet-mode #topbar button.tool { width:46px !important; min-width:46px !important; height:40px !important; min-height:40px !important; flex:0 0 40px !important; }
-      body.tablet-mode #tabletAccount { display:none !important; }
-      body.tablet-mode #workspace { height:calc(100dvh - 48px) !important; }
-      @media (orientation:landscape) {
-        body.tablet-mode #topbar .toolgroup {
-          left:50% !important; top:auto !important; bottom:8px !important; width:auto !important;
-          max-width:calc(100vw - 16px) !important; max-height:58px !important;
-          flex-direction:row !important; overflow-x:auto !important; overflow-y:hidden !important;
-          transform:translateX(-50%) !important; padding:5px 7px !important; gap:4px !important;
-        }
-        body.tablet-mode #topbar .tablet-rail-brand { width:70px !important; height:40px !important; flex:0 0 70px !important; line-height:40px !important; border-bottom:0 !important; border-right:1px solid #e1e5eb !important; }
-        body.tablet-mode #topbar button.tool { width:42px !important; min-width:42px !important; height:42px !important; min-height:42px !important; flex:0 0 42px !important; }
-      }
-    }
-
     /* ================= MOBILE UX ================= */
     #mobileDock, #mobileQuick, #mobileAI, #mobilePages { display:none; }
     @media (max-width:760px) {
       html, body { width:100%; height:100%; min-height:100dvh; }
       #app.entered { min-height:100dvh; height:100dvh; }
-      /* PHONE ONLY — keep tablet/PC layout untouched */
-      body:not(.tablet-mode) #workspace {
-        flex:1 1 0; min-height:0; height:calc(100dvh - 48px); padding-bottom:0;
-        overflow:hidden; position:relative;
-      }
-      body:not(.tablet-mode) #canvasWrap {
-        inset:0; width:100%; height:100%; overflow:hidden;
-      }
-      body:not(.tablet-mode) .canvas-container {
-        width:100% !important; height:100% !important;
-      }
-      body:not(.tablet-mode) #board {
-        display:block; touch-action:none;
-      }
-      body:not(.tablet-mode) #textDialog {
-        left:8px !important; right:8px; width:auto; max-width:none;
-        bottom:78px; top:auto !important; z-index:140;
-        padding:10px; border-radius:14px;
-      }
-      body:not(.tablet-mode) #textDialog textarea {
-        height:82px; min-height:82px; font-size:16px;
-      }
-      body:not(.tablet-mode) #textDialog .row button {
-        min-height:40px; padding:8px 14px; font-size:12px;
-      }
-      body:not(.tablet-mode) #topbar { height:48px; flex-basis:48px; padding:0 10px; gap:5px; overflow:visible; }
-      body:not(.tablet-mode) #topbar .brand { display:block; flex:0 0 auto; margin-right:0; font-size:14px; line-height:1; }
-      body:not(.tablet-mode) #topbar .toolgroup { display:flex; }
+      #workspace { min-height:0; height:auto; padding-bottom:72px; }
+      #canvasWrap { inset:0; }
+      body:not(.tablet-mode) #topbar { height:48px; flex-basis:48px; padding:0 8px; gap:5px; }
+      body:not(.tablet-mode) #topbar .brand { display:none; }
+      body:not(.tablet-mode) #topbar .toolgroup { display:none; }
       body:not(.tablet-mode) #topbar .separator,
       body:not(.tablet-mode) #topbar .control,
       body:not(.tablet-mode) #topbar #undoBtn,
@@ -500,12 +334,10 @@
       body:not(.tablet-mode) #topbar #accountBar,
       body:not(.tablet-mode) #topbar #boardNameDisplay,
       body:not(.tablet-mode) #topbar #saveState { display:none !important; }
-      body:not(.tablet-mode) #topbar > .device-switch { margin-left:auto; flex:0 0 auto; }
-      body:not(.tablet-mode) #mobilePages { top:56px; }
-      body:not(.tablet-mode) #mobileSaveState { top:56px; }
-      body:not(.tablet-mode) #mobileDock {
+      body:not(.tablet-mode) #topbar > .device-switch { margin-left:auto; }
+      #mobileDock {
         display:flex; position:fixed; left:8px; right:8px; bottom:max(8px, env(safe-area-inset-bottom));
-        z-index:150; height:62px; padding:5px; gap:4px; align-items:center;
+        z-index:80; height:62px; padding:5px; gap:4px; align-items:center;
         background:rgba(255,255,255,.96); border:1px solid #dfe4ea; border-radius:15px;
         box-shadow:0 10px 35px rgba(0,0,0,.15); backdrop-filter:blur(12px);
       }
@@ -513,7 +345,7 @@
       .mobile-dock-btn .mi { font-size:19px; line-height:20px; }
       .mobile-dock-btn.active { background:#18202a; color:#fff; }
       .mobile-dock-more { background:#eef1f5; }
-      body:not(.tablet-mode) #mobileQuick { display:flex; position:fixed; left:50%; transform:translateX(-50%); bottom:78px; z-index:149; gap:5px; }
+      #mobileQuick { display:flex; position:fixed; left:50%; transform:translateX(-50%); bottom:78px; z-index:79; gap:5px; }
       .mobile-float { width:38px; height:38px; border:1px solid #dfe4ea; background:rgba(255,255,255,.97); border-radius:11px; box-shadow:0 6px 20px rgba(0,0,0,.12); font-size:17px; cursor:pointer; }
       #mobileSaveState { position:fixed; left:12px; top:10px; z-index:75; padding:5px 8px; border:1px solid #dfe4ea; border-radius:9px; background:rgba(255,255,255,.92); font-size:9px; color:#697383; box-shadow:0 4px 14px rgba(0,0,0,.07); }
       #mobileSaveState.saving { color:#7c5cff; } #mobileSaveState.saved { color:#2d8a5b; } #mobileSaveState.error { color:#c33b3b; }
@@ -599,8 +431,7 @@
 
   <div id="app">
     <header id="topbar">
-      <div class="brand" id="mobileBrandHome">Canvas<span>Flow</span></div>
-      <button id="mobileFullscreen" class="mobile-header-action" type="button" title="Full screen" aria-label="Full screen">⛶</button>
+      <div class="brand">Canvas<span>Flow</span></div>
 
       <div class="device-switch" aria-label="Device layout">
         <button id="pcMode" class="device-btn active" type="button">PC</button>
@@ -617,10 +448,7 @@
       </div>
 
       <div class="toolgroup" aria-label="Tools">
-        <div class="tablet-rail-brand">Canvas<span>Flow</span></div>
         <button class="tool active" data-tool="select" title="Select / move (V)">↖</button>
-        <button class="tool" id="aiToggle" data-tool="ai" title="AI Study Tutor">✦</button>
-        <button class="tool mobile-scroll-tool" id="mobileScrollToggle" type="button" title="Scroll / move board">↕</button>
         <button class="tool" data-tool="pen" title="Pen (P)">✎</button>
         <button class="tool" data-tool="highlighter" title="Highlighter">▰</button>
         <button class="tool" data-tool="eraser" title="Eraser (E)">⌫</button>
@@ -631,7 +459,7 @@
         <button class="tool" data-tool="text" title="Text (T)">T</button>
         <button class="tool" data-tool="node" title="Mind map node">◇</button>
         <button class="tool" data-tool="image" title="Upload image">▧</button>
-
+<button class="tool" id="aiToggle" data-tool="ai" title="AI Study Tutor">✦</button>
       </div>
 
       <div class="separator"></div>
@@ -713,7 +541,7 @@
             <div class="ai-resize-hint">↘ اسحب من الركن لتغيير الحجم</div>
           </div>
           <div class="ai-head-actions">
-            <button class="ai-close" id="aiClose">×</button>
+            <button type="button" class="ai-close" id="aiClose">×</button>
           </div>
         </div>
         <div class="ai-body">
@@ -730,14 +558,14 @@
 أو ارفع صور صفحات الدرس من فوق." aria-label="Lesson text"></textarea>
 
           <div class="ai-actions">
-            <button class="ai-action" data-ai="summary"><b>📚 ملخص كامل</b><span>مرتب بعناوين ونقاط</span></button>
-            <button class="ai-action" data-ai="explain"><b>🧑‍🏫 اشرحلي</b><span>شرح بسيط وواضح</span></button>
-            <button class="ai-action" data-ai="important"><b>🎯 المهم</b><span>الحاجات اللي لازم تركز فيها</span></button>
-            <button class="ai-action" data-ai="quiz"><b>📝 امتحان</b><span>أسئلة وإجابات نموذجية</span></button>
-            <button class="ai-action" data-ai="flashcards"><b>🗂️ Flashcards</b><span>سؤال / إجابة للمراجعة</span></button>
-            <button class="ai-action" data-ai="recall"><b>🔄 Active Recall</b><span>أسئلة واحدة واحدة</span></button>
-            <button class="ai-action" data-ai="mindmap"><b>🧩 Mind Map</b><span>هيكل جاهز للوايت بورد</span></button>
-            <button class="ai-action" data-ai="studyplan"><b>📅 Study Plan</b><span>خطة مذاكرة للدرس</span></button>
+            <button type="button" class="ai-action" data-ai="summary"><b>📚 ملخص كامل</b><span>مرتب بعناوين ونقاط</span></button>
+            <button type="button" class="ai-action" data-ai="explain"><b>🧑‍🏫 اشرحلي</b><span>شرح بسيط وواضح</span></button>
+            <button type="button" class="ai-action" data-ai="important"><b>🎯 المهم</b><span>الحاجات اللي لازم تركز فيها</span></button>
+            <button type="button" class="ai-action" data-ai="quiz"><b>📝 امتحان</b><span>أسئلة وإجابات نموذجية</span></button>
+            <button type="button" class="ai-action" data-ai="flashcards"><b>🗂️ Flashcards</b><span>سؤال / إجابة للمراجعة</span></button>
+            <button type="button" class="ai-action" data-ai="recall"><b>🔄 Active Recall</b><span>أسئلة واحدة واحدة</span></button>
+            <button type="button" class="ai-action" data-ai="mindmap"><b>🧩 Mind Map</b><span>هيكل جاهز للوايت بورد</span></button>
+            <button type="button" class="ai-action" data-ai="studyplan"><b>📅 Study Plan</b><span>خطة مذاكرة للدرس</span></button>
           </div>
 
           <div id="aiResult" class="ai-result empty">النتيجة هتظهر هنا...</div>
@@ -753,9 +581,9 @@
           </details>
         </div>
         <div class="ai-footer">
-          <button id="boardBtn">📌 حط المذكرة على البورد</button>
-          <button id="copyBtn">نسخ</button>
-          <button id="pdfBtn">📄 تصدير PDF</button>
+          <button type="button" id="boardBtn">📌 حط المذكرة على البورد</button>
+          <button type="button" id="copyBtn">نسخ</button>
+          <button type="button" id="pdfBtn">📄 تصدير PDF</button>
         </div>
       </aside>
 
@@ -924,25 +752,7 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
     if(authMode==="login") await auth.signInWithEmailAndPassword(email,password);
     else await auth.createUserWithEmailAndPassword(email,password);
     closeAuthModal();
-  } catch(err){
-    console.error("Email auth error:", err);
-    const messages = {
-      "auth/invalid-email": "الإيميل غير صحيح.",
-      "auth/user-not-found": "الحساب ده مش موجود. اعمل Create account الأول.",
-      "auth/wrong-password": "الباسورد غلط.",
-      "auth/invalid-credential": "الإيميل أو الباسورد غلط.",
-      "auth/email-already-in-use": "الإيميل ده مسجل بالفعل. استخدم Log in.",
-      "auth/weak-password": "الباسورد لازم يكون 6 حروف أو أكتر.",
-      "auth/operation-not-allowed": "تسجيل الدخول بالإيميل والباسورد مش متفعل في Firebase.",
-      "auth/network-request-failed": "مفيش اتصال بـ Firebase. اتأكد من الإنترنت وجرب تاني.",
-      "auth/too-many-requests": "محاولات كتير. استنى شوية وجرب تاني.",
-      "auth/unauthorized-domain": "الدومين الحالي مش مضاف في Firebase Authentication.",
-      "auth/app-not-authorized": "الموقع الحالي غير مصرح له باستخدام Firebase Authentication. ضيف الدومين في Firebase.",
-      "auth/configuration-not-found": "إعدادات Firebase Authentication ناقصة. فعّل Authentication في مشروع Firebase.",
-      "auth/internal-error": "Firebase حصل فيه خطأ داخلي. راجع إعدادات Authentication وجرب تاني."
-    };
-    authMessage.textContent = messages[err.code] || (err.message || "Login failed.").replace("Firebase: ","");
-  }
+  } catch(err){ console.error(err); authMessage.textContent=err.message.replace("Firebase: ",""); }
 });
 
 document.getElementById("googleSignInBtn").addEventListener("click",async ()=>{
@@ -958,11 +768,10 @@ document.getElementById("googleSignInBtn").addEventListener("click",async ()=>{
   } catch(err){
     console.error(err);
     let msg=err.message || "Google sign-in failed.";
-    if(err.code==="auth/popup-blocked") msg="Google popup اتمنع من المتصفح. اسمح بالـpopups للموقع وجرب تاني.";
-    else if(err.code==="auth/popup-closed-by-user") msg="تم إلغاء تسجيل الدخول بجوجل.";
-    else if(err.code==="auth/unauthorized-domain" || err.code==="auth/app-not-authorized") msg="الدومين الحالي مش مضاف في Firebase Authentication. ضيفه من Authentication → Settings → Authorized domains.";
-    else if(err.code==="auth/operation-not-allowed") msg="Google Sign-In مش متفعل في Firebase Authentication. فعّله من Sign-in method.";
-    else if(err.code==="auth/network-request-failed") msg="مفيش اتصال بـ Firebase. اتأكد من الإنترنت وجرب تاني.";
+    if(err.code==="auth/popup-blocked") msg="Google sign-in popup was blocked by the browser. Allow popups for this site and try again.";
+    else if(err.code==="auth/popup-closed-by-user") msg="Google sign-in was cancelled.";
+    else if(err.code==="auth/unauthorized-domain") msg="This website domain is not authorized in Firebase Authentication.";
+    else if(err.code==="auth/operation-not-allowed") msg="Google sign-in is not enabled in Firebase Authentication.";
     authMessage.textContent=msg.replace("Firebase: ","");
   } finally {
     btn.disabled=false;
@@ -1076,8 +885,6 @@ const tabletModeBtn = document.getElementById("tabletMode");
 
 function setDeviceMode(mode) {
   const tablet = mode === "tablet";
-  // Phones use the automatic mobile layout; PC/Tablet is only a desktop/tablet choice.
-  if (window.matchMedia("(max-width:760px)").matches) return;
   document.body.classList.toggle("tablet-mode", tablet);
   pcModeBtn.classList.toggle("active", !tablet);
   tabletModeBtn.classList.toggle("active", tablet);
@@ -1089,21 +896,6 @@ function setDeviceMode(mode) {
 
 pcModeBtn.addEventListener("click", () => setDeviceMode("pc"));
 tabletModeBtn.addEventListener("click", () => setDeviceMode("tablet"));
-
-// Mobile is always automatic, including landscape. Never show or apply the PC/Tablet switch on phones.
-function syncAutomaticMobileLayout(){
-  const phone = window.matchMedia("(max-width:760px)").matches;
-  if(phone){
-    document.body.classList.remove("tablet-mode");
-  } else {
-    const savedMode = localStorage.getItem("canvasflow-device-mode") || "pc";
-    document.body.classList.toggle("tablet-mode", savedMode === "tablet");
-  }
-  requestAnimationFrame(() => { resizeCanvas(); canvas.requestRenderAll(); });
-}
-window.addEventListener("resize", syncAutomaticMobileLayout);
-window.addEventListener("orientationchange", () => setTimeout(syncAutomaticMobileLayout, 120));
-
 
 const canvas = new fabric.Canvas("board", {
   preserveObjectStacking: true,
@@ -1121,13 +913,12 @@ let spaceDown = false;
 let pendingTextPoint = null;
 
 // Undo / redo history. Snapshots contain only the whiteboard objects, not the viewport.
-const HISTORY_LIMIT = Infinity;
+const HISTORY_LIMIT = 80;
 let undoStack = [];
 let redoStack = [];
 let historyReady = false;
 let restoringHistory = false;
 let historyTimer = null;
-let lastHistorySnapshot = null;
 
 function canvasSnapshot() {
   return JSON.stringify(canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]));
@@ -1146,15 +937,10 @@ function updateHistoryButtons() {
 
 function pushHistorySnapshot() {
   if (!historyReady || restoringHistory || suppressSave) return;
-  const current = canvasSnapshot();
-  if (lastHistorySnapshot === null) {
-    lastHistorySnapshot = current;
-    updateHistoryButtons();
-    return;
-  }
-  if (lastHistorySnapshot === current) return;
-  undoStack.push(lastHistorySnapshot);
-  lastHistorySnapshot = current;
+  const snap = canvasSnapshot();
+  if (undoStack[undoStack.length - 1] === snap) return;
+  undoStack.push(snap);
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
   redoStack = [];
   updateHistoryButtons();
 }
@@ -1172,7 +958,6 @@ function restoreHistorySnapshot(snapshot) {
   canvas.loadFromJSON(JSON.parse(snapshot), () => {
     canvas.discardActiveObject();
     canvas.requestRenderAll();
-    lastHistorySnapshot = snapshot;
     suppressSave = false;
     restoringHistory = false;
     updateHistoryButtons();
@@ -1221,7 +1006,6 @@ resizeCanvas();
 
 // Start history from the current blank canvas when no saved board is loaded.
 historyReady = true;
-lastHistorySnapshot = canvasSnapshot();
 updateHistoryButtons();
 
 let tabletScrollMode = false;
@@ -1250,27 +1034,14 @@ function applyBrushSettings() {
 
 function setTabletScrollMode(enabled) {
   tabletScrollMode = !!enabled;
-  if (tabletScrollBtn) {
-    tabletScrollBtn.classList.toggle("active", tabletScrollMode);
-    if (tabletScrollValue) tabletScrollValue.textContent = tabletScrollMode ? "ON" : "OFF";
-  }
-  const mobileScrollToggleEl = document.getElementById("mobileScrollToggle");
-  if (mobileScrollToggleEl) {
-    mobileScrollToggleEl.classList.toggle("active", tabletScrollMode);
-    mobileScrollToggleEl.textContent = tabletScrollMode ? "✋" : "↕";
-    mobileScrollToggleEl.title = tabletScrollMode ? "Drawing mode" : "Scroll / move board";
-    mobileScrollToggleEl.setAttribute("aria-label", tabletScrollMode ? "Drawing mode" : "Scroll / move board");
-  }
+  tabletScrollBtn.classList.toggle("active", tabletScrollMode);
+  tabletScrollValue.textContent = tabletScrollMode ? "ON" : "OFF";
+  // Scroll mode temporarily takes over touch dragging. When it is turned OFF,
+  // restore the currently selected drawing tool so stylus/touch drawing works again.
   canvas.isDrawingMode = !tabletScrollMode && (tool === "pen" || tool === "highlighter");
   canvas.selection = !tabletScrollMode && (tool === "select" || tool === "eraser");
-  canvas.skipTargetFind = tabletScrollMode;
   canvas.defaultCursor = tabletScrollMode ? "grab" : (tool === "select" ? "default" : "crosshair");
-  const upper = canvas.upperCanvasEl;
-  if (upper) upper.style.touchAction = tabletScrollMode ? "none" : "none";
-  const wrapEl = document.getElementById("canvasWrap");
-  if (wrapEl) wrapEl.style.touchAction = tabletScrollMode ? "none" : "none";
   if (!tabletScrollMode && (tool === "pen" || tool === "highlighter")) applyBrushSettings();
-  canvas.requestRenderAll();
 }
 tabletScrollBtn.addEventListener("click", () => setTabletScrollMode(!tabletScrollMode));
 
@@ -1503,7 +1274,6 @@ document.addEventListener("drop", e => { if (hasFiles(e) && e.target !== wrap &&
 
 wrap.addEventListener("pointerdown", e => {
   if (!tabletScrollMode || e.pointerType === "pen") return;
-  if (window.matchMedia("(max-width:760px)").matches) { e.stopPropagation(); }
   touchPan = { id:e.pointerId, x:e.clientX, y:e.clientY, v:canvas.viewportTransform.slice() };
   wrap.setPointerCapture?.(e.pointerId);
   e.preventDefault();
@@ -1698,7 +1468,7 @@ async function loadBoard() {
   } catch(err){ console.error(err); setSaveState("error"); }
 }
 
-const ENTRY_STATE_KEY = "canvasflow-app-entered-v2";
+const ENTRY_STATE_KEY = "canvasflow-app-entered";
 const LOCAL_DRAFT_KEY = "canvasflow-local-draft";
 
 function saveLocalDraft(){
@@ -1791,14 +1561,6 @@ function enterApp(openAI=false){
   localStorage.setItem(ENTRY_STATE_KEY, "1");
   landing.style.display = "none";
   app.classList.add("entered");
-  // The app starts hidden, so Fabric may have measured a 0x0 workspace.
-  // Resize it after making the app visible or drawing/touch input will have
-  // nowhere to render.
-  requestAnimationFrame(() => {
-    resizeCanvas();
-    canvas.calcOffset();
-    canvas.requestRenderAll();
-  });
   if(openAI) aiPanel.classList.add("open");
 }
 
@@ -1813,22 +1575,12 @@ function returnToLanding(){
 document.getElementById("chooseAI").addEventListener("click", () => enterApp(true));
 document.getElementById("chooseBoard").addEventListener("click", () => enterApp(false));
 brandHome?.addEventListener("click", returnToLanding);
-document.querySelector(".tablet-rail-brand")?.addEventListener("click", returnToLanding);
 
 // Stay inside the app after refresh. The landing page is shown again only when
 // the user intentionally clicks the CanvasFlow brand.
 if(localStorage.getItem(ENTRY_STATE_KEY)==="1") {
   landing.style.display = "none";
   app.classList.add("entered");
-  requestAnimationFrame(() => {
-    resizeCanvas();
-    canvas.calcOffset();
-    canvas.requestRenderAll();
-  });
-} else {
-  // Keep the original landing page as the default entry screen.
-  landing.style.display = "flex";
-  app.classList.remove("entered");
 }
 
 // ===================== AI STUDY TUTOR =====================
@@ -2074,43 +1826,25 @@ function addStudyTextToBoard(text) {
   }, {crossOrigin:'anonymous'});
 }
 
-// AI mode buttons: make selection reliable on both mouse and touch.
-const aiActionLabels = {
-  summary:"ملخص كامل", explain:"اشرحلي", important:"المهم", quiz:"امتحان",
-  flashcards:"Flashcards", recall:"Active Recall", mindmap:"Mind Map", studyplan:"Study Plan"
-};
-let selectedAIMode = null;
-function selectAIMode(btn){
-  if(!btn) return;
-  selectedAIMode = btn.dataset.ai || null;
-  document.querySelectorAll(".ai-action").forEach(x => {
-    const active = x === btn;
-    x.classList.toggle("selected", active);
-    x.setAttribute("aria-pressed", active ? "true" : "false");
-  });
-  if(selectedAIMode){
-    aiStatus.textContent = `اختارت: ${aiActionLabels[selectedAIMode] || selectedAIMode} ✓`;
-  }
-}
+// AI action buttons: use one delegated handler so buttons remain reliable even
+// after responsive/mobile DOM updates. Prevent any accidental form submission.
+document.querySelector(".ai-actions")?.addEventListener("click", (event) => {
+  const btn = event.target.closest(".ai-action");
+  if (!btn) return;
+  event.preventDefault();
+  event.stopPropagation();
 
-// Event delegation prevents mobile touch/canvas layers from swallowing individual buttons.
-aiPanel.addEventListener("click", e => {
-  const btn = e.target.closest?.(".ai-action");
-  if(!btn) return;
-  e.preventDefault();
-  e.stopPropagation();
-  selectAIMode(btn);
-  runAI(btn.dataset.ai);
+  document.querySelectorAll(".ai-action").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+
+  const mode = btn.dataset.ai;
+  const labels = {
+    summary:"ملخص كامل", explain:"اشرحلي", important:"المهم", quiz:"امتحان",
+    flashcards:"Flashcards", recall:"Active Recall", mindmap:"Mind Map", studyplan:"Study Plan"
+  };
+  aiStatus.textContent = `اختارت: ${labels[mode] || mode} — جاري التنفيذ...`;
+  runAI(mode);
 });
-
-// Also select immediately on touch/pointer down so the choice is visible even if the keyboard/browser
-// changes focus during the request.
-aiPanel.addEventListener("pointerdown", e => {
-  const btn = e.target.closest?.(".ai-action");
-  if(!btn) return;
-  e.stopPropagation();
-  selectAIMode(btn);
-}, {passive:false});
 
 document.getElementById("boardBtn").addEventListener("click", () => {
   const text = aiResult.textContent.trim();
@@ -2127,34 +1861,111 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
   } catch { aiStatus.textContent = "مش قادر أنسخ تلقائيًا — اعمل Ctrl+C."; }
 });
 
-document.getElementById("pdfBtn").addEventListener("click", () => {
+document.getElementById("pdfBtn").addEventListener("click", async () => {
   const text = aiResult.textContent.trim();
   if (!text || aiResult.classList.contains("empty")) return;
-
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({unit:"pt", format:"a4"});
-  const margin = 42, pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
-  const usableW = pageW - margin*2;
-  let y = 48;
-
-  pdf.setFont("helvetica","bold");
-  pdf.setFontSize(18);
-  pdf.text("CanvasFlow - Study Notes", margin, y);
-  y += 28;
-
-  pdf.setFont("helvetica","normal");
-  pdf.setFontSize(10);
-
-  // Browser PDF fonts don't reliably support Arabic shaping.
-  // Export is intentionally readable for Latin/English content; Arabic remains in the source text area.
-  const lines = pdf.splitTextToSize(text, usableW);
-  for (const line of lines) {
-    if (y > pageH - margin) { pdf.addPage(); y = margin; }
-    pdf.text(line, margin, y);
-    y += 14;
+  if (!window.html2canvas || !window.jspdf) {
+    aiStatus.textContent = "مكتبة PDF مش جاهزة — اعمل Refresh وجرب تاني.";
+    return;
   }
-  pdf.save("CanvasFlow-Study-Notes.pdf");
-  aiStatus.textContent = "PDF اتعمل ✓";
+
+  const btn = document.getElementById("pdfBtn");
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "جاري تجهيز PDF...";
+  aiStatus.textContent = "جاري تجهيز الـ PDF...";
+
+  try {
+    // Render the Arabic note as real browser HTML first, then capture it.
+    // This avoids jsPDF's default-font Arabic shaping/encoding problem.
+    const sheet = document.createElement("div");
+    sheet.style.cssText = [
+      "position:fixed", "left:-10000px", "top:0", "width:794px", "box-sizing:border-box",
+      "padding:58px 62px 64px", "background:#fff", "color:#111827", "font-family:Arial,'Noto Sans Arabic',Tahoma,sans-serif",
+      "direction:rtl", "text-align:right", "line-height:1.75", "font-size:16px", "z-index:-1"
+    ].join(";");
+
+    const title = document.createElement("div");
+    title.textContent = "CanvasFlow - Study Notes";
+    title.style.cssText = "font-size:25px;font-weight:800;text-align:center;margin-bottom:28px;direction:ltr;";
+    sheet.appendChild(title);
+
+    const body = document.createElement("div");
+    body.style.cssText = "direction:rtl;text-align:right;white-space:pre-wrap;word-break:normal;overflow-wrap:anywhere;";
+
+    // Keep the AI output exactly as text, while giving common Markdown lines
+    // readable spacing without ever injecting the AI text as HTML.
+    text.split(/\r?\n/).forEach(line => {
+      const row = document.createElement("div");
+      const trimmed = line.trim();
+      row.textContent = trimmed;
+      if (/^#{1,4}\s/.test(trimmed)) {
+        row.style.cssText = "font-size:19px;font-weight:800;margin:18px 0 8px;line-height:1.5;";
+        row.textContent = trimmed.replace(/^#{1,4}\s+/, "");
+      } else if (/^[-*•]\s+/.test(trimmed)) {
+        row.style.cssText = "margin:4px 0;padding-right:12px;";
+        row.textContent = "• " + trimmed.replace(/^[-*•]\s+/, "");
+      } else if (/^\d+[.)]\s+/.test(trimmed)) {
+        row.style.cssText = "margin:4px 0;";
+      } else if (!trimmed) {
+        row.style.height = "10px";
+      } else {
+        row.style.margin = "3px 0";
+      }
+      body.appendChild(row);
+    });
+    sheet.appendChild(body);
+    document.body.appendChild(sheet);
+
+    // Wait one frame so the browser finishes Arabic shaping/layout.
+    await new Promise(requestAnimationFrame);
+    const canvasShot = await html2canvas(sheet, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      logging: false,
+      width: 794,
+      windowWidth: 794
+    });
+    sheet.remove();
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 28;
+    const pdfW = pageW - margin * 2;
+    const pdfH = pageH - margin * 2;
+    const pxPerPdfPt = canvasShot.width / pdfW;
+    const pagePxH = Math.floor(pdfH * pxPerPdfPt);
+
+    let offsetY = 0;
+    let firstPage = true;
+    while (offsetY < canvasShot.height) {
+      const sliceH = Math.min(pagePxH, canvasShot.height - offsetY);
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvasShot.width;
+      pageCanvas.height = sliceH;
+      const ctx = pageCanvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      ctx.drawImage(canvasShot, 0, offsetY, canvasShot.width, sliceH, 0, 0, canvasShot.width, sliceH);
+
+      if (!firstPage) pdf.addPage();
+      pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.96), "JPEG", margin, margin, pdfW, sliceH / pxPerPdfPt);
+      firstPage = false;
+      offsetY += sliceH;
+    }
+
+    pdf.save("CanvasFlow-Study-Notes.pdf");
+    aiStatus.textContent = "PDF اتعمل بالعربي صح ✓";
+  } catch (err) {
+    console.error("PDF export error:", err);
+    aiStatus.textContent = "حصل خطأ أثناء عمل الـ PDF.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
 });
 
 // Put selected whiteboard text into the lesson box with one click from the browser console/UI later.
@@ -2181,36 +1992,6 @@ updateZoom();
   const mobileFocus = document.getElementById('mobileFocus');
   const mobileZoomReset = document.getElementById('mobileZoomReset');
   const mobileMore = document.getElementById('mobileMore');
-  const mobileFullscreen = document.getElementById('mobileFullscreen');
-  const mobileScrollToggle = document.getElementById('mobileScrollToggle');
-  const mobileBrandHome = document.getElementById('mobileBrandHome');
-
-  function syncFullscreenButton(){
-    if(!mobileFullscreen) return;
-    const active = !!document.fullscreenElement;
-    mobileFullscreen.classList.toggle('active', active);
-    mobileFullscreen.textContent = active ? '✕' : '⛶';
-    mobileFullscreen.title = active ? 'Exit full screen' : 'Full screen';
-    mobileFullscreen.setAttribute('aria-label', active ? 'Exit full screen' : 'Full screen');
-  }
-  mobileFullscreen?.addEventListener('click', async()=>{
-    if(!isMobile()) return;
-    try {
-      if(document.fullscreenElement) await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
-    } catch(err){ console.warn('Fullscreen unavailable', err); }
-    syncFullscreenButton();
-  });
-  document.addEventListener('fullscreenchange', syncFullscreenButton);
-  mobileScrollToggle?.addEventListener('click', ()=>{
-    if(!isMobile()) return;
-    setTabletScrollMode(!tabletScrollMode);
-    mobileScrollToggle.classList.toggle('active', tabletScrollMode);
-    mobileScrollToggle.title = tabletScrollMode ? 'Drawing mode' : 'Scroll / move board';
-    mobileScrollToggle.setAttribute('aria-label', tabletScrollMode ? 'Drawing mode' : 'Scroll / move board');
-  });
-  mobileBrandHome?.addEventListener('click', ()=>{ if(typeof returnToLanding==='function') returnToLanding(); });
-  syncFullscreenButton();
 
   function mobileSetState(type, text){
     if(!mobileSaveState) return;
@@ -2218,38 +1999,6 @@ updateZoom();
     mobileSaveState.textContent=text || (type==='saving'?'Saving...':type==='error'?'Save failed':'Saved ✓');
   }
   window.addEventListener('canvasflow:save-state', e=>mobileSetState(e.detail?.type,e.detail?.text));
-
-  // Keep the phone canvas perfectly sized after browser chrome/orientation changes.
-  let mobileResizeFrame = null;
-  function enforcePhoneLayout(){
-    const phone = isMobile();
-    if (phone) {
-      document.body.classList.remove("tablet-mode");
-      document.getElementById("tabletMode")?.classList.remove("active");
-      document.getElementById("pcMode")?.classList.remove("active");
-      document.getElementById("tabletMode")?.setAttribute("aria-hidden","true");
-      document.getElementById("pcMode")?.setAttribute("aria-hidden","true");
-    } else {
-      const savedMode = localStorage.getItem("canvasflow-device-mode") || "pc";
-      document.body.classList.toggle("tablet-mode", savedMode === "tablet");
-    }
-  }
-  enforcePhoneLayout();
-  window.addEventListener('resize', enforcePhoneLayout, {passive:true});
-  window.addEventListener('orientationchange', enforcePhoneLayout, {passive:true});
-
-  function resizePhoneCanvas(){
-    if(!isMobile() || typeof canvas==='undefined' || typeof resizeCanvas!=='function') return;
-    cancelAnimationFrame(mobileResizeFrame);
-    mobileResizeFrame = requestAnimationFrame(()=>{
-      resizeCanvas();
-      canvas.calcOffset();
-      canvas.requestRenderAll();
-    });
-  }
-  window.addEventListener('orientationchange', resizePhoneCanvas, {passive:true});
-  window.visualViewport?.addEventListener('resize', resizePhoneCanvas, {passive:true});
-  setTimeout(resizePhoneCanvas, 80);
 
   document.querySelectorAll('[data-mobile-tool]').forEach(btn=>btn.addEventListener('click',()=>{
     if(!isMobile()) return;
