@@ -922,7 +922,25 @@ document.getElementById("authForm").addEventListener("submit",async e=>{
     if(authMode==="login") await auth.signInWithEmailAndPassword(email,password);
     else await auth.createUserWithEmailAndPassword(email,password);
     closeAuthModal();
-  } catch(err){ console.error(err); authMessage.textContent=err.message.replace("Firebase: ",""); }
+  } catch(err){
+    console.error("Email auth error:", err);
+    const messages = {
+      "auth/invalid-email": "الإيميل غير صحيح.",
+      "auth/user-not-found": "الحساب ده مش موجود. اعمل Create account الأول.",
+      "auth/wrong-password": "الباسورد غلط.",
+      "auth/invalid-credential": "الإيميل أو الباسورد غلط.",
+      "auth/email-already-in-use": "الإيميل ده مسجل بالفعل. استخدم Log in.",
+      "auth/weak-password": "الباسورد لازم يكون 6 حروف أو أكتر.",
+      "auth/operation-not-allowed": "تسجيل الدخول بالإيميل والباسورد مش متفعل في Firebase.",
+      "auth/network-request-failed": "مفيش اتصال بـ Firebase. اتأكد من الإنترنت وجرب تاني.",
+      "auth/too-many-requests": "محاولات كتير. استنى شوية وجرب تاني.",
+      "auth/unauthorized-domain": "الدومين الحالي مش مضاف في Firebase Authentication.",
+      "auth/app-not-authorized": "الموقع الحالي غير مصرح له باستخدام Firebase Authentication. ضيف الدومين في Firebase.",
+      "auth/configuration-not-found": "إعدادات Firebase Authentication ناقصة. فعّل Authentication في مشروع Firebase.",
+      "auth/internal-error": "Firebase حصل فيه خطأ داخلي. راجع إعدادات Authentication وجرب تاني."
+    };
+    authMessage.textContent = messages[err.code] || (err.message || "Login failed.").replace("Firebase: ","");
+  }
 });
 
 document.getElementById("googleSignInBtn").addEventListener("click",async ()=>{
@@ -938,10 +956,11 @@ document.getElementById("googleSignInBtn").addEventListener("click",async ()=>{
   } catch(err){
     console.error(err);
     let msg=err.message || "Google sign-in failed.";
-    if(err.code==="auth/popup-blocked") msg="Google sign-in popup was blocked by the browser. Allow popups for this site and try again.";
-    else if(err.code==="auth/popup-closed-by-user") msg="Google sign-in was cancelled.";
-    else if(err.code==="auth/unauthorized-domain") msg="This website domain is not authorized in Firebase Authentication.";
-    else if(err.code==="auth/operation-not-allowed") msg="Google sign-in is not enabled in Firebase Authentication.";
+    if(err.code==="auth/popup-blocked") msg="Google popup اتمنع من المتصفح. اسمح بالـpopups للموقع وجرب تاني.";
+    else if(err.code==="auth/popup-closed-by-user") msg="تم إلغاء تسجيل الدخول بجوجل.";
+    else if(err.code==="auth/unauthorized-domain" || err.code==="auth/app-not-authorized") msg="الدومين الحالي مش مضاف في Firebase Authentication. ضيفه من Authentication → Settings → Authorized domains.";
+    else if(err.code==="auth/operation-not-allowed") msg="Google Sign-In مش متفعل في Firebase Authentication. فعّله من Sign-in method.";
+    else if(err.code==="auth/network-request-failed") msg="مفيش اتصال بـ Firebase. اتأكد من الإنترنت وجرب تاني.";
     authMessage.textContent=msg.replace("Firebase: ","");
   } finally {
     btn.disabled=false;
