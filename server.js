@@ -3,14 +3,16 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GoogleGenAI } from "@google/genai";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+const DEFAULT_MODEL = "gemini-3.8-flash";
+const configuredModel = String(process.env.GEMINI_MODEL || "").trim();
+const MODEL = (/^(AQ\.|AIza)/i.test(configuredModel) || !/^gemini-[a-z0-9.-]+$/i.test(configuredModel))
+  ? DEFAULT_MODEL
+  : configuredModel;
 const MAX_IMAGES = Number(process.env.MAX_IMAGES || 12);
 const MAX_IMAGE_MB = Number(process.env.MAX_IMAGE_MB || 8);
 
@@ -20,9 +22,7 @@ if (!process.env.GEMINI_API_KEY) {
   console.warn("   GEMINI_API_KEY=YOUR_GEMINI_API_KEY");
 }
 
-const ai = process.env.GEMINI_API_KEY
-  ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
-  : null;
+const aiConfigured = Boolean(process.env.GEMINI_API_KEY);
 
 app.use(cors({
   origin: process.env.ALLOWED_ORIGIN || true
@@ -79,7 +79,7 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/study", async (req, res) => {
   try {
-    if (!ai) {
+    if (!aiConfigured) {
       return res.status(503).json({
         error: "AI is not configured. Add GEMINI_API_KEY to .env."
       });
@@ -112,16 +112,42 @@ app.post("/api/study", async (req, res) => {
       });
     }
 
-    const response = await ai.models.generateContent({
-      model: MODEL,
+    const requestBody = {
+      systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: [{ role: "user", parts: contents }],
-      config: {
-        systemInstruction,
-        temperature: 0.35
-      }
+      generationConfig: { temperature: 0.35 }
+    };
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`;
+    let googleResponse = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": process.env.GEMINI_API_KEY
+      },
+      body: JSON.stringify(requestBody)
     });
 
-    const text = response.text || "The AI returned no text.";
+    if (googleResponse.status === 401) {
+      googleResponse = await fetch(`${apiUrl}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
+    }
+
+    const googleData = await googleResponse.json().catch(() => ({}));
+    if (!googleResponse.ok) {
+      const message = googleData?.error?.message || `Gemini API request failed (${googleResponse.status}).`;
+      const err = new Error(message);
+      err.status = googleResponse.status;
+      throw err;
+    }
+
+    const text = googleData?.candidates?.[0]?.content?.parts
+      ?.map(part => part?.text || "")
+      .join("\n")
+      .trim() || "The AI returned no text.";
     res.json({
       ok: true,
       mode,
@@ -130,7 +156,7 @@ app.post("/api/study", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    const status = /quota|rate|resource exhausted/i.test(error?.message || "") ? 429 : 500;
+    const status = Number.isInteger(error?.status) ? error.status : (/quota|rate|resource exhausted/i.test(error?.message || "") ? 429 : 500);
     res.status(status).json({
       error: error?.message || "AI request failed."
     });
