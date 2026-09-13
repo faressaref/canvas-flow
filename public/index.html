@@ -315,6 +315,8 @@
     #boardsList { max-height:330px; overflow:auto; }
     #boardNameDisplay { max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; color:#697383; }
     .save-btn { border:1px solid #dfe3ea; background:#fff; color:#18202a; border-radius:8px; padding:7px 9px; cursor:pointer; font-size:10px; font-weight:800; }
+    /* Cloud saving is automatic; manual Save controls are intentionally hidden. */
+    #saveBoardBtn, #tabletSave, #saveBoardFromModal { display:none !important; }
     .save-btn.primary { background:#5b63ff; border-color:#5b63ff; color:#fff; }
     #tabletAccount { display:none; }
     #tabletAccount label { display:block; font-size:8px; font-weight:700; color:#697383; margin-bottom:3px; }
@@ -2253,43 +2255,71 @@ function setSaveState(type, text) {
   if (mel) { mel.className = type; mel.textContent = label; }
   window.dispatchEvent(new CustomEvent("canvasflow:save-state", {detail:{type, text:label}}));
 }
+// ================= AUTO SAVE =================
+// Boards are saved automatically. No Save button or manual action is required.
+// Local draft is updated immediately; cloud sync is debounced to avoid excessive
+// Firestore writes while the user is drawing/moving objects.
+const AUTO_SAVE_DELAY = 1200;
+
 function scheduleSave(major=false) {
   if(!suppressSave) saveLocalDraft();
   if (!FIREBASE_READY || !db || suppressSave || !currentUser) return;
-  if (major) saveNow(true);
+
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>saveNow(false),30000);
+  // Major changes can still use the same debounce so rapid canvas operations
+  // are grouped into one reliable Firestore write.
+  saveTimer=setTimeout(()=>saveNow(false), major ? 900 : AUTO_SAVE_DELAY);
 }
+
 async function saveNow(force=false, forcedName=null) {
-  if (!FIREBASE_READY || !db || suppressSave) return;
-  if (!currentUser) { if(force) openAuthModal(); return; }
+  if (!FIREBASE_READY || !db || suppressSave || !currentUser) return;
   if (saveInProgress) { saveQueued=true; return; }
-  saveInProgress=true; setSaveState("saving");
+
+  saveInProgress=true;
+  setSaveState("saving", "Saving...");
   try {
+    // Create the board automatically the first time something needs to be saved.
+    // Never interrupt the user with a naming prompt.
     if(!currentBoardId){
-      let name=(forcedName||currentBoardName||"").trim();
-      if(!name || name==="Unsaved board") name=prompt("Name your board:", "My first board") || "My first board";
-      name=name.trim() || "My first board";
-      const ref=await boardsCollection().add({name, canvas:"", createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-      currentBoardId=ref.id; currentBoardName=name; updateAccountUI();
+      const name=(forcedName||currentBoardName||DEFAULT_BOARD_NAME).trim() || DEFAULT_BOARD_NAME;
+      const ref=await boardsCollection().add({
+        name,
+        canvas:"",
+        pages:[],
+        pageIndex:0,
+        pageCount:1,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      currentBoardId=ref.id;
+      currentBoardName=name;
+      updateAccountUI();
     }
+
     ensureBoardPages();
     boardPages[boardPageIndex] = canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
+
     await boardRef().set({
-      name: currentBoardName,
+      name: currentBoardName || DEFAULT_BOARD_NAME,
       canvas: JSON.stringify(boardPages[boardPageIndex]),
       pages: boardPages.map(pg => JSON.stringify(pg)),
       pageIndex: boardPageIndex,
       pageCount: boardPages.length,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
-    setSaveState("saved");
-    if(currentUser && currentBoardId) localStorage.setItem("canvasflow-last-board-"+currentUser.uid,currentBoardId);
+
+    setSaveState("saved", "Saved ✓");
+    localStorage.setItem("canvasflow-last-board-"+currentUser.uid,currentBoardId);
   } catch(err) {
-    console.error(err); setSaveState("error");
+    console.error("CanvasFlow auto-save failed:", err);
+    setSaveState("error", "Auto-save failed");
   } finally {
     saveInProgress=false;
-    if(saveQueued){saveQueued=false; setTimeout(()=>saveNow(false),250);}
+    if(saveQueued){
+      saveQueued=false;
+      clearTimeout(saveTimer);
+      saveTimer=setTimeout(()=>saveNow(false),300);
+    }
   }
 }
 async function loadBoard() {
@@ -2363,12 +2393,13 @@ if(auth){
     currentUser=user||null;
     updateAccountUI();
     if(user){
-      const beforeLoad = currentBoardId;
       await loadBoard();
       localStorage.setItem("canvasflow-auth-seen","1");
-      // If this account has no cloud board yet, keep the current local draft.
-      if(!currentBoardId && beforeLoad) {
-        restoreLocalDraft();
+      // If this account has no cloud board yet, restore the local draft and
+      // immediately queue it for automatic cloud saving.
+      if(!currentBoardId) {
+        const restored = restoreLocalDraft();
+        if(restored) scheduleSave(true);
       }
     } else {
       // On refresh, keep the current board/draft instead of wiping the canvas.
