@@ -4083,3 +4083,93 @@ body.mobile-css-fullscreen #authModal.open .modal-card{
   });
 })();
 </script>
+
+<!-- ===== MOBILE TWO-FINGER PINCH ZOOM - ROBUST ===== -->
+<style id="mobile-pinch-robust-style">
+@media (max-width:760px), (max-height:520px) and (max-width:900px){
+  #canvasWrap{touch-action:pan-x pan-y !important;}
+}
+</style>
+<script id="mobile-pinch-robust-final">
+(function(){
+  'use strict';
+  const wrap=document.getElementById('canvasWrap');
+  if(!wrap) return;
+  const mobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const getCanvas=()=>typeof canvas!=='undefined'?canvas:null;
+  let g=null;
+  const dist=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+  const mid=(a,b)=>({x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2});
+  function start(e){
+    if(!mobile() || e.touches.length!==2 || !getCanvas()) return;
+    const a=e.touches[0],b=e.touches[1],m=mid(a,b),c=getCanvas();
+    g={d:Math.max(1,dist(a,b)),z:c.getZoom(),mX:m.x,mY:m.y,v:c.viewportTransform.slice()};
+    e.preventDefault();
+  }
+  function move(e){
+    if(!mobile() || !g || e.touches.length!==2 || !getCanvas()) return;
+    const a=e.touches[0],b=e.touches[1],m=mid(a,b),d=Math.max(1,dist(a,b)),c=getCanvas();
+    const z=Math.max(0.2,Math.min(5,g.z*(d/g.d))), f=z/g.z, v=g.v.slice();
+    v[4]=m.x-(g.mX-g.v[4])*f;
+    v[5]=m.y-(g.mY-g.v[5])*f;
+    c.setViewportTransform(v); c.requestRenderAll();
+    if(typeof updateZoom==='function') updateZoom();
+    e.preventDefault();
+  }
+  function end(e){ if(e.touches.length<2) g=null; }
+  wrap.addEventListener('touchstart',start,{passive:false,capture:true});
+  wrap.addEventListener('touchmove',move,{passive:false,capture:true});
+  wrap.addEventListener('touchend',end,{passive:true,capture:true});
+  wrap.addEventListener('touchcancel',end,{passive:true,capture:true});
+})();
+</script>
+
+<!-- ===== MOBILE BOARDS MATCH ACCOUNT CONTAINER ===== -->
+<style id="mobile-boards-match-account-final">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  /* Boards uses the exact same centered compact/glass modal treatment as Account. */
+  #boardsModal.open{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:2147483646 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:12px !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+    background:rgba(10,14,20,.30) !important;
+    backdrop-filter:blur(12px) saturate(115%) !important;
+    -webkit-backdrop-filter:blur(12px) saturate(115%) !important;
+  }
+  #boardsModal.open .modal-card{
+    position:relative !important;
+    z-index:2147483647 !important;
+    width:min(340px, calc(100vw - 28px)) !important;
+    max-width:340px !important;
+    max-height:min(78dvh,520px) !important;
+    overflow-y:auto !important;
+    box-sizing:border-box !important;
+    margin:0 auto !important;
+    padding:13px !important;
+    border-radius:16px !important;
+    border:1px solid rgba(255,255,255,.72) !important;
+    background:rgba(255,255,255,.96) !important;
+    box-shadow:0 20px 60px rgba(0,0,0,.28),0 2px 10px rgba(0,0,0,.08) !important;
+  }
+  #boardsModal.open .modal-head{margin-bottom:9px !important;}
+  #boardsModal.open .modal-head h3{font-size:15px !important;}
+  #boardsModal.open .modal-close{width:28px !important;height:28px !important;}
+  #boardsModal.open .boards-toolbar{gap:5px !important;margin-bottom:8px !important;}
+  #boardsModal.open .board-action{min-height:40px !important;height:40px !important;padding:8px 7px !important;margin-top:0 !important;border-radius:8px !important;font-size:11px !important;}
+  #boardsModal.open .board-name-input{min-height:40px !important;height:40px !important;margin:4px 0 7px !important;padding:8px 10px !important;border-radius:8px !important;font-size:13px !important;}
+  #boardsModal.open #boardsList{max-height:calc(min(78dvh,520px) - 145px) !important;overflow-y:auto !important;}
+  #boardsModal.open .board-item{padding:9px 8px !important;margin:5px 0 !important;border-radius:9px !important;}
+  #boardsModal.open .board-item strong{font-size:11px !important;}
+  #boardsModal.open .board-item small{font-size:8px !important;}
+}
+body.in-fullscreen #boardsModal.open,
+body.mobile-css-fullscreen #boardsModal.open{z-index:2147483646 !important;}
+body.in-fullscreen #boardsModal.open .modal-card,
+body.mobile-css-fullscreen #boardsModal.open .modal-card{z-index:2147483647 !important;}
+</style>
