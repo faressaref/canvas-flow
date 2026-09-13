@@ -1167,7 +1167,7 @@
             <div style="font-size:25px;margin-bottom:5px;">📚</div>
             <b style="font-size:12px;">ارفع صور صفحات الدرس</b>
             <div style="font-size:10px;color:#89919d;margin-top:4px;">تقدر ترفع أكتر من صورة</div>
-            <input id="lessonImages" type="file" accept="image/*" multiple style="display:none;">
+            <input id="lessonImages" type="file" accept="*/*" multiple style="display:none;">
           </div>
           <div id="lessonPreviews" style="display:flex;gap:7px;overflow:auto;margin-top:8px;"></div>
           <textarea id="lessonInput" placeholder="اكتب أو الصق محتوى الدرس هنا...
@@ -1321,7 +1321,7 @@
 
   <div id="mobileV2LandscapeTools" aria-label="Mobile landscape tools"></div>
 
-  <input id="fileInput" type="file" accept="image/*" />
+  <input id="fileInput" type="file" accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip,.rar,*/*" />
 
 
   <div id="authModal">
@@ -1930,76 +1930,103 @@ document.getElementById("addText").onclick = () => {
 };
 
 async function addImageFileToCanvas(file) {
-  // Load the selected image locally first so it is added even when
-  // Firebase Storage or browser CORS handling is unavailable.
-  const localUrl = URL.createObjectURL(file);
-  await new Promise((resolve) => {
-    const finish = () => { try { URL.revokeObjectURL(localUrl); } catch(e) {} resolve(); };
-    const addImage = async (img) => {
-      if (!img) { finish(); return; }
-      img.set({left:canvas.getCenter().left-150, top:canvas.getCenter().top-100, objectRole:"image", fileName:file.name});
-      const maxW=420, maxH=300;
-      const scale=Math.min(maxW/(img.width||1), maxH/(img.height||1), 1);
-      img.scale(scale);
-      canvas.add(img);
-      canvas.setActiveObject(img);
-      canvas.requestRenderAll();
-
-      if (FIREBASE_READY && storage) {
+  // Use a data URL for the Fabric image. This is reliable across browsers
+  // and does not depend on Firebase Storage or blob/CORS behavior.
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const imgEl = new Image();
+      imgEl.onload = async () => {
         try {
-          setSaveState("saving");
-          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-          const ref = storage.ref("whiteboard-images/" + Date.now() + "_" + safeName);
-          await ref.put(file);
-          const url = await ref.getDownloadURL();
-          img.set({srcUrl:url});
+          const img = new fabric.Image(imgEl);
+          const center = canvas.getCenter();
+          img.set({
+            left: center.left - 150,
+            top: center.top - 100,
+            objectRole: "image",
+            fileName: file.name,
+            srcUrl: dataUrl
+          });
+          const maxW = 420, maxH = 300;
+          const scale = Math.min(maxW / (img.width || 1), maxH / (img.height || 1), 1);
+          img.scale(scale);
+          canvas.add(img);
+          canvas.setActiveObject(img);
           canvas.requestRenderAll();
           scheduleSave(true);
-        } catch (err) {
-          console.error(err);
-          img.set({srcUrl:localUrl});
-          setSaveState("error", "Image kept locally — Firebase Storage failed");
-          scheduleSave(true);
-        }
-      } else {
-        img.set({srcUrl:localUrl});
-        scheduleSave(true);
-      }
-      finish();
-    };
 
-    fabric.Image.fromURL(localUrl, addImage, {crossOrigin:"anonymous"});
+          if (FIREBASE_READY && storage) {
+            try {
+              setSaveState("saving");
+              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+              const ref = storage.ref("whiteboard-images/" + Date.now() + "_" + safeName);
+              await ref.put(file);
+              img.set({srcUrl: await ref.getDownloadURL()});
+              canvas.requestRenderAll();
+              scheduleSave(true);
+            } catch (err) {
+              console.error("Image Storage upload failed:", err);
+              setSaveState("error", "Image added locally — Firebase Storage failed");
+            }
+          }
+        } catch (err) {
+          console.error("Image add failed:", err);
+          setSaveState("error", "Could not add image");
+        }
+        resolve();
+      };
+      imgEl.onerror = (err) => {
+        console.error("Image decode failed:", err);
+        setSaveState("error", "Could not load image");
+        resolve();
+      };
+      imgEl.src = dataUrl;
+    };
+    reader.onerror = (err) => {
+      console.error("FileReader failed:", err);
+      setSaveState("error", "Could not read image");
+      resolve();
+    };
+    reader.readAsDataURL(file);
   });
 }
-
 async function addFileAttachment(file) {
-  let url = URL.createObjectURL(file);
-  let persistentUrl = url;
-  if (FIREBASE_READY && storage) {
-    try {
-      setSaveState("saving");
-      const ref = storage.ref("whiteboard-files/" + Date.now() + "_" + file.name.replace(/[^w.-]/g,"_"));
-      await ref.put(file);
-      persistentUrl = await ref.getDownloadURL();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(err);
-      setSaveState("error", "File kept locally — Firebase Storage failed");
-    }
-  }
+  const localUrl = URL.createObjectURL(file);
+  let persistentUrl = localUrl;
 
-  const label = `${file.name} · ${Math.max(1, Math.round(file.size/1024))} KB`;
+  // Add the file card immediately. Storage must never block the UI from adding it.
+  const label = `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB`;
   const text = new fabric.Textbox(`📎 ${label}`, {
-    left:canvas.getCenter().left-110, top:canvas.getCenter().top-35, width:220,
-    fontSize:13, fill:"#18202a", backgroundColor:"#ffffff", padding:10,
-    borderColor:"#dfe4ea", cornerColor:"#5b63ff", cornerSize:7,
-    objectRole:"file", fileName:file.name, fileType:file.type || "application/octet-stream", fileSize:file.size, srcUrl:persistentUrl
+    left: canvas.getCenter().left - 110, top: canvas.getCenter().top - 35, width: 220,
+    fontSize: 13, fill: "#18202a", backgroundColor: "#ffffff", padding: 10,
+    borderColor: "#dfe4ea", cornerColor: "#5b63ff", cornerSize: 7,
+    objectRole: "file", fileName: file.name, fileType: file.type || "application/octet-stream", fileSize: file.size, srcUrl: persistentUrl
   });
-  text.set({shadow:"0 4px 12px rgba(0,0,0,.08)"});
+  text.set({shadow: "0 4px 12px rgba(0,0,0,.08)"});
   canvas.add(text);
   canvas.setActiveObject(text);
   canvas.requestRenderAll();
   scheduleSave(true);
+
+  if (FIREBASE_READY && storage) {
+    try {
+      setSaveState("saving");
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const ref = storage.ref("whiteboard-files/" + Date.now() + "_" + safeName);
+      await ref.put(file);
+      persistentUrl = await ref.getDownloadURL();
+      text.set({srcUrl: persistentUrl});
+      canvas.requestRenderAll();
+      try { URL.revokeObjectURL(localUrl); } catch(e) {}
+      scheduleSave(true);
+    } catch (err) {
+      console.error("File Storage upload failed:", err);
+      text.set({srcUrl: localUrl});
+      setSaveState("error", "File kept locally — Firebase Storage failed");
+      scheduleSave(true);
+    }
+  }
 }
 
 async function handleDroppedFiles(files) {
