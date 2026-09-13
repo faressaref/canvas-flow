@@ -2887,10 +2887,16 @@ updateZoom();
     e.preventDefault(); e.stopPropagation();
     const name=btn.dataset.v2Tool;
     if(name==='image'){
-      pendingImagePoint = pendingImagePoint || (() => { const c=canvas.getCenter(); return {x:c.left,y:c.top}; })();
+      e.stopImmediatePropagation();
+      const c=canvas.getCenter();
+      pendingImagePoint={x:c.left,y:c.top};
       const input=document.getElementById('fileInput');
-      if(input) input.click();
+      if(input){
+        input.value='';
+        input.click();
+      }
       setTool('select');
+      return;
     } else {
       setTabletScrollMode(false);
       setTool(name);
@@ -2997,7 +3003,11 @@ updateZoom();
           document.getElementById('aiToggle')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
           return;
         }
-        if(name==='image'){ const c=canvas.getCenter(); pendingImagePoint={x:c.left,y:c.top}; const input=document.getElementById('fileInput'); if(input){ input.value=''; input.click(); } setTool?.('select'); return; }
+        if(name==='image'){
+      /* Image is handled by the single capture-phase mobile handler above.
+         Do not open the picker a second time in landscape. */
+      return;
+    }
         if(name==='scroll'){ window.__mobileScrollOn=!window.__mobileScrollOn; setTabletScrollMode(window.__mobileScrollOn); sync(); return; }
         setTabletScrollMode(false); setTool(name); sync();
       });
