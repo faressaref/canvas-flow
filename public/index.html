@@ -1716,7 +1716,12 @@ async function loadBoardById(id){
         undoStack=[];
         redoStack=[];
         updateHistoryButtons();
-        renderBoardPages();
+        const pageLabel=document.getElementById("mobilePageLabel");
+        if(pageLabel) pageLabel.textContent=`Page ${boardPageIndex+1} / ${boardPages.length}`;
+        const prevPage=document.getElementById("mobilePrevPage");
+        const nextPage=document.getElementById("mobileNextPage");
+        if(prevPage) prevPage.disabled=boardPageIndex===0;
+        if(nextPage) nextPage.disabled=boardPageIndex===boardPages.length-1;
         setSaveState("saved", "Opened ✓");
       }catch(renderErr){
         console.error("CanvasFlow render after board open failed:",renderErr);
@@ -2414,7 +2419,7 @@ function setSaveState(type, text) {
 // Firestore writes while the user is drawing/moving objects.
 const AUTO_SAVE_DELAY = 1200;
 
-window.ensureBoardPages = function(){
+function normalizeBoardPagesState(){
   if(!Array.isArray(boardPages) || !boardPages.length){
     boardPages=[canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"])];
     boardPageIndex=0;
@@ -2422,6 +2427,7 @@ window.ensureBoardPages = function(){
   boardPageIndex=Math.max(0,Math.min(Number(boardPageIndex)||0,boardPages.length-1));
   boardPagesReady=true;
 }
+
 
 function scheduleSave(major=false) {
   if(!suppressSave) saveLocalDraft();
@@ -2460,7 +2466,7 @@ async function saveNow(force=false, forcedName=null) {
       updateAccountUI();
     }
 
-    window.ensureBoardPages();
+    normalizeBoardPagesState();
     const currentPageJson = canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
     boardPages[boardPageIndex] = currentPageJson;
 
@@ -3356,15 +3362,24 @@ updateZoom();
   }
   sheetClass(); window.addEventListener('resize',sheetClass,{passive:true});
 
+  function normalizePageState(){
+    if(!Array.isArray(boardPages) || !boardPages.length){
+      boardPages=[canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"])];
+      boardPageIndex=0;
+    }
+    boardPageIndex=Math.max(0,Math.min(Number(boardPageIndex)||0,boardPages.length-1));
+    boardPagesReady=true;
+  }
+
   // Real multi-page board system. Pages stay inside the same board.
   const label=document.getElementById('mobilePageLabel');
   function getBoardPagesForSave(){
-    window.ensureBoardPages();
+    normalizePageState();
     boardPages[boardPageIndex]=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
     return boardPages;
   }
   function renderBoardPages(){
-    window.ensureBoardPages();
+    normalizePageState();
     if(label) label.textContent=`Page ${boardPageIndex+1} / ${boardPages.length}`;
     const prev=document.getElementById('mobilePrevPage');
     const next=document.getElementById('mobileNextPage');
@@ -3372,7 +3387,7 @@ updateZoom();
     if(next) next.disabled=boardPageIndex===boardPages.length-1;
   }
   async function switchBoardPage(nextIndex){
-    window.ensureBoardPages();
+    normalizePageState();
     const target=Math.max(0,Math.min(nextIndex,boardPages.length-1));
     if(target===boardPageIndex) return;
     boardPages[boardPageIndex]=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
@@ -3389,7 +3404,7 @@ updateZoom();
     });
   }
   document.getElementById('mobileAddPage')?.addEventListener('click',async()=>{
-    window.ensureBoardPages();
+    normalizePageState();
     boardPages[boardPageIndex]=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
     boardPages.push({version:"6.0.0",objects:[]});
     boardPageIndex=boardPages.length-1;
@@ -3402,7 +3417,7 @@ updateZoom();
   });
   document.getElementById('mobileNextPage')?.addEventListener('click',()=>switchBoardPage(boardPageIndex+1));
   document.getElementById('mobilePrevPage')?.addEventListener('click',()=>switchBoardPage(boardPageIndex-1));
-  window.ensureBoardPages(); renderBoardPages();
+  normalizePageState(); renderBoardPages();
 })();
 
 </script>
