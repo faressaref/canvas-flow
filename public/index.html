@@ -1214,6 +1214,7 @@
     <button type="button" data-v2-tool="select"><span class="v2icon">↖</span><span>Select</span></button>
     <button type="button" data-v2-tool="pen"><span class="v2icon">✎</span><span>Pen</span></button>
     <button type="button" data-v2-tool="highlighter"><span class="v2icon">▰</span><span>Highlight</span></button>
+    <button type="button" id="mobileFullscreen" aria-label="Fullscreen" title="Fullscreen"><span class="v2icon">⛶</span><span>Fullscreen</span></button>
     <button type="button" id="mobileV2Scroll" aria-label="Scroll board"><span class="v2icon">↕</span><span>Scroll</span></button>
     <button type="button" id="mobileV2AI"><span class="v2icon">✦</span><span>AI</span></button>
     <button type="button" id="mobileV2More"><span class="v2icon">⋯</span><span>More</span></button>
@@ -2801,7 +2802,7 @@ updateZoom();
 
 // ================= MOBILE UX =================
 (function initMobileUX(){
-  const isMobile = () => window.matchMedia('(max-width:760px)').matches;
+  const isMobile = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
   const mobileAI = document.getElementById('mobileAI');
   const mobileAIButton = document.getElementById('mobileAIButton');
   const mobileOpenAI = document.getElementById('mobileOpenAI');
@@ -2810,7 +2811,36 @@ updateZoom();
   const mobileUndo = document.getElementById('mobileUndo');
   const mobileRedo = document.getElementById('mobileRedo');
   const mobileFocus = document.getElementById('mobileFocus');
+  const mobileFullscreen = document.getElementById('mobileFullscreen');
   const mobileZoomReset = document.getElementById('mobileZoomReset');
+
+  function isFullscreen(){
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+  async function toggleMobileFullscreen(){
+    if(!isMobile()) return;
+    try {
+      if(isFullscreen()){
+        if(document.exitFullscreen) await document.exitFullscreen();
+        else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } else {
+        const el=document.documentElement;
+        if(el.requestFullscreen) await el.requestFullscreen();
+        else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      }
+    } catch(e) {
+      // Some mobile browsers do not expose the Fullscreen API.
+    }
+    syncMobileFullscreen();
+  }
+  function syncMobileFullscreen(){
+    if(!mobileFullscreen) return;
+    const fs=isFullscreen();
+    mobileFullscreen.textContent=fs?'×':'⛶';
+    mobileFullscreen.title=fs?'Exit fullscreen':'Fullscreen';
+    mobileFullscreen.setAttribute('aria-label',fs?'Exit fullscreen':'Fullscreen');
+    mobileFullscreen.classList.toggle('active',fs);
+  }
   const mobileMore = document.getElementById('mobileMore');
 
   function mobileSetState(type, text){
@@ -2830,6 +2860,11 @@ updateZoom();
   mobileRedo?.addEventListener('click',()=>typeof redo==='function'&&redo());
   mobileZoomReset?.addEventListener('click',()=>{ if(typeof canvas!=='undefined'){ canvas.setViewportTransform([1,0,0,1,0,0]); if(typeof updateZoom==='function')updateZoom(); }});
   mobileFocus?.addEventListener('click',()=>document.body.classList.toggle('mobile-focus'));
+  mobileFullscreen?.addEventListener('click',toggleMobileFullscreen);
+  document.addEventListener('fullscreenchange',syncMobileFullscreen);
+  document.addEventListener('webkitfullscreenchange',syncMobileFullscreen);
+  window.addEventListener('orientationchange',()=>setTimeout(syncMobileFullscreen,80),{passive:true});
+  syncMobileFullscreen();
   mobileMore?.addEventListener('click',()=>{
     const tools=['eraser','rect','circle','line','arrow','text','node','image'];
     const labels={eraser:'⌫ Eraser',rect:'▱ Rectangle',circle:'○ Circle',line:'╱ Line',arrow:'➜ Arrow',text:'T Text',node:'◇ Node',image:'▧ Image'};
@@ -2971,6 +3006,20 @@ updateZoom();
   #canvasWrap canvas { pointer-events:auto !important; }
 }
 </style>
+
+<style>
+@media (max-width:760px){
+  #mobileFullscreen{display:flex !important;align-items:center;justify-content:center;}
+  #mobileFullscreen.active{font-size:22px;font-weight:700;}
+}
+</style>
+<style id="mobile-fullscreen-v2">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  #mobileFullscreen{display:flex !important;align-items:center;justify-content:center;flex:0 0 auto !important;min-width:64px !important;}
+  #mobileFullscreen .v2icon{font-size:18px;line-height:18px;}
+  #mobileV2Bar{z-index:10010 !important;}
+}
+</style>
 </body>
 </html>
 
@@ -3020,5 +3069,19 @@ updateZoom();
   #mobileV2Bar > button{flex:0 0 58px !important; min-width:58px !important; width:58px !important;}
   #mobileV2More{display:none !important;}
   #mobileV2Menu{display:none !important;}
+}
+</style>
+
+<style id="mobile-fullscreen-final">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  #mobileV2Bar #mobileFullscreen{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    flex:0 0 64px !important;
+    min-width:64px !important;
+    width:64px !important;
+    pointer-events:auto !important;
+  }
 }
 </style>
