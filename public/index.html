@@ -2780,13 +2780,31 @@ updateZoom();
       b.innerHTML=`<span class="v2icon">${icon}</span><span>${label}</span>`;
       b.addEventListener('click',e=>{
         e.preventDefault(); e.stopPropagation();
-        if(name==='ai'){ document.getElementById('aiToggle')?.click(); return; }
+        if(name==='ai'){
+          const panel=document.getElementById('aiPanel');
+          if(panel) panel.classList.toggle('open');
+          document.getElementById('aiToggle')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
+          return;
+        }
         if(name==='image'){ document.getElementById('fileInput')?.click(); return; }
-        if(name==='scroll'){ window.__mobileScrollOn=!window.__mobileScrollOn; setTabletScrollMode(window.__mobileScrollOn); return; }
-        setTabletScrollMode(false); setTool(name);
+        if(name==='scroll'){ window.__mobileScrollOn=!window.__mobileScrollOn; setTabletScrollMode(window.__mobileScrollOn); sync(); return; }
+        setTabletScrollMode(false); setTool(name); sync();
       });
       bar.appendChild(b);
     });
+    // Landscape: keep Color and Fullscreen directly in the Elements bar (no More).
+    const color=document.createElement('label');
+    color.className='mobile-v2-color'; color.setAttribute('aria-label','Color');
+    color.innerHTML='<span class="v2icon">●</span><input id="mobileV2ColorLandscape" type="color" aria-label="Color">';
+    const ci=color.querySelector('input');
+    const dc=document.getElementById('color');
+    if(ci && dc) ci.value=dc.value;
+    ci?.addEventListener('input',()=>{ if(dc){dc.value=ci.value;dc.dispatchEvent(new Event('input',{bubbles:true}));dc.dispatchEvent(new Event('change',{bubbles:true}));} });
+    bar.appendChild(color);
+    const fs=document.createElement('button'); fs.type='button'; fs.id='mobileLandscapeFullscreen';
+    fs.innerHTML='<span class="v2icon">⛶</span><span>Fullscreen</span>';
+    fs.addEventListener('click',()=>document.getElementById('mobileFullscreen')?.click());
+    bar.appendChild(fs);
   }
   function sync(){
     if(!landscape()) return;
@@ -2794,6 +2812,8 @@ updateZoom();
     bar.querySelectorAll('[data-v2-tool]').forEach(b=>b.classList.toggle('active',b.dataset.v2Tool===tool));
     bar.querySelector('[data-v2-tool="scroll"]')?.classList.toggle('active',!!window.__mobileScrollOn);
     bar.querySelector('[data-v2-tool="ai"]')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
+    const fs=document.getElementById('mobileLandscapeFullscreen');
+    if(fs) fs.querySelector('.v2icon').textContent=(document.fullscreenElement||document.webkitFullscreenElement)?'×':'⛶';
   }
   window.addEventListener('resize',sync,{passive:true});
   window.addEventListener('orientationchange',()=>setTimeout(sync,80),{passive:true});
@@ -3020,6 +3040,16 @@ updateZoom();
   #mobileV2Bar{z-index:10010 !important;}
 }
 </style>
+
+<style id="mobile-landscape-elements-final">
+@media screen and (max-height:520px) and (max-width:900px){
+  #mobileV2More,#mobileV2Menu{display:none !important;}
+  #mobileV2Bar{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;overflow-x:auto !important;overflow-y:hidden !important;justify-content:flex-start !important;align-items:center !important;gap:3px !important;touch-action:pan-x !important;}
+  #mobileV2Bar > button,#mobileV2Bar > label{display:flex !important;flex:0 0 58px !important;min-width:58px !important;width:58px !important;}
+  #mobileV2Bar > label{align-items:center;justify-content:center;flex-direction:column;}
+  #mobileV2Bar #mobileLandscapeFullscreen{display:flex !important;}
+}
+</style>
 </body>
 </html>
 
@@ -3082,6 +3112,35 @@ updateZoom();
     min-width:64px !important;
     width:64px !important;
     pointer-events:auto !important;
+  }
+}
+</style>
+<style id="mobile-elements-horizontal-scroll-final">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  #mobileV2Bar{
+    display:flex !important;
+    flex-direction:row !important;
+    flex-wrap:nowrap !important;
+    justify-content:flex-start !important;
+    align-items:stretch !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    touch-action:pan-x !important;
+    scrollbar-width:none !important;
+    white-space:nowrap !important;
+  }
+  #mobileV2Bar::-webkit-scrollbar{display:none !important;}
+  #mobileV2Bar > button,
+  #mobileV2Bar > label{
+    flex:0 0 58px !important;
+    min-width:58px !important;
+    width:58px !important;
+    max-width:58px !important;
+  }
+  #mobileV2Bar .mobile-v2-color{
+    flex:0 0 58px !important;
+    min-width:58px !important;
   }
 }
 </style>
