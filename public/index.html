@@ -1457,7 +1457,7 @@ function boardRef(id=currentBoardId) {
 }
 function updateAccountUI() {
   const logged = !!currentUser;
-  document.getElementById("authBtn").textContent = logged ? "Log out" : "Log in";
+  document.getElementById("authBtn").textContent = logged ? "Account" : "Log in";
   document.getElementById("userEmail").textContent = logged ? currentUser.email : "Not signed in";
   document.getElementById("boardNameDisplay").textContent = logged ? currentBoardName : "Login to save";
   document.getElementById("tabletUserDot").textContent = logged ? (currentUser.email || "Account").split("@")[0] : "Guest";
@@ -1525,7 +1525,7 @@ document.getElementById("authBtn").onclick=()=>{
   }
 };
 
-function openAccountChooser(){
+window.openAccountChooser = function openAccountChooser(){
   let modal=document.getElementById("accountChooserModal");
   if(!modal){
     modal=document.createElement("div");
@@ -1649,52 +1649,87 @@ async function deleteBoard(id){
 }
 
 async function loadBoardById(id){
-  if(!currentUser) return;
-  const ref=boardRef(id); if(!ref) return;
+  if(!currentUser){ setSaveState("error","Please log in"); return; }
+  const ref=boardRef(id);
+  if(!ref){ setSaveState("error","Board reference missing"); return; }
 
-  // Close the boards list as soon as a board is tapped/clicked.
   boardsModal.classList.remove("open");
   setSaveState("saving", "Opening...");
+  suppressSave=true;
 
   try {
     const snap=await ref.get();
     if(!snap.exists){
+      suppressSave=false;
       setSaveState("error", "Board not found");
       return;
     }
 
     const d=snap.data()||{};
+    let pages=[];
+
+    // Read the saved pages safely. Older boards may only have `canvas`.
+    if(Array.isArray(d.pages) && d.pages.length){
+      for(let i=0;i<d.pages.length;i++){
+        const raw=d.pages[i];
+        if(!raw) continue;
+        try{
+          const page = typeof raw === "string" ? JSON.parse(raw) : raw;
+          if(page && typeof page === "object") pages.push(page);
+        }catch(parseErr){
+          console.warn("CanvasFlow: skipped invalid saved page", i+1, parseErr);
+        }
+      }
+    }
+
+    if(!pages.length && d.canvas){
+      try{
+        const page = typeof d.canvas === "string" ? JSON.parse(d.canvas) : d.canvas;
+        if(page && typeof page === "object") pages=[page];
+      }catch(parseErr){
+        throw new Error("Saved canvas data is corrupted and could not be opened.");
+      }
+    }
+
+    if(!pages.length) pages=[{version:"6.0.0",objects:[]}];
+
     currentBoardId=id;
     currentBoardName=d.name||"Untitled board";
-    updateAccountUI();
-    localStorage.setItem("canvasflow-last-board-"+currentUser.uid,id);
-
-    suppressSave=true;
-    const pages = Array.isArray(d.pages) && d.pages.length
-      ? d.pages
-      : (d.canvas ? [JSON.parse(d.canvas)] : [{version:"6.0.0",objects:[]}]);
-
-    boardPages = pages.map(x => typeof x === "string" ? JSON.parse(x) : x);
-    boardPageIndex = Math.max(0, Math.min(Number(d.pageIndex)||0, boardPages.length-1));
+    boardPages=pages;
+    boardPageIndex=Math.max(0,Math.min(parseInt(d.pageIndex,10)||0,boardPages.length-1));
     boardPagesReady=true;
 
+    try{
+      localStorage.setItem("canvasflow-last-board-"+currentUser.uid,id);
+    }catch(e){}
+    updateAccountUI();
+
     const data=boardPages[boardPageIndex] || {version:"6.0.0",objects:[]};
-    canvas.loadFromJSON(data,()=>{
-      canvas.requestRenderAll();
-      suppressSave=false;
-      historyReady=true;
-      undoStack=[];
-      redoStack=[];
-      updateHistoryButtons();
-      setSaveState("saved", "Opened ✓");
-      renderBoardPages();
+    if(!data || typeof data !== "object") throw new Error("This board contains invalid canvas data.");
+    if(!Array.isArray(data.objects)) data.objects=[];
+
+    // Fabric's callback runs asynchronously, so finish the UI state there.
+    canvas.loadFromJSON(data, function(){
+      try{
+        canvas.requestRenderAll();
+        historyReady=true;
+        undoStack=[];
+        redoStack=[];
+        updateHistoryButtons();
+        renderBoardPages();
+        setSaveState("saved", "Opened ✓");
+      }catch(renderErr){
+        console.error("CanvasFlow render after board open failed:",renderErr);
+        setSaveState("error", "Open failed: " + (renderErr.message||renderErr));
+      }finally{
+        suppressSave=false;
+      }
     });
   } catch(err){
-    console.error("CanvasFlow board load failed:", err);
     suppressSave=false;
-    const msg = err?.code ? `${err.code}: ${err.message||"Could not open board."}` : (err?.message || String(err) || "Could not open board.");
-    setSaveState("error", "Open failed");
-    console.error(msg);
+    console.error("CanvasFlow board load failed:",err);
+    const detail=(err && err.code ? String(err.code)+" — " : "") + (err && err.message ? String(err.message) : String(err||"Unknown error"));
+    setSaveState("error", "Open failed: " + detail);
   }
 }
 
@@ -4553,7 +4588,14 @@ body.mobile-css-fullscreen #authModal.open .modal-card{
   function openFromAccount(e){
     e?.preventDefault();
     e?.stopPropagation();
-    if(typeof window.openAuthModal==='function') window.openAuthModal();
+    // If already signed in, open the account chooser instead of reopening
+    // the login form. The chooser shows the current account + Add new account.
+    if(typeof currentUser !== 'undefined' && currentUser){
+      if(typeof window.openAccountChooser==='function') window.openAccountChooser();
+      else if(typeof openAccountChooser==='function') openAccountChooser();
+      return;
+    }
+    if(typeof window.openAuthModal==='function') window.openAuthModal('login');
     else modal.classList.add('open');
   }
 
