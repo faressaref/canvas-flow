@@ -933,6 +933,37 @@
       visibility:hidden !important;
       pointer-events:none !important;
     }
+
+/* FINAL PHONE PORTRAIT FIX — isolated from desktop/tablet */
+@media screen and (max-width:760px) and (orientation:portrait){
+  html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;}
+  #topbar{display:none !important;}
+  #app.entered{display:flex !important;width:100%;height:100dvh;min-height:100dvh;overflow:hidden;}
+  #workspace{position:relative !important;display:block !important;flex:1 1 auto !important;width:100% !important;height:100% !important;min-width:0 !important;min-height:0 !important;padding:58px 0 70px !important;overflow:hidden !important;}
+  #canvasWrap{position:absolute !important;left:0 !important;right:0 !important;top:58px !important;bottom:70px !important;width:auto !important;height:auto !important;padding:0 !important;overflow:hidden !important;}
+  #mobilePhoneHeader{position:fixed !important;top:0 !important;left:0 !important;right:0 !important;height:58px !important;z-index:1000 !important;display:flex !important;align-items:center !important;}
+  #mobilePhoneHeader .mbrand{display:block !important;font-size:17px !important;cursor:pointer !important;}
+  #mobilePhoneHeader .mtools{display:flex !important;gap:6px !important;}
+  #mobilePhoneHeader button{width:auto !important;min-width:70px !important;height:38px !important;padding:0 9px !important;}
+  #mobileV2Bar{position:fixed !important;left:7px !important;right:7px !important;top:auto !important;bottom:max(7px,env(safe-area-inset-bottom)) !important;height:58px !important;z-index:1001 !important;display:flex !important;align-items:stretch !important;overflow-x:auto !important;overflow-y:hidden !important;}
+  #mobileV2Bar button{flex:0 0 54px !important;min-width:54px !important;height:48px !important;}
+  #mobileV2Bar #mobileV2Scroll{display:none !important;}
+  .device-switch,#pcMode,#tabletMode,#hint,#zoom,#tabletControls,#tabletAccount,#mobileDock,#mobileQuick,#mobilePages,#mobileAI,#mobileSaveState{display:none !important;}
+}
+
+
+/* Mobile Elements layout: compact footer + overflow in More. Desktop untouched. */
+@media (max-width:760px), (max-height:520px) and (max-width:900px){
+  #mobileV2Bar{position:fixed !important;left:6px !important;right:6px !important;top:auto !important;bottom:max(6px,env(safe-area-inset-bottom)) !important;height:58px !important;display:flex !important;gap:3px !important;padding:4px !important;overflow:hidden !important;z-index:1001 !important;box-sizing:border-box !important;}
+  #mobileV2Bar button{flex:1 1 0 !important;min-width:0 !important;height:48px !important;font-size:8px !important;padding:2px 1px !important;}
+  #mobileV2Bar button .v2icon{font-size:18px !important;line-height:18px !important;}
+  #mobileV2More{display:flex !important;}
+  #mobileV2Menu{position:fixed !important;left:7px !important;right:7px !important;bottom:calc(68px + env(safe-area-inset-bottom)) !important;top:auto !important;max-height:50dvh !important;overflow:auto !important;display:none !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:6px !important;padding:8px !important;z-index:1002 !important;box-sizing:border-box !important;}
+  #mobileV2Menu.open{display:grid !important;}
+  #mobileV2Menu button,#mobileV2Menu label{min-height:48px !important;display:flex !important;align-items:center !important;justify-content:center !important;flex-direction:column !important;gap:2px !important;font-size:9px !important;cursor:pointer !important;box-sizing:border-box !important;}
+  #mobileV2Menu .v2icon{font-size:18px !important;line-height:18px !important;}
+  #mobileV2Menu input[type=color]{width:28px !important;height:22px !important;border:0 !important;padding:0 !important;background:transparent !important;}
+}
 </style>
 </head>
 <body>
@@ -1178,24 +1209,17 @@
     </div>
   </div>
 
-  <!-- Mobile V2 UI: completely independent from desktop/tablet controls -->
+  <!-- Mobile V2 UI: independent touch-first controls -->
   <div id="mobileV2Bar" aria-label="Mobile tools">
     <button type="button" data-v2-tool="select"><span class="v2icon">↖</span><span>Select</span></button>
     <button type="button" data-v2-tool="pen"><span class="v2icon">✎</span><span>Pen</span></button>
     <button type="button" data-v2-tool="highlighter"><span class="v2icon">▰</span><span>Highlight</span></button>
-    <button type="button" data-v2-tool="eraser"><span class="v2icon">⌫</span><span>Eraser</span></button>
-    <button type="button" data-v2-tool="rect"><span class="v2icon">▱</span><span>Rectangle</span></button>
-    <button type="button" data-v2-tool="circle"><span class="v2icon">○</span><span>Circle</span></button>
-    <button type="button" data-v2-tool="line"><span class="v2icon">╱</span><span>Line</span></button>
-    <button type="button" data-v2-tool="arrow"><span class="v2icon">➜</span><span>Arrow</span></button>
-    <button type="button" data-v2-tool="text"><span class="v2icon">T</span><span>Text</span></button>
-    <button type="button" data-v2-tool="node"><span class="v2icon">◇</span><span>Node</span></button>
-    <button type="button" data-v2-tool="image"><span class="v2icon">▧</span><span>Image</span></button>
     <button type="button" id="mobileV2Scroll" aria-label="Scroll board"><span class="v2icon">↕</span><span>Scroll</span></button>
     <button type="button" id="mobileV2AI"><span class="v2icon">✦</span><span>AI</span></button>
-    <div class="mobile-v2-color" title="Color"><input id="mobileV2Color" type="color" value="#18202a" aria-label="Color"></div>
+    <button type="button" id="mobileV2More"><span class="v2icon">⋯</span><span>More</span></button>
   </div>
   <div id="mobileV2Menu" aria-label="More mobile tools"></div>
+  <div id="mobileV2LandscapeTools" aria-label="Mobile landscape tools"></div>
 
   <input id="fileInput" type="file" accept="image/*" />
 
@@ -1602,6 +1626,7 @@ function hexToRgba(hex, alpha) {
 }
 
 function applyBrushSettings() {
+  if (!canvas.freeDrawingBrush) canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
   const baseColor = document.getElementById("color").value;
   const size = +document.getElementById("size").value;
   if (tool === "highlighter") {
@@ -1629,6 +1654,13 @@ tabletScrollBtn.addEventListener("click", () => setTabletScrollMode(!tabletScrol
 
 function setTool(next) {
   if (!next || next === "ai") return;
+  // On phones, selecting any drawing tool must always release scroll/pan mode.
+  if (next === "pen" || next === "highlighter" || next === "rect" || next === "circle" || next === "line" || next === "arrow" || next === "text" || next === "node" || next === "eraser") {
+    if (window.matchMedia && window.matchMedia("(max-width:760px), (max-height:520px) and (max-width:900px)").matches) {
+      tabletScrollMode = false;
+      window.__mobileScrollOn = false;
+    }
+  }
   if (next === "scroll") {
     setTabletScrollMode(!tabletScrollMode);
     document.querySelectorAll(".tool").forEach(b => b.classList.toggle("active", b.dataset.tool === "scroll"));
@@ -1636,7 +1668,13 @@ function setTool(next) {
   }
   tool = next;
   document.querySelectorAll(".tool").forEach(b => b.classList.toggle("active", b.dataset.tool === next));
-  canvas.isDrawingMode = !tabletScrollMode && (next === "pen" || next === "highlighter");
+  // Always explicitly restore Fabric drawing mode for desktop as well as mobile.
+  const drawingTool = next === "pen" || next === "highlighter";
+  canvas.isDrawingMode = !tabletScrollMode && drawingTool;
+  if (drawingTool) {
+    if (!canvas.freeDrawingBrush) canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    applyBrushSettings();
+  }
   canvas.selection = !tabletScrollMode && (next === "select" || next === "eraser");
   canvas.defaultCursor = next === "select" ? "default" : "crosshair";
 
@@ -2620,6 +2658,7 @@ updateZoom();
     ['eraser','⌫','Eraser'],['rect','▱','Rectangle'],['circle','○','Circle'],['line','╱','Line'],
     ['arrow','➜','Arrow'],['text','T','Text'],['node','◇','Node'],['image','▧','Image']
   ];
+  const moreBtn = document.getElementById('mobileV2More');
 
   function sync(){
     const on=mobile();
@@ -2666,16 +2705,34 @@ updateZoom();
     menu.dataset.ready='1';
     tools.forEach(([name,icon,label])=>{
       const b=document.createElement('button'); b.type='button'; b.dataset.v2Tool=name;
-      b.innerHTML=`${icon}<br><span>${label}</span>`;
+      b.innerHTML=`<span class="v2icon">${icon}</span><span>${label}</span>`;
       b.addEventListener('click',e=>{
         e.preventDefault(); e.stopPropagation();
-        if(name==='image'){ document.getElementById('fileInput')?.click(); setTool?.('select'); }
-        else { setTabletScrollMode?.(false); setTool?.(name); }
+        if(name==='image'){
+          document.getElementById('fileInput')?.click();
+          setTool?.('select');
+        } else {
+          setTabletScrollMode?.(false); setTool?.(name);
+        }
         menu.classList.remove('open'); sync();
       });
       menu.appendChild(b);
     });
+    const colorBtn=document.createElement('label');
+    colorBtn.className='mobile-v2-menu-color';
+    colorBtn.innerHTML=`<span class="v2icon">●</span><span>Color</span><input type="color" value="${colorV2?.value || '#18202a'}" aria-label="Color">`;
+    const inp=colorBtn.querySelector('input');
+    inp?.addEventListener('input',()=>{
+      if(colorV2){ colorV2.value=inp.value; colorV2.dispatchEvent(new Event('input',{bubbles:true})); }
+    });
+    menu.appendChild(colorBtn);
   }
+  moreBtn?.addEventListener('click',e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(!mobile()) return;
+    buildMenu(); menu.classList.toggle('open'); sync();
+  });
+
   colorV2?.addEventListener('input',()=>{
     if(desktopColor){ desktopColor.value=colorV2.value; desktopColor.dispatchEvent(new Event('input',{bubbles:true})); desktopColor.dispatchEvent(new Event('change',{bubbles:true})); }
   });
@@ -2699,6 +2756,47 @@ updateZoom();
 (function mobileHeaderActions(){
   document.getElementById('mobileBoardsV2')?.addEventListener('click',()=>document.getElementById('boardsBtn')?.click());
   document.getElementById('mobileAuthV2')?.addEventListener('click',()=>document.getElementById('authBtn')?.click());
+})();
+
+
+// MOBILE LANDSCAPE TOOLBAR — keep every tool visible side-by-side and working.
+(function mobileLandscapeTools(){
+  const bar=document.getElementById('mobileV2Bar');
+  if(!bar) return;
+  const defs=[
+    ['select','↖','Select'],['pen','✎','Pen'],['highlighter','▰','Highlight'],
+    ['scroll','↕','Scroll'],['eraser','⌫','Eraser'],['rect','▱','Rectangle'],
+    ['circle','○','Circle'],['line','╱','Line'],['arrow','➜','Arrow'],
+    ['text','T','Text'],['node','◇','Node'],['image','▧','Image'],['ai','✦','AI']
+  ];
+  const landscape=()=>window.matchMedia('(max-height:520px) and (max-width:900px)').matches;
+  let built=false;
+  function build(){
+    if(built) return; built=true;
+    bar.innerHTML='';
+    defs.forEach(([name,icon,label])=>{
+      const b=document.createElement('button'); b.type='button'; b.dataset.v2Tool=name;
+      b.innerHTML=`<span class="v2icon">${icon}</span><span>${label}</span>`;
+      b.addEventListener('click',e=>{
+        e.preventDefault(); e.stopPropagation();
+        if(name==='ai'){ document.getElementById('aiToggle')?.click(); return; }
+        if(name==='image'){ document.getElementById('fileInput')?.click(); return; }
+        if(name==='scroll'){ window.__mobileScrollOn=!window.__mobileScrollOn; setTabletScrollMode(window.__mobileScrollOn); return; }
+        setTabletScrollMode(false); setTool(name);
+      });
+      bar.appendChild(b);
+    });
+  }
+  function sync(){
+    if(!landscape()) return;
+    build();
+    bar.querySelectorAll('[data-v2-tool]').forEach(b=>b.classList.toggle('active',b.dataset.v2Tool===tool));
+    bar.querySelector('[data-v2-tool="scroll"]')?.classList.toggle('active',!!window.__mobileScrollOn);
+    bar.querySelector('[data-v2-tool="ai"]')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
+  }
+  window.addEventListener('resize',sync,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(sync,80),{passive:true});
+  sync();
 })();
 
 // ================= MOBILE UX =================
@@ -2862,5 +2960,65 @@ updateZoom();
   window.addEventListener('orientationchange',function(){setTimeout(hide,50);},{passive:true});
 })();
 </script>
+
+<style id="mobile-drawing-fix">
+@media (max-width:760px), (max-height:520px) and (max-width:900px){
+  #canvasWrap, #canvasWrap .canvas-container, #canvasWrap .canvas-container canvas,
+  #canvasWrap .upper-canvas, #canvasWrap .lower-canvas {
+    touch-action:none !important;
+  }
+  #canvasWrap .canvas-container { pointer-events:auto !important; }
+  #canvasWrap canvas { pointer-events:auto !important; }
+}
+</style>
 </body>
 </html>
+
+<style>
+@media (max-width:760px) and (orientation:landscape){
+  #mobileV2More{display:none !important;}
+  #mobileV2Bar{
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    flex-wrap:nowrap !important;
+    justify-content:flex-start !important;
+    scrollbar-width:none !important;
+  }
+  #mobileV2Bar::-webkit-scrollbar{display:none !important;}
+  #mobileV2Bar button{
+    flex:0 0 auto !important;
+    min-width:58px !important;
+  }
+  #mobileV2Menu{display:none !important;}
+}
+</style>
+
+<style>
+@media (max-width:760px) and (orientation:landscape){
+  #mobileV2More, #mobileV2Menu { display:none !important; }
+  #mobileV2Bar {
+    display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important;
+    overflow-x:auto !important; overflow-y:hidden !important;
+    justify-content:flex-start !important; align-items:center !important;
+    width:calc(100vw - 14px) !important; max-width:calc(100vw - 14px) !important;
+    scrollbar-width:none !important;
+  }
+  #mobileV2Bar::-webkit-scrollbar{display:none !important;}
+  #mobileV2Bar > button {
+    display:flex !important; flex:0 0 auto !important; min-width:58px !important;
+  }
+}
+</style>
+
+<style>
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  #textDialog{z-index:10050 !important; width:min(280px,calc(100vw - 24px)) !important; box-sizing:border-box !important;}
+  #textDialog textarea{font-size:16px !important; min-height:90px !important;}
+}
+@media screen and (max-height:520px) and (max-width:900px){
+  #mobileV2Bar{overflow-x:auto !important; flex-wrap:nowrap !important; justify-content:flex-start !important;}
+  #mobileV2Bar > button{flex:0 0 58px !important; min-width:58px !important; width:58px !important;}
+  #mobileV2More{display:none !important;}
+  #mobileV2Menu{display:none !important;}
+}
+</style>
