@@ -3033,6 +3033,58 @@ updateZoom();
   #mobileFullscreen.active{font-size:22px;font-weight:700;}
 }
 </style>
+
+<script id="mobile-elements-final-interaction-fix">
+(function(){
+  const isPhone = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const bar = document.getElementById('mobileV2Bar');
+  if(!bar) return;
+
+  // Final interaction layer: handle the actual mobile Elements buttons in capture
+  // phase so no older mobile toolbar listener can swallow the tap.
+  bar.addEventListener('click', function(e){
+    if(!isPhone()) return;
+    const btn=e.target.closest('button[data-v2-tool]');
+    if(!btn || !bar.contains(btn)) return;
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const name=btn.dataset.v2Tool;
+    if(name==='ai'){
+      const panel=document.getElementById('aiPanel');
+      const toggle=document.getElementById('aiToggle');
+      if(panel){
+        const open=!panel.classList.contains('open');
+        panel.classList.toggle('open',open);
+        toggle?.classList.toggle('active',open);
+      }
+      return;
+    }
+
+    if(name==='scroll'){
+      window.__mobileScrollOn=!window.__mobileScrollOn;
+      if(typeof setTabletScrollMode==='function') setTabletScrollMode(window.__mobileScrollOn);
+      return;
+    }
+
+    if(name==='image'){
+      document.getElementById('fileInput')?.click();
+      if(typeof setTool==='function') setTool('select');
+      return;
+    }
+
+    if(typeof setTabletScrollMode==='function') setTabletScrollMode(false);
+    if(typeof setTool==='function') setTool(name);
+
+    // Keep the active state in sync immediately.
+    bar.querySelectorAll('button[data-v2-tool]').forEach(b=>{
+      b.classList.toggle('active', b.dataset.v2Tool===name);
+    });
+  }, true);
+})();
+</script>
+
 <style id="mobile-fullscreen-v2">
 @media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
   #mobileFullscreen{display:flex !important;align-items:center;justify-content:center;flex:0 0 auto !important;min-width:64px !important;}
@@ -3050,6 +3102,75 @@ updateZoom();
   #mobileV2Bar #mobileLandscapeFullscreen{display:flex !important;}
 }
 </style>
+
+<script id="mobile-fullscreen-scroll-final">
+(function(){
+  const mobile = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const fsBtn = () => document.querySelector('#mobileV2Bar [data-v2-tool="fullscreen"], #mobileV2Bar #mobileFullscreen, #mobileV2Fullscreen');
+  const scrollBtn = () => document.querySelector('#mobileV2Bar [data-v2-tool="scroll"], #mobileV2Scroll');
+
+  function syncFullscreen(){
+    const b=fsBtn();
+    if(!b) return;
+    const active=!!document.fullscreenElement;
+    b.classList.toggle('active',active);
+    const icon=b.querySelector('.v2icon');
+    const label=b.querySelector('span:last-child');
+    if(icon) icon.textContent=active?'×':'⛶';
+    if(label) label.textContent=active?'Exit':'Fullscreen';
+  }
+
+  document.addEventListener('click', function(e){
+    if(!mobile()) return;
+    const b=e.target.closest('#mobileV2Bar [data-v2-tool="fullscreen"], #mobileV2Bar #mobileFullscreen, #mobileV2Fullscreen');
+    if(!b) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const root=document.documentElement;
+    if(!document.fullscreenElement){
+      const req=root.requestFullscreen || root.webkitRequestFullscreen;
+      if(req){
+        try { Promise.resolve(req.call(root)).catch(()=>{}); } catch(_){}
+      }
+    }else{
+      const exit=document.exitFullscreen || document.webkitExitFullscreen;
+      if(exit){
+        try { Promise.resolve(exit.call(document)).catch(()=>{}); } catch(_){}
+      }
+    }
+    setTimeout(syncFullscreen,80);
+  }, true);
+
+  document.addEventListener('fullscreenchange',syncFullscreen);
+  document.addEventListener('webkitfullscreenchange',syncFullscreen);
+
+  document.addEventListener('click', function(e){
+    if(!mobile()) return;
+    const b=e.target.closest('#mobileV2Bar [data-v2-tool="scroll"], #mobileV2Scroll');
+    if(!b) return;
+    setTimeout(()=>{
+      const on=!!window.__mobileScrollOn;
+      b.classList.toggle('active',on);
+    },0);
+  }, true);
+
+  syncFullscreen();
+})();
+</script>
+<style id="mobile-scroll-active-final">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  #mobileV2Bar [data-v2-tool="scroll"],
+  #mobileV2Scroll{
+    transition:border-color .15s ease, box-shadow .15s ease, background .15s ease !important;
+  }
+  #mobileV2Bar [data-v2-tool="scroll"].active,
+  #mobileV2Scroll.active{
+    border:2px solid currentColor !important;
+    box-shadow:0 0 0 2px rgba(0,0,0,.08) !important;
+  }
+}
+</style>
+
 </body>
 </html>
 
@@ -3141,6 +3262,26 @@ updateZoom();
   #mobileV2Bar .mobile-v2-color{
     flex:0 0 58px !important;
     min-width:58px !important;
+  }
+}
+</style>
+
+<style id="mobile-elements-final-touch">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  #mobileV2Bar{
+    pointer-events:auto !important;
+    touch-action:pan-x !important;
+    -webkit-user-select:none !important;
+    user-select:none !important;
+  }
+  #mobileV2Bar > button,
+  #mobileV2Bar > label{
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
+  }
+  #mobileV2Bar input[type="color"]{
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
   }
 }
 </style>
