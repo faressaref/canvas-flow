@@ -2347,6 +2347,15 @@ function setSaveState(type, text) {
 // Firestore writes while the user is drawing/moving objects.
 const AUTO_SAVE_DELAY = 1200;
 
+function ensureBoardPages(){
+  if(!Array.isArray(boardPages) || !boardPages.length){
+    boardPages=[canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"])];
+    boardPageIndex=0;
+  }
+  boardPageIndex=Math.max(0,Math.min(Number(boardPageIndex)||0,boardPages.length-1));
+  boardPagesReady=true;
+}
+
 function scheduleSave(major=false) {
   if(!suppressSave) saveLocalDraft();
   if (!FIREBASE_READY || !db || suppressSave || !currentUser) return;
@@ -3282,14 +3291,6 @@ updateZoom();
 
   // Real multi-page board system. Pages stay inside the same board.
   const label=document.getElementById('mobilePageLabel');
-  function ensureBoardPages(){
-    if(!Array.isArray(boardPages) || !boardPages.length){
-      boardPages=[canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"])];
-      boardPageIndex=0;
-    }
-    boardPageIndex=Math.max(0,Math.min(boardPageIndex,boardPages.length-1));
-    boardPagesReady=true;
-  }
   function getBoardPagesForSave(){
     ensureBoardPages();
     boardPages[boardPageIndex]=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
