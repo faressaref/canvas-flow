@@ -1389,6 +1389,8 @@
       <div class="boards-toolbar">
         <button class="board-action" id="newBoardBtn">＋ New board</button>
         <button class="board-action" id="saveBoardFromModal">💾 Save current</button>
+        <button class="board-action" id="selectBoardsBtn">☑ Select</button>
+        <button class="board-action" id="deleteSelectedBoardsBtn" style="display:none">🗑 Delete selected</button>
       </div>
       <input class="board-name-input" id="newBoardName" placeholder="Board name (when creating a new board)">
       <div id="boardsList"></div>
@@ -1566,38 +1568,21 @@ window.openAccountChooser = function openAccountChooser(){
 function openBoardsModal(){ if(!requireLogin()) return; boardsModal.classList.add("open"); renderBoards(); }
 document.getElementById("boardsBtn").onclick=openBoardsModal;
 document.getElementById("tabletBoards").onclick=openBoardsModal;
-document.getElementById("boardsClose").onclick=()=>boardsModal.classList.remove("open");
+document.getElementById("boardsClose").onclick=()=>{boardsModal.classList.remove("open");exitBoardSelectionMode();};
 
+let boardSelectionMode=false;
+let selectedBoardIds=new Set();
+function updateBoardSelectionUI(){const m=document.getElementById("boardsModal"),b=document.getElementById("deleteSelectedBoardsBtn");if(!m||!b)return;m.classList.toggle("select-mode",boardSelectionMode);b.style.display=boardSelectionMode?"block":"none";b.textContent=selectedBoardIds.size?`🗑 Delete selected (${selectedBoardIds.size})`:"🗑 Delete selected";}
+function toggleBoardSelection(id,item,check){if(selectedBoardIds.has(id)){selectedBoardIds.delete(id);item.classList.remove("selected");check.checked=false}else{selectedBoardIds.add(id);item.classList.add("selected");check.checked=true}updateBoardSelectionUI();}
+function enterBoardSelectionMode(){boardSelectionMode=true;selectedBoardIds.clear();updateBoardSelectionUI();renderBoards();}
+function exitBoardSelectionMode(){boardSelectionMode=false;selectedBoardIds.clear();updateBoardSelectionUI();}
+async function deleteSelectedBoards(){if(!currentUser||!selectedBoardIds.size)return;const ids=[...selectedBoardIds];if(!confirm(`Delete ${ids.length} selected board${ids.length===1?"":"s"}?`))return;const b=document.getElementById("deleteSelectedBoardsBtn");if(b){b.disabled=true;b.textContent="Deleting..."}try{await Promise.all(ids.map(id=>boardsCollection().doc(id).delete()));if(ids.includes(currentBoardId)){currentBoardId=null;currentBoardName="Unsaved board";boardPages=[{version:"6.0.0",objects:[]}];boardPageIndex=0;boardPagesReady=true;canvas.clear();canvas.requestRenderAll();updateAccountUI()}selectedBoardIds.clear();boardSelectionMode=false;await renderBoards();}catch(err){console.error("Delete selected boards failed:",err);alert("Could not delete the selected boards.");}finally{if(b)b.disabled=false;updateBoardSelectionUI();}}
+document.getElementById("selectBoardsBtn").onclick=enterBoardSelectionMode;document.getElementById("deleteSelectedBoardsBtn").onclick=deleteSelectedBoards;
 async function renderBoards(){
   const list=document.getElementById("boardsList");
   if(!currentUser){list.innerHTML='<div style="font-size:10px;color:#697383;padding:10px">Log in to see your boards.</div>';return;}
   list.innerHTML='<div style="font-size:10px;color:#697383;padding:10px">Loading boards...</div>';
-  try {
-    const snap=await boardsCollection().orderBy("updatedAt","desc").get();
-    if(snap.empty){ list.innerHTML='<div style="font-size:10px;color:#697383;padding:10px">No saved boards yet.</div>'; return; }
-    list.innerHTML="";
-    snap.forEach(doc=>{
-      const d=doc.data()||{};
-      const item=document.createElement("div"); item.className="board-item"+(doc.id===currentBoardId?" active":"");
-      const left=document.createElement("div");
-      const title=document.createElement("strong"); title.textContent=d.name||"Untitled board";
-      const date=document.createElement("small"); date.textContent=d.updatedAt?.toDate ? d.updatedAt.toDate().toLocaleString() : "Saved board";
-      left.append(title,date);
-      const actions=document.createElement("div"); actions.className="board-item-actions";
-      const rename=document.createElement("button"); rename.className="rename-board"; rename.textContent="✎"; rename.title="Rename board"; rename.setAttribute("aria-label","Rename board");
-      rename.onclick=async ev=>{ ev.stopPropagation(); await renameBoard(doc.id, d.name||"Untitled board"); };
-      const del=document.createElement("button"); del.className="delete-board"; del.textContent="🗑"; del.title="Delete board"; del.setAttribute("aria-label","Delete board");
-      del.onclick=async ev=>{ ev.stopPropagation(); if(confirm(`Delete “${d.name||"Untitled board"}”?`)){ await deleteBoard(doc.id); } };
-      actions.append(rename,del);
-      item.append(left,actions);
-      item.onclick=async()=>{
-        // Open the selected board immediately and close the boards menu.
-        boardsModal.classList.remove("open");
-        await loadBoardById(doc.id);
-      };
-      list.appendChild(item);
-    });
-  } catch(err){ console.error(err); list.innerHTML='<div style="font-size:10px;color:#b33;padding:10px">Could not load boards. Check Firestore rules.</div>'; }
+  try{const snap=await boardsCollection().orderBy("updatedAt","desc").get();if(snap.empty){list.innerHTML='<div style="font-size:10px;color:#697383;padding:10px">No saved boards yet.</div>';updateBoardSelectionUI();return;}list.innerHTML="";snap.forEach(doc=>{const d=doc.data()||{};const item=document.createElement("div");item.className="board-item"+(doc.id===currentBoardId?" active":"")+(selectedBoardIds.has(doc.id)?" selected":"");const main=document.createElement("div");main.className="board-item-main";const check=document.createElement("input");check.type="checkbox";check.className="board-select-check";check.checked=selectedBoardIds.has(doc.id);check.onclick=e=>{e.stopPropagation();toggleBoardSelection(doc.id,item,check)};const left=document.createElement("div");const title=document.createElement("strong");title.textContent=d.name||"Untitled board";const date=document.createElement("small");date.textContent=d.updatedAt?.toDate?d.updatedAt.toDate().toLocaleString():"Saved board";left.append(title,date);main.append(check,left);const actions=document.createElement("div");actions.className="board-item-actions";const rename=document.createElement("button");rename.textContent="✎";rename.title="Rename board";rename.onclick=async e=>{e.stopPropagation();await renameBoard(doc.id,d.name||"Untitled board")};const del=document.createElement("button");del.textContent="🗑";del.title="Delete board";del.onclick=async e=>{e.stopPropagation();if(confirm(`Delete “${d.name||"Untitled board"}”?`))await deleteBoard(doc.id)};actions.append(rename,del);item.append(main,actions);item.onclick=async()=>{if(boardSelectionMode){toggleBoardSelection(doc.id,item,check);return}boardsModal.classList.remove("open");await loadBoardById(doc.id)};list.appendChild(item)});updateBoardSelectionUI()}catch(err){console.error(err);list.innerHTML='<div style="font-size:10px;color:#b33;padding:10px">Could not load boards. Check Firestore rules.</div>';}
 }
 
 async function createNewBoard(){
@@ -4955,4 +4940,6 @@ body.mobile-css-fullscreen #tabletQuickColors{
     padding:14px;
   }
 }
+
+    .board-select-check{display:none;width:16px;height:16px;flex:0 0 auto;cursor:pointer;accent-color:#18202a}.board-item-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0}#boardsModal.select-mode .board-select-check{display:block}#boardsModal.select-mode .board-item.selected{border-color:#18202a;background:#f1f3f6}#boardsModal.select-mode .board-item-actions{display:none}#boardsModal.select-mode #selectBoardsBtn{display:none}
 </style>
