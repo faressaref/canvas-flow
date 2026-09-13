@@ -3122,23 +3122,39 @@ updateZoom();
 
   document.addEventListener('click', function(e){
     if(!mobile()) return;
-    const b=e.target.closest('#mobileV2Bar [data-v2-tool="fullscreen"], #mobileV2Bar #mobileFullscreen, #mobileV2Fullscreen');
+    const b=e.target.closest('#mobileV2Bar #mobileFullscreen, #mobileV2Bar [data-v2-tool="fullscreen"], #mobileV2Fullscreen');
     if(!b) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    const root=document.documentElement;
-    if(!document.fullscreenElement){
-      const req=root.requestFullscreen || root.webkitRequestFullscreen;
-      if(req){
-        try { Promise.resolve(req.call(root)).catch(()=>{}); } catch(_){}
-      }
-    }else{
+
+    const nativeFS=!!(document.fullscreenElement || document.webkitFullscreenElement);
+    const app=document.getElementById('app');
+
+    if(nativeFS){
       const exit=document.exitFullscreen || document.webkitExitFullscreen;
       if(exit){
-        try { Promise.resolve(exit.call(document)).catch(()=>{}); } catch(_){}
+        try { const r=exit.call(document); if(r?.catch) r.catch(()=>{}); } catch(_){}
+      }
+      document.body.classList.remove('mobile-css-fullscreen');
+      app?.classList.remove('mobile-css-fullscreen');
+    }else{
+      const root=document.documentElement;
+      const req=root.requestFullscreen || root.webkitRequestFullscreen;
+      let started=false;
+      if(req){
+        try {
+          const r=req.call(root);
+          started=true;
+          if(r?.catch) r.catch(()=>{});
+        } catch(_){}
+      }
+      // Fallback for mobile browsers that don't implement Fullscreen API.
+      if(!started){
+        document.body.classList.add('mobile-css-fullscreen');
+        app?.classList.add('mobile-css-fullscreen');
       }
     }
-    setTimeout(syncFullscreen,80);
+    setTimeout(syncFullscreen,120);
   }, true);
 
   document.addEventListener('fullscreenchange',syncFullscreen);
@@ -3282,6 +3298,28 @@ updateZoom();
   #mobileV2Bar input[type="color"]{
     pointer-events:auto !important;
     touch-action:manipulation !important;
+  }
+}
+</style>
+
+<style id="mobile-css-fullscreen-fallback">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  body.mobile-css-fullscreen{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100dvh !important;
+    overflow:hidden !important;
+    z-index:999999 !important;
+    background:#fff !important;
+  }
+  body.mobile-css-fullscreen #app{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100dvh !important;
+    min-height:100dvh !important;
+    z-index:1000000 !important;
   }
 }
 </style>
