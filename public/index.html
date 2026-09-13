@@ -3017,51 +3017,6 @@ updateZoom();
   }
   sheetClass(); window.addEventListener('resize',sheetClass,{passive:true});
 
-  // Mobile: two-finger pinch-to-zoom + two-finger pan. Pen remains dedicated to drawing.
-  // Disable native browser touch gestures on the board so pinch is handled by Fabric.
-  const target=document.getElementById('canvasWrap');
-  const pointers=new Map();
-  let pinch=null;
-  if(target){ target.style.touchAction='none'; target.style.webkitTouchCallout='none'; }
-  function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
-  function mid(a,b){ return {x:(a.x+b.x)/2,y:(a.y+b.y)/2}; }
-  target?.addEventListener('pointerdown',e=>{
-    if(!isMobile() || e.pointerType==='pen' || typeof canvas==='undefined') return;
-    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pointers.size===2){
-      const pts=[...pointers.values()], m=mid(pts[0],pts[1]);
-      pinch={distance:dist(pts[0],pts[1]), zoom:canvas.getZoom(), center:m, vt:canvas.viewportTransform.slice()};
-      e.preventDefault();
-    }
-  },{passive:false,capture:true});
-  target?.addEventListener('pointermove',e=>{
-    if(!isMobile() || !pointers.has(e.pointerId) || typeof canvas==='undefined') return;
-    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pointers.size===2 && pinch){
-      const pts=[...pointers.values()], d=Math.max(1,dist(pts[0],pts[1])), m=mid(pts[0],pts[1]);
-      const z=Math.max(.2,Math.min(4,pinch.zoom*(d/pinch.distance)));
-      const factor=z/pinch.zoom;
-      const v=pinch.vt.slice();
-      v[4]=m.x-(pinch.center.x-pinch.vt[4])*factor;
-      v[5]=m.y-(pinch.center.y-pinch.vt[5])*factor;
-      canvas.setViewportTransform(v); canvas.setZoom(z); canvas.requestRenderAll();
-      if(typeof updateZoom==='function')updateZoom();
-      e.preventDefault();
-    }
-  },{passive:false,capture:true});
-  function endPointer(e){ pointers.delete(e.pointerId); if(pointers.size<2) pinch=null; }
-  target?.addEventListener('pointerup',endPointer,{capture:true});
-  target?.addEventListener('pointercancel',endPointer,{capture:true});
-
-  // Double-tap resets zoom.
-  let lastTap=0;
-  target?.addEventListener('pointerup',e=>{
-    if(!isMobile() || e.pointerType==='pen' || typeof canvas==='undefined') return;
-    const now=Date.now();
-    if(now-lastTap<280){ canvas.setViewportTransform([1,0,0,1,0,0]); if(typeof updateZoom==='function')updateZoom(); }
-    lastTap=now;
-  },{passive:true});
-
   // Page UI: a safe lightweight page count/state. Actual multi-page persistence can be added without changing canvas data.
   let pageCount=1, pageIndex=1;
   const label=document.getElementById('mobilePageLabel');
@@ -3843,3 +3798,288 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   }
 }
 </style>
+
+
+<!-- ===== MOBILE PINCH + AUTH FINAL FIX ===== -->
+<style id="mobile-auth-final-fix">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  /* Keep the login sheet inside the phone viewport and above the keyboard. */
+  #authModal.mobile-sheet{
+    align-items:flex-end !important;
+    justify-content:center !important;
+    padding:0 8px env(safe-area-inset-bottom) !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+  }
+  #authModal.mobile-sheet .modal-card{
+    width:100% !important;
+    max-width:480px !important;
+    max-height:min(92dvh,680px) !important;
+    overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch !important;
+    box-sizing:border-box !important;
+    border-radius:20px 20px 12px 12px !important;
+    padding:16px !important;
+    margin:0 !important;
+  }
+  #authModal.mobile-sheet .modal-head{margin-bottom:12px !important;}
+  #authModal.mobile-sheet .modal-head h3{font-size:16px !important;}
+  #authModal.mobile-sheet .auth-tabs{margin-bottom:10px !important;}
+  #authModal.mobile-sheet .auth-tab{font-size:12px !important;padding:9px 7px !important;}
+  #authModal.mobile-sheet .auth-form input,
+  #authModal.mobile-sheet #googleSignInBtn,
+  #authModal.mobile-sheet .auth-form button{
+    min-height:44px !important;
+    font-size:16px !important;
+    box-sizing:border-box !important;
+  }
+  #authModal.mobile-sheet .auth-form input{margin:5px 0 !important;padding:10px 11px !important;}
+  #authModal.mobile-sheet .auth-form button,
+  #authModal.mobile-sheet #googleSignInBtn{font-size:13px !important;}
+  #authModal.mobile-sheet #authMessage{font-size:11px !important;}
+}
+</style>
+
+<script id="mobile-pinch-auth-final-fix">
+(function(){
+  'use strict';
+  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const target=document.getElementById('canvasWrap');
+  if(!target) return;
+
+  // Replace the older pinch handler with a stable two-finger gesture that
+  // preserves both zoom and pan when the fingers leave the screen.
+  if(window.__canvasFlowPinchFinalCleanup) window.__canvasFlowPinchFinalCleanup();
+
+  const pointers=new Map();
+  let gesture=null;
+  const getCanvas=()=>typeof canvas!=='undefined' ? canvas : null;
+  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+
+  function localPoint(pt){
+    const r=target.getBoundingClientRect();
+    return {x:pt.x-r.left,y:pt.y-r.top};
+  }
+
+  function start(e){
+    if(!isMobile() || e.pointerType==='pen' || !getCanvas()) return;
+    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pointers.size===2){
+      const [a,b]=[...pointers.values()];
+      const m=midpoint(a,b), lp=localPoint(m);
+      const c=getCanvas();
+      gesture={
+        distance:Math.max(1,distance(a,b)),
+        zoom:c.getZoom(),
+        midX:m.x, midY:m.y,
+        viewport:c.viewportTransform.slice(),
+        localX:lp.x, localY:lp.y
+      };
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
+  function move(e){
+    if(!isMobile() || !pointers.has(e.pointerId) || !getCanvas()) return;
+    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pointers.size!==2 || !gesture) return;
+
+    const [a,b]=[...pointers.values()];
+    const m=midpoint(a,b);
+    const d=Math.max(1,distance(a,b));
+    const c=getCanvas();
+    const z=Math.max(0.2,Math.min(4,gesture.zoom*(d/gesture.distance)));
+    const factor=z/gesture.zoom;
+    const v=gesture.viewport.slice();
+
+    // Scale around the original midpoint, then follow the midpoint movement.
+    v[4]=m.x-(gesture.midX-gesture.viewport[4])*factor;
+    v[5]=m.y-(gesture.midY-gesture.viewport[5])*factor;
+
+    c.setViewportTransform(v);
+    c.requestRenderAll();
+    if(typeof updateZoom==='function') updateZoom();
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function end(e){
+    pointers.delete(e.pointerId);
+    if(pointers.size<2) gesture=null;
+  }
+
+  target.addEventListener('pointerdown',start,{passive:false,capture:true});
+  target.addEventListener('pointermove',move,{passive:false,capture:true});
+  target.addEventListener('pointerup',end,{capture:true});
+  target.addEventListener('pointercancel',end,{capture:true});
+  target.addEventListener('lostpointercapture',end,{capture:true});
+
+  window.__canvasFlowPinchFinalCleanup=()=>{
+    target.removeEventListener('pointerdown',start,true);
+    target.removeEventListener('pointermove',move,true);
+    target.removeEventListener('pointerup',end,true);
+    target.removeEventListener('pointercancel',end,true);
+    target.removeEventListener('lostpointercapture',end,true);
+  };
+
+  // Keep the login modal sized correctly after the mobile keyboard changes
+  // the visual viewport. Do not scroll the whole page behind the sheet.
+  const auth=document.getElementById('authModal');
+  const syncAuth=()=>{
+    if(!auth || !isMobile() || !auth.classList.contains('open')) return;
+    const card=auth.querySelector('.modal-card');
+    if(!card) return;
+    const vv=window.visualViewport;
+    if(vv){
+      const bottom=Math.max(0,window.innerHeight-(vv.offsetTop+vv.height));
+      card.style.maxHeight=Math.max(280,Math.floor(vv.height-8))+'px';
+      card.style.marginBottom=bottom+'px';
+    }
+  };
+  auth?.addEventListener('click',e=>{
+    if(e.target===auth) return;
+    setTimeout(syncAuth,80);
+  });
+  window.visualViewport?.addEventListener('resize',syncAuth,{passive:true});
+  window.visualViewport?.addEventListener('scroll',syncAuth,{passive:true});
+  const authObserver=auth?new MutationObserver(syncAuth):null;
+  authObserver?.observe(auth,{attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',syncAuth,{passive:true});
+})();
+</script>
+
+<!-- ===== MOBILE AUTH COMPACT + GLASS OVERLAY ===== -->
+<style id="mobile-auth-compact-final">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  /* Login layer is always above every mobile control, footer and element bar. */
+  #authModal.mobile-sheet,
+  #authModal.open{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:2147483646 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:12px !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+    background:rgba(10,14,20,.30) !important;
+    backdrop-filter:blur(12px) saturate(115%) !important;
+    -webkit-backdrop-filter:blur(12px) saturate(115%) !important;
+  }
+
+  #authModal.mobile-sheet .modal-card,
+  #authModal.open .modal-card{
+    position:relative !important;
+    z-index:2147483647 !important;
+    width:min(340px, calc(100vw - 28px)) !important;
+    max-width:340px !important;
+    max-height:min(78dvh,520px) !important;
+    overflow-y:auto !important;
+    box-sizing:border-box !important;
+    margin:0 auto !important;
+    padding:13px !important;
+    border-radius:16px !important;
+    border:1px solid rgba(255,255,255,.72) !important;
+    background:rgba(255,255,255,.96) !important;
+    box-shadow:0 20px 60px rgba(0,0,0,.28), 0 2px 10px rgba(0,0,0,.08) !important;
+  }
+
+  #authModal.mobile-sheet .modal-head,
+  #authModal.open .modal-head{ margin-bottom:9px !important; }
+  #authModal.mobile-sheet .modal-head h3,
+  #authModal.open .modal-head h3{ font-size:15px !important; }
+  #authModal.mobile-sheet .modal-close,
+  #authModal.open .modal-close{ width:28px !important; height:28px !important; }
+
+  #authModal.mobile-sheet .auth-tabs,
+  #authModal.open .auth-tabs{ margin-bottom:8px !important; }
+  #authModal.mobile-sheet .auth-tab,
+  #authModal.open .auth-tab{ padding:7px 6px !important; font-size:10px !important; }
+
+  #authModal.mobile-sheet .auth-form input,
+  #authModal.open .auth-form input{
+    min-height:40px !important;
+    height:40px !important;
+    margin:4px 0 !important;
+    padding:8px 10px !important;
+    font-size:15px !important;
+    border-radius:8px !important;
+  }
+  #authModal.mobile-sheet .auth-form button,
+  #authModal.open .auth-form button,
+  #authModal.mobile-sheet #googleSignInBtn,
+  #authModal.open #googleSignInBtn{
+    min-height:40px !important;
+    height:40px !important;
+    padding:8px 10px !important;
+    margin-top:6px !important;
+    border-radius:8px !important;
+    font-size:12px !important;
+  }
+  #authModal.mobile-sheet .auth-divider,
+  #authModal.open .auth-divider{ margin:8px 0 6px !important; }
+  #authModal.mobile-sheet #authMessage,
+  #authModal.open #authMessage{ min-height:12px !important; margin-top:5px !important; font-size:9px !important; }
+}
+
+/* In fullscreen the auth overlay/card still wins over the canvas and all mobile UI. */
+body.in-fullscreen #authModal.open,
+body.mobile-css-fullscreen #authModal.open{
+  z-index:2147483646 !important;
+}
+body.in-fullscreen #authModal.open .modal-card,
+body.mobile-css-fullscreen #authModal.open .modal-card{
+  z-index:2147483647 !important;
+}
+</style>
+
+<!-- ===== FINAL MOBILE ACCOUNT MODAL VISIBILITY FIX ===== -->
+<style id="final-mobile-auth-visibility-fix">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  /* Never show the login card by default. It is a real modal and only opens after Account is tapped. */
+  #authModal:not(.open){
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+    opacity:0 !important;
+  }
+  #authModal.open{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+    opacity:1 !important;
+  }
+}
+</style>
+<script id="final-mobile-auth-visibility-fix-script">
+(function(){
+  const modal=document.getElementById('authModal');
+  const account=document.getElementById('mobileAuthV2');
+  const desktopAccount=document.getElementById('authBtn');
+  if(!modal) return;
+
+  // A login modal must never be visible on initial page load.
+  // Keep it closed unless an actual Account action opens it.
+  modal.classList.remove('open');
+
+  function openFromAccount(e){
+    e?.preventDefault();
+    e?.stopPropagation();
+    if(typeof window.openAuthModal==='function') window.openAuthModal();
+    else modal.classList.add('open');
+  }
+
+  // Direct mobile Account action. Capture phase prevents other mobile handlers
+  // from accidentally toggling the modal twice.
+  account?.addEventListener('click',openFromAccount,true);
+
+  // Keep the modal closed when clicking the backdrop/close button.
+  document.getElementById('authClose')?.addEventListener('click',()=>modal.classList.remove('open'),true);
+  modal.addEventListener('click',e=>{
+    if(e.target===modal) modal.classList.remove('open');
+  });
+})();
+</script>
