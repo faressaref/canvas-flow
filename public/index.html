@@ -629,7 +629,7 @@
   #workspace{background:#f6f6f3 !important}
   #aiPanel{
     left:8px !important;right:8px !important;top:66px !important;
-    height:calc(100dvh - 76px) !important;border-radius:20px !important;
+    height:calc(100dvh - 140px) !important;border-radius:20px !important;
     box-shadow:0 18px 50px rgba(0,0,0,.22) !important;
   }
 }
@@ -639,7 +639,7 @@
   #mobileV2Bar button{height:46px}
   #mobileV2Menu{top:116px;bottom:auto}
   #canvasWrap{padding-top:50px !important;padding-bottom:66px !important}
-  #aiPanel{top:58px !important;height:calc(100dvh - 66px) !important}
+  #aiPanel{top:58px !important;height:calc(100dvh - 128px) !important}
 }
 
 
@@ -939,8 +939,8 @@
   html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;}
   #topbar{display:none !important;}
   #app.entered{display:flex !important;width:100%;height:100dvh;min-height:100dvh;overflow:hidden;}
-  #workspace{position:relative !important;display:block !important;flex:1 1 auto !important;width:100% !important;height:100% !important;min-width:0 !important;min-height:0 !important;padding:58px 0 70px !important;overflow:hidden !important;}
-  #canvasWrap{position:absolute !important;left:0 !important;right:0 !important;top:58px !important;bottom:70px !important;width:auto !important;height:auto !important;padding:0 !important;overflow:hidden !important;}
+  #workspace{position:relative !important;display:block !important;flex:1 1 auto !important;width:100% !important;height:100% !important;min-width:0 !important;min-height:0 !important;padding:0 !important;overflow:hidden !important;}
+  #canvasWrap{position:absolute !important;left:0 !important;right:0 !important;top:58px !important;bottom:74px !important;width:auto !important;height:auto !important;padding:0 !important;overflow:hidden !important;}
   #mobilePhoneHeader{position:fixed !important;top:0 !important;left:0 !important;right:0 !important;height:58px !important;z-index:1000 !important;display:flex !important;align-items:center !important;}
   #mobilePhoneHeader .mbrand{display:block !important;font-size:17px !important;cursor:pointer !important;}
   #mobilePhoneHeader .mtools{display:flex !important;gap:6px !important;}
@@ -3106,10 +3106,12 @@ updateZoom();
   const bar = document.getElementById('mobileV2Bar');
   if(!bar) return;
 
-  // Final interaction layer: handle the actual mobile Elements buttons in capture
-  // phase so no older mobile toolbar listener can swallow the tap.
   bar.addEventListener('click', function(e){
     if(!isPhone()) return;
+
+    // Let #mobileFullscreen and #mobileV2AI use their own dedicated listeners
+    if(e.target.closest('#mobileFullscreen') || e.target.closest('#mobileV2AI') || e.target.closest('#mobileV2Scroll')) return;
+
     const btn=e.target.closest('button[data-v2-tool]');
     if(!btn || !bar.contains(btn)) return;
 
@@ -3143,7 +3145,6 @@ updateZoom();
     if(typeof setTabletScrollMode==='function') setTabletScrollMode(false);
     if(typeof setTool==='function') setTool(name);
 
-    // Keep the active state in sync immediately.
     bar.querySelectorAll('button[data-v2-tool]').forEach(b=>{
       b.classList.toggle('active', b.dataset.v2Tool===name);
     });
@@ -3171,63 +3172,10 @@ updateZoom();
 
 <script id="mobile-fullscreen-scroll-final">
 (function(){
-  const mobile = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
-  const fsBtn = () => document.querySelector('#mobileV2Bar [data-v2-tool="fullscreen"], #mobileV2Bar #mobileFullscreen, #mobileV2Fullscreen');
-  const scrollBtn = () => document.querySelector('#mobileV2Bar [data-v2-tool="scroll"], #mobileV2Scroll');
-
-  function syncFullscreen(){
-    const b=fsBtn();
-    if(!b) return;
-    const active=!!document.fullscreenElement;
-    b.classList.toggle('active',active);
-    const icon=b.querySelector('.v2icon');
-    const label=b.querySelector('span:last-child');
-    if(icon) icon.textContent=active?'×':'⛶';
-    if(label) label.textContent=active?'Exit':'Fullscreen';
-  }
-
+  /* Scroll button active-state sync */
   document.addEventListener('click', function(e){
-    if(!mobile()) return;
-    const b=e.target.closest('#mobileV2Bar #mobileFullscreen, #mobileV2Bar [data-v2-tool="fullscreen"], #mobileV2Fullscreen');
-    if(!b) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    const nativeFS=!!(document.fullscreenElement || document.webkitFullscreenElement);
-    const app=document.getElementById('app');
-
-    if(nativeFS){
-      const exit=document.exitFullscreen || document.webkitExitFullscreen;
-      if(exit){
-        try { const r=exit.call(document); if(r?.catch) r.catch(()=>{}); } catch(_){}
-      }
-      document.body.classList.remove('mobile-css-fullscreen');
-      app?.classList.remove('mobile-css-fullscreen');
-    }else{
-      const root=document.documentElement;
-      const req=root.requestFullscreen || root.webkitRequestFullscreen;
-      let started=false;
-      if(req){
-        try {
-          const r=req.call(root);
-          started=true;
-          if(r?.catch) r.catch(()=>{});
-        } catch(_){}
-      }
-      // Fallback for mobile browsers that don't implement Fullscreen API.
-      if(!started){
-        document.body.classList.add('mobile-css-fullscreen');
-        app?.classList.add('mobile-css-fullscreen');
-      }
-    }
-    setTimeout(syncFullscreen,120);
-  }, true);
-
-  document.addEventListener('fullscreenchange',syncFullscreen);
-  document.addEventListener('webkitfullscreenchange',syncFullscreen);
-
-  document.addEventListener('click', function(e){
-    if(!mobile()) return;
+    const mobile=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+    if(!mobile) return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="scroll"], #mobileV2Scroll');
     if(!b) return;
     setTimeout(()=>{
@@ -3235,8 +3183,6 @@ updateZoom();
       b.classList.toggle('active',on);
     },0);
   }, true);
-
-  syncFullscreen();
 })();
 </script>
 <style id="mobile-scroll-active-final">
@@ -3254,63 +3200,14 @@ updateZoom();
 </style>
 
 
-<script id="fullscreen-single-handler-final">
-(function(){
-  function setup(){
-    const old=document.getElementById('mobileFullscreen');
-    if(!old || old.dataset.finalFsReady) return;
-    const b=old.cloneNode(true); // removes every previously attached click listener
-    b.dataset.finalFsReady='1';
-    old.replaceWith(b);
+/* fullscreen-single-handler-final removed — replaced by canvasflow-fullscreen-final below */
 
-    const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
-    const native=()=>document.fullscreenElement||document.webkitFullscreenElement;
-
-    b.addEventListener('click',function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      if(!isMobile()) return;
-
-      if(native()){
-        const fn=document.exitFullscreen||document.webkitExitFullscreen;
-        if(fn){ try{ const r=fn.call(document); if(r&&r.catch)r.catch(()=>{}); }catch(_){} }
-      }else{
-        const el=document.documentElement;
-        const fn=el.requestFullscreen||el.webkitRequestFullscreen;
-        if(fn){
-          try{
-            const r=fn.call(el);
-            if(r&&r.catch)r.catch(()=>{});
-          }catch(_){}
-        }
-      }
-    });
-
-    function sync(){
-      const fs=!!native();
-      b.classList.toggle('active',fs);
-      const icon=b.querySelector('.v2icon');
-      const label=b.querySelector('span:last-child');
-      if(icon) icon.textContent=fs?'×':'⛶';
-      if(label) label.textContent=fs?'Exit':'Fullscreen';
-    }
-    document.addEventListener('fullscreenchange',sync);
-    document.addEventListener('webkitfullscreenchange',sync);
-    sync();
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup);
-  else setup();
-})();
-</script>
 
 
 <script id="mobile-fontsize-and-fullscreen-final">
 (function(){
-  const mobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
-  const fs=()=>document.getElementById('mobileFullscreen');
   const font=document.getElementById('mobileFontSize');
   const fontValue=document.getElementById('mobileFontSizeValue');
-
   if(font){
     font.addEventListener('input',()=>{
       if(fontValue) fontValue.textContent=font.value;
@@ -3322,61 +3219,6 @@ updateZoom();
         if(typeof scheduleSave==='function') scheduleSave(true);
       }
     });
-  }
-
-  const button=fs();
-  if(button && !button.dataset.fontFsFinal){
-    button.dataset.fontFsFinal='1';
-
-    // Remove all previous listeners from this specific button while preserving its markup.
-    const clean=button.cloneNode(true);
-    clean.dataset.fontFsFinal='1';
-    button.replaceWith(clean);
-
-    const enter=async()=>{
-      const root=document.documentElement;
-      const fn=root.requestFullscreen || root.webkitRequestFullscreen || root.msRequestFullscreen;
-      if(!fn) throw new Error('fullscreen unsupported');
-      return fn.call(root);
-    };
-    const leave=async()=>{
-      const fn=document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-      if(fn) return fn.call(document);
-    };
-
-    clean.addEventListener('click',async e=>{
-      e.preventDefault(); e.stopPropagation();
-      if(!mobile()) return;
-      const native=!!(document.fullscreenElement||document.webkitFullscreenElement);
-      try{
-        if(native){
-          await leave();
-        }else{
-          await enter();
-        }
-      }catch(err){
-        // Browser denied/doesn't support native fullscreen: use an app fullscreen fallback.
-        document.body.classList.toggle('mobile-css-fullscreen');
-      }
-      const active=!!(document.fullscreenElement||document.webkitFullscreenElement||document.body.classList.contains('mobile-css-fullscreen'));
-      clean.classList.toggle('active',active);
-      const icon=clean.querySelector('.v2icon');
-      const label=clean.querySelector('span:last-child');
-      if(icon) icon.textContent=active?'×':'⛶';
-      if(label) label.textContent=active?'Exit':'Fullscreen';
-    },{passive:false});
-
-    const sync=()=>{
-      const active=!!(document.fullscreenElement||document.webkitFullscreenElement||document.body.classList.contains('mobile-css-fullscreen'));
-      clean.classList.toggle('active',active);
-      const icon=clean.querySelector('.v2icon');
-      const label=clean.querySelector('span:last-child');
-      if(icon) icon.textContent=active?'×':'⛶';
-      if(label) label.textContent=active?'Exit':'Fullscreen';
-    };
-    document.addEventListener('fullscreenchange',sync);
-    document.addEventListener('webkitfullscreenchange',sync);
-    sync();
   }
 })();
 </script>
@@ -3501,6 +3343,126 @@ updateZoom();
   },true);
 })();
 </script>
+
+<!-- ===== EXIT FULLSCREEN BUTTON ===== -->
+<button id="exitFullscreenBtn" type="button" aria-label="Exit fullscreen">
+  <span class="v2icon">✕</span><span>Exit</span>
+</button>
+
+<style id="exit-fullscreen-btn-style">
+#exitFullscreenBtn {
+  display: none;
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: 12px;
+  z-index: 999999;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(24,32,42,.9);
+  color: #fff;
+  font: 800 11px/1 system-ui, sans-serif;
+  padding: 9px 12px;
+  gap: 5px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 22px rgba(0,0,0,.3);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-width: 54px;
+}
+#exitFullscreenBtn .v2icon { font-size: 18px; line-height: 18px; }
+body.in-fullscreen #exitFullscreenBtn { display: flex !important; }
+body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
+/* Keep it on top of everything in fullscreen */
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  #exitFullscreenBtn { z-index: 9999999 !important; }
+}
+</style>
+
+<script id="canvasflow-fullscreen-final">
+(function(){
+  'use strict';
+  var isMobile = function(){ return window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches; };
+  var nativeFS  = function(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement); };
+  var cssFS     = function(){ return document.body.classList.contains('mobile-css-fullscreen'); };
+  var isFS      = function(){ return nativeFS() || cssFS(); };
+
+  function enterFS(){
+    var root = document.documentElement;
+    var fn = root.requestFullscreen || root.webkitRequestFullscreen || root.mozRequestFullScreen || root.msRequestFullscreen;
+    if(fn){ try{ var r=fn.call(root); if(r && r.catch) r.catch(function(){}); return; }catch(e){} }
+    document.body.classList.add('mobile-css-fullscreen');
+    var app=document.getElementById('app'); if(app) app.classList.add('mobile-css-fullscreen');
+  }
+  function exitFS(){
+    document.body.classList.remove('mobile-css-fullscreen');
+    var app=document.getElementById('app'); if(app) app.classList.remove('mobile-css-fullscreen');
+    if(!nativeFS()) return;
+    var fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if(fn){ try{ var r=fn.call(document); if(r && r.catch) r.catch(function(){}); }catch(e){} }
+  }
+
+  function syncAll(){
+    var on = isFS();
+    document.body.classList.toggle('in-fullscreen', on);
+
+    // Elements bar button
+    var btn = document.getElementById('mobileFullscreen');
+    if(btn){
+      btn.classList.toggle('active', on);
+      var icon = btn.querySelector('.v2icon'); var lbl = btn.querySelector('span:last-child');
+      if(icon) icon.textContent = '⛶';
+      if(lbl)  lbl.textContent  = on ? 'Fullscreen' : 'Fullscreen';
+    }
+    // Landscape rebuilt button
+    var btnL = document.getElementById('mobileLandscapeFullscreen');
+    if(btnL){
+      btnL.classList.toggle('active', on);
+      var i2 = btnL.querySelector('.v2icon'); var l2 = btnL.querySelector('span:last-child');
+      if(i2) i2.textContent = on ? '✕' : '⛶';
+      if(l2) l2.textContent = on ? 'Exit' : 'Fullscreen';
+    }
+  }
+
+  function attachBtn(btn){
+    if(!btn || btn.dataset.cfFsOk) return;
+    btn.dataset.cfFsOk = '1';
+    btn.addEventListener('click', function(e){
+      if(!isMobile()) return;
+      e.preventDefault(); e.stopPropagation();
+      if(isFS()) exitFS(); else enterFS();
+      setTimeout(syncAll, 100);
+    }, { capture: true, passive: false });
+  }
+
+  function attachExit(){
+    var eb = document.getElementById('exitFullscreenBtn');
+    if(!eb || eb.dataset.cfExitOk) return;
+    eb.dataset.cfExitOk = '1';
+    eb.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      exitFS();
+      setTimeout(syncAll, 100);
+    }, { capture: true });
+  }
+
+  function setup(){
+    attachBtn(document.getElementById('mobileFullscreen'));
+    attachExit();
+    syncAll();
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
+  else setup();
+
+  document.addEventListener('fullscreenchange',       function(){ setTimeout(syncAll,50); });
+  document.addEventListener('webkitfullscreenchange', function(){ setTimeout(syncAll,50); });
+  document.addEventListener('mozfullscreenchange',    function(){ setTimeout(syncAll,50); });
+  window.addEventListener('orientationchange', function(){ setTimeout(syncAll,150); }, { passive:true });
+})();
+</script>
+
 </body>
 </html>
 
