@@ -1009,6 +1009,45 @@
   }
 }
 </style>
+
+<style id="mobile-autosave-status-final">
+/* Mobile landscape: restore a tiny live save indicator above the bottom toolbar. */
+@media screen and (max-width:760px) and (orientation:landscape){
+  #mobileSaveState{
+    display:block !important;
+    position:fixed !important;
+    left:max(8px, env(safe-area-inset-left)) !important;
+    right:auto !important;
+    top:auto !important;
+    bottom:calc(66px + env(safe-area-inset-bottom)) !important;
+    z-index:2005 !important;
+    width:auto !important;
+    max-width:120px !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    padding:3px 6px !important;
+    margin:0 !important;
+    border:1px solid #dfe4ea !important;
+    border-radius:6px !important;
+    background:rgba(255,255,255,.94) !important;
+    box-shadow:0 3px 10px rgba(0,0,0,.08) !important;
+    font-size:8px !important;
+    line-height:12px !important;
+    font-weight:700 !important;
+    white-space:nowrap !important;
+    pointer-events:none !important;
+  }
+  #mobileSaveState.saving{ color:#7c5cff !important; }
+  #mobileSaveState.saved{ color:#2d8a5b !important; }
+  #mobileSaveState.error{ color:#c33b3b !important; }
+}
+
+/* Mobile portrait: keep the status hidden, as requested for the current landscape layout. */
+@media screen and (max-width:760px) and (orientation:portrait){
+  #mobileSaveState{ display:none !important; }
+}
+</style>
+
 </head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
