@@ -2972,6 +2972,30 @@ updateZoom();
 (function mobileLandscapeTools(){
   const bar=document.getElementById('mobileV2Bar');
   if(!bar) return;
+(function mobileLandscapeImageUploadFix(){
+  // Landscape phones: open the native picker directly from the actual Image button.
+  // This runs only in phone-landscape mode and avoids competing delegated handlers.
+  const isLandscapePhone=()=>window.matchMedia('(max-height:520px) and (max-width:900px)').matches;
+  let opening=false;
+  document.addEventListener('pointerup',e=>{
+    if(!isLandscapePhone() || opening) return;
+    const btn=e.target?.closest?.('#mobileV2Bar [data-v2-tool="image"]');
+    if(!btn) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    opening=true;
+    const input=document.getElementById('fileInput');
+    if(input){
+      input.value='';
+      input.click();
+    }
+    setTimeout(()=>{ opening=false; },500);
+  },true);
+
+  const input=document.getElementById('fileInput');
+  input?.addEventListener('change',()=>{ opening=false; },true);
+})();
+
   const defs=[
     ['select','↖','Select'],['pen','✎','Pen'],['highlighter','▰','Highlight'],
     ['scroll','↕','Scroll'],['eraser','⌫','Eraser'],['rect','▱','Rectangle'],
