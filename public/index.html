@@ -75,7 +75,7 @@
     .primary { background:#18202a; color:white; border:0; border-radius:7px; padding:8px 12px; cursor:pointer; }
     .secondary { background:#eef1f5; color:#39424e; border:0; border-radius:7px; padding:8px 12px; cursor:pointer; }
 
-    #fileInput { display:none; }
+    #fileInput { position:fixed; left:-10000px; top:-10000px; width:1px; height:1px; opacity:0; pointer-events:none; }
     /* Drag & drop uploads */
     #dropOverlay {
       display:none; position:absolute; inset:12px; z-index:40; border:2px dashed #5b63ff;
@@ -2066,7 +2066,8 @@ document.getElementById("fileInput").addEventListener("change", async e => {
   const point = pendingImagePoint ? {...pendingImagePoint} : null;
   e.target.value = "";
   for (const file of files) {
-    if ((file.type || '').startsWith('image/')) await addImageFileToCanvas(file, point);
+    const isImage = (file.type || '').startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(file.name || '');
+    if (isImage) await addImageFileToCanvas(file, point);
     else await addFileAttachment(file);
   }
 });
@@ -2972,29 +2973,7 @@ updateZoom();
 (function mobileLandscapeTools(){
   const bar=document.getElementById('mobileV2Bar');
   if(!bar) return;
-(function mobileLandscapeImageUploadFix(){
-  // Landscape phones: open the native picker directly from the actual Image button.
-  // This runs only in phone-landscape mode and avoids competing delegated handlers.
-  const isLandscapePhone=()=>window.matchMedia('(max-height:520px) and (max-width:900px)').matches;
-  let opening=false;
-  document.addEventListener('pointerup',e=>{
-    if(!isLandscapePhone() || opening) return;
-    const btn=e.target?.closest?.('#mobileV2Bar [data-v2-tool="image"]');
-    if(!btn) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    opening=true;
-    const input=document.getElementById('fileInput');
-    if(input){
-      input.value='';
-      input.click();
-    }
-    setTimeout(()=>{ opening=false; },500);
-  },true);
 
-  const input=document.getElementById('fileInput');
-  input?.addEventListener('change',()=>{ opening=false; },true);
-})();
 
   const defs=[
     ['select','↖','Select'],['pen','✎','Pen'],['highlighter','▰','Highlight'],
@@ -3018,7 +2997,7 @@ updateZoom();
           document.getElementById('aiToggle')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
           return;
         }
-        if(name==='image'){ pendingImagePoint = pendingImagePoint || (() => { const c=canvas.getCenter(); return {x:c.left,y:c.top}; })(); const input=document.getElementById('fileInput'); if(input) input.click(); return; }
+        if(name==='image'){ const c=canvas.getCenter(); pendingImagePoint={x:c.left,y:c.top}; const input=document.getElementById('fileInput'); if(input){ input.value=''; input.click(); } setTool?.('select'); return; }
         if(name==='scroll'){ window.__mobileScrollOn=!window.__mobileScrollOn; setTabletScrollMode(window.__mobileScrollOn); sync(); return; }
         setTabletScrollMode(false); setTool(name); sync();
       });
@@ -3273,9 +3252,10 @@ updateZoom();
     }
 
     if(name==='image'){
-      pendingImagePoint = pendingImagePoint || (() => { const c=canvas.getCenter(); return {x:c.left,y:c.top}; })();
+      const c=canvas.getCenter();
+      pendingImagePoint={x:c.left,y:c.top};
       const input=document.getElementById('fileInput');
-      if(input) input.click();
+      if(input){ input.value=''; input.click(); }
       if(typeof setTool==='function') setTool('select');
       return;
     }
