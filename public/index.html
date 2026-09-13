@@ -145,9 +145,10 @@
     body.tablet-mode #textDialog { left:76px !important; }
 
     /* Compact tablet controls below the tool rail. Scroll the rail if the phone is short. */
-    #tabletControls { display:none; }
+    #tabletControls { display:none !important; }
+    body:not(.tablet-mode) #tabletControls { display:none !important; visibility:hidden !important; pointer-events:none !important; }
     body.tablet-mode #tabletControls {
-      display:flex; position:fixed; left:8px; bottom:62px; z-index:25;
+      display:flex !important; visibility:visible !important; pointer-events:auto !important; position:fixed; left:8px; bottom:62px; z-index:25;
       width:60px; flex-direction:column; gap:5px;
       max-height:calc(100dvh - 180px); overflow-y:auto; overflow-x:hidden;
       scrollbar-width:thin;
@@ -331,7 +332,11 @@
     body.tablet-mode #accountBar { display:none; }
 
 
-    /* ================= MOBILE UX ================= */
+    /* PC must use only the original top toolbar. Tablet controls never appear on PC. */
+  body:not(.tablet-mode) #tabletControls { display:none !important; }
+  body.phone-layout .device-switch { display:none !important; visibility:hidden !important; pointer-events:none !important; }
+
+  /* ================= MOBILE UX ================= */
     #mobileDock, #mobileQuick, #mobileAI, #mobilePages { display:none; }
     @media (max-width:760px) {
       /* Phone = automatic mobile layout. Never expose the PC / Tablet switch. */
@@ -484,7 +489,182 @@
       #mobilePages { top:8px; }
     }
 
-  </style>
+  
+/* Phone-only layers must never appear on PC/tablet. */
+@media (min-width:761px){ #mobilePhoneHeader, #mobileV2Bar, #mobileV2Scroll, #mobileV2Menu { display:none !important; } }
+
+/* ============================================================
+   MOBILE V2 — built as a separate touch-first UI
+   ============================================================ */
+@media (max-width:760px){
+  html,body{width:100%;height:100%;min-width:0;max-width:100%;overflow:hidden;overscroll-behavior:none;}
+  #topbar{display:none !important;}
+  #app.entered{display:flex !important;width:100%;height:100dvh;min-height:100dvh;overflow:hidden;}
+  #workspace{position:relative;flex:1 1 auto;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;padding:0 !important;}
+  #canvasWrap{position:absolute !important;inset:0 !important;width:100%;height:100%;overflow:hidden;}
+  .canvas-container,.canvas-container canvas{max-width:none;touch-action:none;}
+  #hint,#zoom,#tabletControls,#tabletAccount{display:none !important;}
+
+  /* Never expose PC / Tablet on a phone, including landscape. */
+  .device-switch,#pcMode,#tabletMode{display:none !important;visibility:hidden !important;pointer-events:none !important;}
+
+  /* The old mobile controls are replaced by the new compact bar. */
+  #mobileDock,#mobileQuick,#mobilePages,#mobileAI,#mobileSaveState{display:none !important;}
+
+  #mobileV2Bar{
+    position:fixed;left:7px;right:7px;bottom:max(7px,env(safe-area-inset-bottom));
+    z-index:200;height:58px;padding:5px;display:flex;align-items:stretch;gap:4px;
+    background:rgba(255,255,255,.97);border:1px solid #dfe4ea;border-radius:15px;
+    box-shadow:0 9px 30px rgba(0,0,0,.16);backdrop-filter:blur(14px);
+    max-width:calc(100vw - 14px);overflow:hidden;
+  }
+  #mobileV2Bar button{
+    min-width:0;flex:1;height:48px;border:0;border-radius:10px;background:transparent;
+    color:#4b5563;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:1px;font:800 9px/1 system-ui,sans-serif;cursor:pointer;padding:2px;
+  }
+  #mobileV2Bar button .v2icon{font-size:19px;line-height:20px;}
+  #mobileV2Bar button.active{background:#18202a;color:#fff;}
+  #mobileV2More{background:#eef1f5 !important;}
+
+  #mobileV2Scroll{display:none !important;background:transparent !important;}
+  #mobileV2Scroll .v2icon{font-size:18px;line-height:18px;}
+  #mobileV2Scroll.active{background:#18202a;color:#fff;}
+
+  /* Scroll is always part of the Elements bar. */
+  @media (orientation:landscape){
+    #mobileV2Bar{height:54px;}
+    #mobileV2Bar button{height:44px;}
+  }
+
+  #mobileV2Menu{
+    position:fixed;left:7px;right:7px;bottom:calc(max(7px,env(safe-area-inset-bottom)) + 65px);
+    z-index:202;background:rgba(255,255,255,.98);border:1px solid #dfe4ea;border-radius:15px;
+    box-shadow:0 14px 40px rgba(0,0,0,.18);padding:8px;display:none;
+    grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;max-width:calc(100vw - 14px);
+    max-height:min(52dvh,330px);overflow:auto;
+  }
+  #mobileV2Menu.open{display:grid;}
+  #mobileV2Menu button{
+    min-width:0;border:1px solid #e1e5eb;background:#fff;border-radius:10px;padding:9px 3px;
+    color:#39424e;font:800 9px/1.15 system-ui,sans-serif;cursor:pointer;overflow:hidden;
+  }
+  #mobileV2Menu button.active{background:#18202a;color:#fff;border-color:#18202a;}
+
+  /* Real AI panel: compact, full-width, no desktop resizing handles. */
+  #aiPanel{
+    position:fixed !important;left:7px !important;right:7px !important;top:7px !important;bottom:auto !important;
+    width:auto !important;height:calc(100dvh - 76px) !important;max-width:none !important;max-height:none !important;
+    min-width:0 !important;min-height:0 !important;resize:none !important;border-radius:16px !important;
+    z-index:210 !important;overflow:hidden !important;
+  }
+  #aiPanel::after{display:none;}
+  #aiPanel .ai-head{padding:9px 10px;}
+  #aiPanel .ai-title{font-size:13px;}
+  #aiPanel .ai-subtitle{font-size:8px;}
+  #aiPanel .ai-resize-hint{display:none;}
+  #aiPanel .ai-body{padding:8px;overflow:auto;-webkit-overflow-scrolling:touch;}
+  #aiPanel #lessonInput{min-height:100px;max-height:170px;font-size:13px;resize:none;}
+  #aiPanel .ai-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;}
+  #aiPanel .ai-action{padding:7px 5px;font-size:9px;min-width:0;}
+  #aiPanel .ai-action b{font-size:9px;}
+  #aiPanel .ai-action span{font-size:7px;}
+  #aiPanel .ai-result{max-height:30%;font-size:9px;}
+  #aiPanel .ai-footer{padding:7px;}
+  #aiPanel .ai-footer button{font-size:9px;padding:7px 4px;}
+}
+
+
+/* ============================================================
+   PHONE ONLY — NEW UI / PC & TABLET STYLES ARE UNTOUCHED
+   ============================================================ */
+@media (max-width:760px){
+  /* Hide the floating shortcut buttons on phones in both orientations. */
+  #mobileQuick{display:none !important;visibility:hidden !important;pointer-events:none !important;}
+  #mobilePhoneHeader{
+    position:fixed;top:0;left:0;right:0;height:58px;z-index:205;
+    display:flex !important;align-items:center;justify-content:space-between;
+    padding:8px 10px;box-sizing:border-box;
+    background:rgba(250,250,248,.94);backdrop-filter:blur(16px);
+    border-bottom:1px solid #e7e5df;
+  }
+  #mobilePhoneHeader .mbrand{font:900 17px/1 system-ui,sans-serif;color:#171717;letter-spacing:-.6px}
+  #mobilePhoneHeader .mbrand span{color:#777}
+  #mobilePhoneHeader .mtools{display:flex;gap:6px}
+  #mobilePhoneHeader button{
+    width:38px;height:38px;border:1px solid #dedbd3;border-radius:11px;
+    background:#fff;color:#222;font:800 17px/1 system-ui,sans-serif;
+    box-shadow:0 3px 12px rgba(0,0,0,.06);
+  }
+  #mobileV2Bar{
+    left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));
+    height:64px;padding:6px;gap:5px;border-radius:20px;display:flex !important;
+    background:#191919;border:0;box-shadow:0 14px 35px rgba(0,0,0,.22);
+  }
+  #mobileV2Bar button{height:52px;color:#bdbdbd;border-radius:15px;font-size:8px;gap:2px}
+  #mobileV2Bar button .v2icon{font-size:21px;line-height:21px}
+  #mobileV2Bar button.active{background:#fff;color:#111}
+  #mobileV2More{background:#292929 !important;color:#ddd !important}
+  #mobileV2Scroll{display:flex !important;background:#292929 !important;color:#ddd !important;} 
+  #mobileV2Menu{
+    left:10px;right:10px;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 82px);
+    border:0;border-radius:20px;background:#191919;padding:9px;
+    grid-template-columns:repeat(4,minmax(0,1fr));box-shadow:0 18px 45px rgba(0,0,0,.24);
+  }
+  #mobileV2Menu button{background:#242424;border:1px solid #343434;color:#eee;border-radius:13px;padding:10px 3px;font-size:8px}
+  #mobileV2Menu button.active{background:#fff;color:#111;border-color:#fff}
+  #canvasWrap{
+    background:#f6f6f3 !important;
+    padding-top:58px !important;box-sizing:border-box;
+  }
+  #canvas{background:#fff !important}
+  #workspace{background:#f6f6f3 !important}
+  #aiPanel{
+    left:8px !important;right:8px !important;top:66px !important;
+    height:calc(100dvh - 76px) !important;border-radius:20px !important;
+    box-shadow:0 18px 50px rgba(0,0,0,.22) !important;
+  }
+}
+@media (max-width:760px) and (orientation:landscape){
+  #mobilePhoneHeader{height:50px}
+  #canvasWrap{padding-top:50px !important}
+  #mobileV2Bar{height:58px}
+  #mobileV2Bar button{height:46px}
+  #mobileV2Menu{bottom:calc(max(8px,env(safe-area-inset-bottom)) + 70px)}
+  #aiPanel{top:58px !important;height:calc(100dvh - 66px) !important}
+}
+
+
+/* HARD PHONE LOCK: the PC / Tablet switch must never render on phones. */
+@media screen and (max-width:760px){
+  html body #topbar .device-switch,
+  html body #topbar > .device-switch,
+  html body .device-switch{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    width:0 !important;
+    height:0 !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:0 !important;
+    max-height:0 !important;
+    overflow:hidden !important;
+    pointer-events:none !important;
+    position:absolute !important;
+    left:-99999px !important;
+  }
+}
+
+@media (max-width:760px){
+  #hint, .hint, .shortcuts, .keyboard-hints, [class*="shortcut"], [class*="hint"]{display:none !important;visibility:hidden !important;opacity:0 !important;}
+}
+
+    /* Phone landscape: also hide desktop shortcut hint when the browser width grows in landscape. */
+    @media (max-height: 520px) and (max-width: 900px) {
+      #hint, #zoom { display:none !important; visibility:hidden !important; opacity:0 !important; pointer-events:none !important; }
+    }
+</style>
 </head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
@@ -529,6 +709,7 @@
         <button class="tool active" data-tool="select" title="Select / move (V)">↖</button>
         <button class="tool" data-tool="pen" title="Pen (P)">✎</button>
         <button class="tool" data-tool="highlighter" title="Highlighter">▰</button>
+        <button class="tool" data-tool="scroll" title="Scroll / move board">↕</button>
         <button class="tool" data-tool="eraser" title="Eraser (E)">⌫</button>
         <button class="tool" data-tool="rect" title="Rectangle">▱</button>
         <button class="tool" data-tool="circle" title="Circle">○</button>
@@ -717,6 +898,28 @@
       </div>
     </div>
   </div>
+
+
+  <!-- Phone-only UI: intentionally separate from the desktop/tablet header -->
+  <div id="mobilePhoneHeader" aria-label="Phone header">
+    <div class="mbrand">Canvas<span>Flow</span></div>
+    <div class="mtools">
+      <button type="button" id="mobileUndoV2" aria-label="Undo">↶</button>
+      <button type="button" id="mobileRedoV2" aria-label="Redo">↷</button>
+      <button type="button" id="mobileHomeV2" aria-label="Home">⌂</button>
+    </div>
+  </div>
+
+  <!-- Mobile V2 UI: completely independent from desktop/tablet controls -->
+  <div id="mobileV2Bar" aria-label="Mobile tools">
+    <button type="button" data-v2-tool="select"><span class="v2icon">↖</span><span>Select</span></button>
+    <button type="button" data-v2-tool="pen"><span class="v2icon">✎</span><span>Pen</span></button>
+    <button type="button" data-v2-tool="highlighter"><span class="v2icon">▰</span><span>Highlight</span></button>
+    <button type="button" id="mobileV2Scroll" aria-label="Scroll board"><span class="v2icon">↕</span><span>Scroll</span></button>
+    <button type="button" id="mobileV2AI"><span class="v2icon">✦</span><span>AI</span></button>
+    <button type="button" id="mobileV2More"><span class="v2icon">⋯</span><span>More</span></button>
+  </div>
+  <div id="mobileV2Menu" aria-label="More mobile tools"></div>
 
   <input id="fileInput" type="file" accept="image/*" />
 
@@ -986,7 +1189,9 @@ pcModeBtn.addEventListener("click", () => setDeviceMode("pc"));
 tabletModeBtn.addEventListener("click", () => setDeviceMode("tablet"));
 
 function enforcePhoneLayout() {
-  if (window.matchMedia("(max-width:760px)").matches) {
+  const isPhone = window.matchMedia("(max-width:760px)").matches;
+  document.body.classList.toggle("phone-layout", isPhone);
+  if (isPhone) {
     document.body.classList.remove("tablet-mode");
     pcModeBtn.classList.add("active");
     tabletModeBtn.classList.remove("active");
@@ -1134,6 +1339,7 @@ function applyBrushSettings() {
 
 function setTabletScrollMode(enabled) {
   tabletScrollMode = !!enabled;
+  if (window.matchMedia && window.matchMedia("(max-width:760px)").matches) window.__mobileScrollOn = tabletScrollMode;
   tabletScrollBtn.classList.toggle("active", tabletScrollMode);
   tabletScrollValue.textContent = tabletScrollMode ? "ON" : "OFF";
   // Scroll mode temporarily takes over touch dragging. When it is turned OFF,
@@ -1147,6 +1353,11 @@ tabletScrollBtn.addEventListener("click", () => setTabletScrollMode(!tabletScrol
 
 function setTool(next) {
   if (!next || next === "ai") return;
+  if (next === "scroll") {
+    setTabletScrollMode(!tabletScrollMode);
+    document.querySelectorAll(".tool").forEach(b => b.classList.toggle("active", b.dataset.tool === "scroll"));
+    return;
+  }
   tool = next;
   document.querySelectorAll(".tool").forEach(b => b.classList.toggle("active", b.dataset.tool === next));
   canvas.isDrawingMode = !tabletScrollMode && (next === "pen" || next === "highlighter");
@@ -1734,10 +1945,7 @@ new ResizeObserver(rememberAiSize).observe(aiPanel);
 aiEndpoint.value = localStorage.getItem("canvasflow-ai-endpoint") || "/api/study";
 aiModel.value = localStorage.getItem("canvasflow-ai-model") || "";
 
-aiToggle.addEventListener("click", () => {
-  const isOpen = aiPanel.classList.toggle("open");
-  aiToggle.classList.toggle("active", isOpen);
-});
+// AI toggle is handled by the unified tool handler below; no duplicate click listener.
 aiClose.addEventListener("click", () => {
   aiPanel.classList.remove("open");
   aiToggle.classList.remove("active");
@@ -2106,6 +2314,99 @@ window.CanvasFlowStudy = {
 setTool("select");
 updateZoom();
 
+
+// ============================================================
+// MOBILE V2 CONTROLLER — independent touch-first implementation
+// ============================================================
+
+  // Phone-only controls; desktop/tablet behavior remains unchanged.
+  document.getElementById('mobileUndoV2')?.addEventListener('click',()=>{ if(window.matchMedia('(max-width:760px)').matches) document.getElementById('undoBtn')?.click(); });
+  document.getElementById('mobileRedoV2')?.addEventListener('click',()=>{ if(window.matchMedia('(max-width:760px)').matches) document.getElementById('redoBtn')?.click(); });
+  document.getElementById('mobileHomeV2')?.addEventListener('click',()=>{ if(window.matchMedia('(max-width:760px)').matches) document.getElementById('landing')?.classList.remove('hidden'); });
+
+(function mobileV2(){
+  const mobile = () => window.matchMedia('(max-width:760px)').matches;
+  const bar = document.getElementById('mobileV2Bar');
+  const menu = document.getElementById('mobileV2Menu');
+  const aiBtn = document.getElementById('mobileV2AI');
+  const moreBtn = document.getElementById('mobileV2More');
+  const scrollBtn = document.getElementById('mobileV2Scroll');
+  const panel = document.getElementById('aiPanel');
+
+  const tools = [
+    ['eraser','⌫','Eraser'],['rect','▱','Rectangle'],['circle','○','Circle'],['line','╱','Line'],
+    ['arrow','➜','Arrow'],['text','T','Text'],['node','◇','Node'],['image','▧','Image']
+  ];
+
+  function sync(){
+    const on=mobile();
+    if(bar) bar.style.display=on?'flex':'none';
+    if(scrollBtn) scrollBtn.style.display=on && window.matchMedia('(orientation:landscape)').matches?'flex':'none';
+    document.body.classList.remove('tablet-mode');
+    if(on){
+      const current=typeof tool==='string'?tool:'select';
+      bar?.querySelectorAll('[data-v2-tool]').forEach(b=>b.classList.toggle('active',b.dataset.v2Tool===current));
+      scrollBtn?.classList.toggle('active',!!window.__mobileScrollOn);
+      aiBtn?.classList.toggle('active',!!panel?.classList.contains('open'));
+      scrollBtn?.classList.toggle('active',!!window.__mobileScrollOn);
+    }
+  }
+
+  bar?.querySelectorAll('[data-v2-tool]').forEach(btn=>btn.addEventListener('click',e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(!mobile()) return;
+    setTabletScrollMode?.(false);
+    setTool?.(btn.dataset.v2Tool);
+    menu?.classList.remove('open');
+    sync();
+  }));
+
+  aiBtn?.addEventListener('click',e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(!mobile() || !panel) return;
+    const open=!panel.classList.contains('open');
+    panel.classList.toggle('open',open);
+    document.getElementById('aiToggle')?.classList.toggle('active',open);
+    menu?.classList.remove('open');
+    sync();
+  });
+
+  function buildMenu(){
+    if(!menu || menu.dataset.ready) return;
+    menu.dataset.ready='1';
+    tools.forEach(([name,icon,label])=>{
+      const b=document.createElement('button'); b.type='button'; b.dataset.v2Tool=name;
+      b.innerHTML=`${icon}<br><span>${label}</span>`;
+      b.addEventListener('click',e=>{
+        e.preventDefault(); e.stopPropagation();
+        if(name==='image'){ document.getElementById('fileInput')?.click(); setTool?.('select'); }
+        else { setTabletScrollMode?.(false); setTool?.(name); }
+        menu.classList.remove('open'); sync();
+      });
+      menu.appendChild(b);
+    });
+  }
+  moreBtn?.addEventListener('click',e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(!mobile()) return;
+    buildMenu(); menu.classList.toggle('open'); sync();
+  });
+
+  scrollBtn?.addEventListener('click',e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(!mobile()) return;
+    window.__mobileScrollOn=!window.__mobileScrollOn;
+    setTabletScrollMode?.(window.__mobileScrollOn);
+    sync();
+  });
+
+  panel?.querySelector('#aiClose')?.addEventListener('click',()=>setTimeout(sync,0));
+  new MutationObserver(sync).observe(panel||document.body,{attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',sync,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(sync,80),{passive:true});
+  buildMenu(); sync();
+})();
+
 // ================= MOBILE UX =================
 (function initMobileUX(){
   const isMobile = () => window.matchMedia('(max-width:760px)').matches;
@@ -2249,6 +2550,23 @@ updateZoom();
   renderPage();
 })();
 
+</script>
+
+<script>
+(function hardHidePhoneDeviceSwitch(){
+  function hide(){
+    if(window.matchMedia && window.matchMedia('(max-width:760px)').matches){
+      document.querySelectorAll('.device-switch, #pcMode, #tabletMode').forEach(function(el){
+        el.style.setProperty('display','none','important');
+        el.style.setProperty('visibility','hidden','important');
+        el.style.setProperty('pointer-events','none','important');
+      });
+    }
+  }
+  hide();
+  window.addEventListener('resize',hide,{passive:true});
+  window.addEventListener('orientationchange',function(){setTimeout(hide,50);},{passive:true});
+})();
 </script>
 </body>
 </html>
