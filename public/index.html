@@ -1239,7 +1239,6 @@
     <button type="button" data-v2-tool="select"><span class="v2icon">↖</span><span>Select</span></button>
     <button type="button" data-v2-tool="pen"><span class="v2icon">✎</span><span>Pen</span></button>
     <button type="button" data-v2-tool="highlighter"><span class="v2icon">▰</span><span>Highlight</span></button>
-    <button type="button" id="mobileFullscreen" aria-label="Fullscreen" title="Fullscreen"><span class="v2icon">⛶</span><span>Fullscreen</span></button>
     <button type="button" id="mobileV2Scroll" aria-label="Scroll board"><span class="v2icon">↕</span><span>Scroll</span></button>
     <button type="button" id="mobileV2AI"><span class="v2icon">✦</span><span>AI</span></button>
     <label id="mobileFontSizeControl" title="Font size">
@@ -1267,6 +1266,36 @@
     <div class="mobile-nib-preview" id="mobileNibPreview"><span></span></div>
   </div>
 </div>
+
+  <!-- Mobile quick pen colors: positioned directly above the Pen tool. -->
+  <div id="mobileQuickPenColors" aria-label="Quick pen colors">
+    <button type="button" data-quick-pen-color="#e53935" aria-label="Red pen" title="Red"></button>
+    <button type="button" data-quick-pen-color="#111111" aria-label="Black pen" title="Black"></button>
+    <button type="button" data-quick-pen-color="#1976d2" aria-label="Blue pen" title="Blue"></button>
+  </div>
+
+  <!-- Marker settings: long-press Highlight. -->
+  <div id="mobileMarkerSettings" aria-hidden="true">
+    <div class="mobile-marker-card">
+      <div class="mobile-pen-head"><strong>Marker Settings</strong><button type="button" id="mobileMarkerClose" aria-label="Close">×</button></div>
+      <label>Marker Color <output id="mobileMarkerColorValue">#FFD54A</output>
+        <input id="mobileMarkerColor" type="color" value="#FFD54A" aria-label="Marker color">
+      </label>
+      <label>Marker Size <output id="mobileMarkerSizeValue">10</output>
+        <input id="mobileMarkerSize" type="range" min="4" max="40" value="10" step="1">
+      </label>
+      <div class="mobile-pen-presets">
+        <button type="button" data-marker-size="6">Thin</button>
+        <button type="button" data-marker-size="10">Medium</button>
+        <button type="button" data-marker-size="18">Bold</button>
+        <button type="button" data-marker-size="28">Extra Bold</button>
+      </div>
+      <label>Opacity <output id="mobileMarkerOpacityValue">30%</output>
+        <input id="mobileMarkerOpacity" type="range" min="10" max="70" value="30" step="5">
+      </label>
+    </div>
+  </div>
+
   <div id="mobileV2LandscapeTools" aria-label="Mobile landscape tools"></div>
 
   <input id="fileInput" type="file" accept="image/*" />
@@ -1686,8 +1715,12 @@ function applyBrushSettings() {
   }
   if (!(canvas.freeDrawingBrush instanceof fabric.PencilBrush) || calligraphy) canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
   if (tool === "highlighter") {
-    canvas.freeDrawingBrush.color = hexToRgba(baseColor, 0.30);
-    canvas.freeDrawingBrush.width = Math.max(14, size * 3.2);
+    const mobileMarker = window.matchMedia && window.matchMedia("(max-width:760px), (max-height:520px) and (max-width:900px)").matches;
+    const markerColor = mobileMarker ? (document.getElementById("mobileMarkerColor")?.value || baseColor) : baseColor;
+    const markerSize = mobileMarker ? Number(document.getElementById("mobileMarkerSize")?.value || 10) : size;
+    const markerOpacity = mobileMarker ? Number(document.getElementById("mobileMarkerOpacity")?.value || 30) / 100 : 0.30;
+    canvas.freeDrawingBrush.color = hexToRgba(markerColor, markerOpacity);
+    canvas.freeDrawingBrush.width = mobileMarker ? Math.max(8, markerSize) : Math.max(14, size * 3.2);
   } else {
     canvas.freeDrawingBrush.color = baseColor;
     canvas.freeDrawingBrush.width = size;
@@ -1833,12 +1866,25 @@ function addMindNode(p) {
 function showTextDialog(p) {
   pendingTextPoint = p;
   const d = document.getElementById("textDialog");
+  const mobileText = window.matchMedia && window.matchMedia("(max-width:760px), (max-height:520px) and (max-width:900px)").matches;
+  const savedX = window.scrollX || 0;
+  const savedY = window.scrollY || 0;
   d.style.display = "block";
-  d.style.left = Math.min(Math.max(12, p.x), workspace.clientWidth-292) + "px";
-  d.style.top = Math.min(Math.max(12, p.y), workspace.clientHeight-150) + "px";
+  if (mobileText) {
+    // Keep the browser page locked while the on-screen keyboard is active.
+    d.style.position = "fixed";
+    d.style.left = Math.min(Math.max(12, p.x), Math.max(12, window.innerWidth - 292)) + "px";
+    d.style.top = Math.min(Math.max(64, p.y), Math.max(64, window.innerHeight - 165)) + "px";
+  } else {
+    d.style.position = "absolute";
+    d.style.left = Math.min(Math.max(12, p.x), workspace.clientWidth-292) + "px";
+    d.style.top = Math.min(Math.max(12, p.y), workspace.clientHeight-150) + "px";
+  }
   const ta = document.getElementById("textValue");
   ta.value = "";
-  ta.focus();
+  ta.focus({preventScroll:true});
+  requestAnimationFrame(()=>window.scrollTo(savedX, savedY));
+  setTimeout(()=>window.scrollTo(savedX, savedY),80);
 }
 document.getElementById("cancelText").onclick = () => document.getElementById("textDialog").style.display="none";
 document.getElementById("addText").onclick = () => {
@@ -2867,10 +2913,6 @@ updateZoom();
     if(ci && dc) ci.value=dc.value;
     ci?.addEventListener('input',()=>{ if(dc){dc.value=ci.value;dc.dispatchEvent(new Event('input',{bubbles:true}));dc.dispatchEvent(new Event('change',{bubbles:true}));} });
     bar.appendChild(color);
-    const fs=document.createElement('button'); fs.type='button'; fs.id='mobileLandscapeFullscreen';
-    fs.innerHTML='<span class="v2icon">⛶</span><span>Fullscreen</span>';
-    fs.addEventListener('click',()=>document.getElementById('mobileFullscreen')?.click());
-    bar.appendChild(fs);
   }
   function sync(){
     if(!landscape()) return;
@@ -2878,8 +2920,6 @@ updateZoom();
     bar.querySelectorAll('[data-v2-tool]').forEach(b=>b.classList.toggle('active',b.dataset.v2Tool===tool));
     bar.querySelector('[data-v2-tool="scroll"]')?.classList.toggle('active',!!window.__mobileScrollOn);
     bar.querySelector('[data-v2-tool="ai"]')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
-    const fs=document.getElementById('mobileLandscapeFullscreen');
-    if(fs) fs.querySelector('.v2icon').textContent=(document.fullscreenElement||document.webkitFullscreenElement)?'×':'⛶';
   }
   window.addEventListener('resize',sync,{passive:true});
   window.addEventListener('orientationchange',()=>setTimeout(sync,80),{passive:true});
@@ -2897,36 +2937,8 @@ updateZoom();
   const mobileUndo = document.getElementById('mobileUndo');
   const mobileRedo = document.getElementById('mobileRedo');
   const mobileFocus = document.getElementById('mobileFocus');
-  const mobileFullscreen = document.getElementById('mobileFullscreen');
   const mobileZoomReset = document.getElementById('mobileZoomReset');
 
-  function isFullscreen(){
-    return !!(document.fullscreenElement || document.webkitFullscreenElement);
-  }
-  async function toggleMobileFullscreen(){
-    if(!isMobile()) return;
-    try {
-      if(isFullscreen()){
-        if(document.exitFullscreen) await document.exitFullscreen();
-        else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
-      } else {
-        const el=document.documentElement;
-        if(el.requestFullscreen) await el.requestFullscreen();
-        else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      }
-    } catch(e) {
-      // Some mobile browsers do not expose the Fullscreen API.
-    }
-    syncMobileFullscreen();
-  }
-  function syncMobileFullscreen(){
-    if(!mobileFullscreen) return;
-    const fs=isFullscreen();
-    mobileFullscreen.textContent=fs?'×':'⛶';
-    mobileFullscreen.title=fs?'Exit fullscreen':'Fullscreen';
-    mobileFullscreen.setAttribute('aria-label',fs?'Exit fullscreen':'Fullscreen');
-    mobileFullscreen.classList.toggle('active',fs);
-  }
   const mobileMore = document.getElementById('mobileMore');
 
   function mobileSetState(type, text){
@@ -2946,11 +2958,6 @@ updateZoom();
   mobileRedo?.addEventListener('click',()=>typeof redo==='function'&&redo());
   mobileZoomReset?.addEventListener('click',()=>{ if(typeof canvas!=='undefined'){ canvas.setViewportTransform([1,0,0,1,0,0]); if(typeof updateZoom==='function')updateZoom(); }});
   mobileFocus?.addEventListener('click',()=>document.body.classList.toggle('mobile-focus'));
-  mobileFullscreen?.addEventListener('click',toggleMobileFullscreen);
-  document.addEventListener('fullscreenchange',syncMobileFullscreen);
-  document.addEventListener('webkitfullscreenchange',syncMobileFullscreen);
-  window.addEventListener('orientationchange',()=>setTimeout(syncMobileFullscreen,80),{passive:true});
-  syncMobileFullscreen();
   mobileMore?.addEventListener('click',()=>{
     const tools=['eraser','rect','circle','line','arrow','text','node','image'];
     const labels={eraser:'⌫ Eraser',rect:'▱ Rectangle',circle:'○ Circle',line:'╱ Line',arrow:'➜ Arrow',text:'T Text',node:'◇ Node',image:'▧ Image'};
@@ -3010,10 +3017,12 @@ updateZoom();
   }
   sheetClass(); window.addEventListener('resize',sheetClass,{passive:true});
 
-  // Simple two-finger pinch + pan on mobile. Pen remains dedicated to drawing.
+  // Mobile: two-finger pinch-to-zoom + two-finger pan. Pen remains dedicated to drawing.
+  // Disable native browser touch gestures on the board so pinch is handled by Fabric.
   const target=document.getElementById('canvasWrap');
   const pointers=new Map();
   let pinch=null;
+  if(target){ target.style.touchAction='none'; target.style.webkitTouchCallout='none'; }
   function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
   function mid(a,b){ return {x:(a.x+b.x)/2,y:(a.y+b.y)/2}; }
   target?.addEventListener('pointerdown',e=>{
@@ -3033,8 +3042,8 @@ updateZoom();
       const z=Math.max(.2,Math.min(4,pinch.zoom*(d/pinch.distance)));
       const factor=z/pinch.zoom;
       const v=pinch.vt.slice();
-      v[4]=m.x-(pinch.center.x-v[4])*factor;
-      v[5]=m.y-(pinch.center.y-v[5])*factor;
+      v[4]=m.x-(pinch.center.x-pinch.vt[4])*factor;
+      v[5]=m.y-(pinch.center.y-pinch.vt[5])*factor;
       canvas.setViewportTransform(v); canvas.setZoom(z); canvas.requestRenderAll();
       if(typeof updateZoom==='function')updateZoom();
       e.preventDefault();
@@ -3093,12 +3102,6 @@ updateZoom();
 }
 </style>
 
-<style>
-@media (max-width:760px){
-  #mobileFullscreen{display:flex !important;align-items:center;justify-content:center;}
-  #mobileFullscreen.active{font-size:22px;font-weight:700;}
-}
-</style>
 
 <script id="mobile-elements-final-interaction-fix">
 (function(){
@@ -3152,23 +3155,7 @@ updateZoom();
 })();
 </script>
 
-<style id="mobile-fullscreen-v2">
-@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
-  #mobileFullscreen{display:flex !important;align-items:center;justify-content:center;flex:0 0 auto !important;min-width:64px !important;}
-  #mobileFullscreen .v2icon{font-size:18px;line-height:18px;}
-  #mobileV2Bar{z-index:10010 !important;}
-}
-</style>
 
-<style id="mobile-landscape-elements-final">
-@media screen and (max-height:520px) and (max-width:900px){
-  #mobileV2More,#mobileV2Menu{display:none !important;}
-  #mobileV2Bar{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;overflow-x:auto !important;overflow-y:hidden !important;justify-content:flex-start !important;align-items:center !important;gap:3px !important;touch-action:pan-x !important;}
-  #mobileV2Bar > button,#mobileV2Bar > label{display:flex !important;flex:0 0 58px !important;min-width:58px !important;width:58px !important;}
-  #mobileV2Bar > label{align-items:center;justify-content:center;flex-direction:column;}
-  #mobileV2Bar #mobileLandscapeFullscreen{display:flex !important;}
-}
-</style>
 
 <script id="mobile-fullscreen-scroll-final">
 (function(){
@@ -3544,6 +3531,193 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 })();
 </script>
 
+\n<style id="mobile-pen-marker-and-quick-colors-final">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  body.landing-active #mobileQuickPenColors{display:none !important;}
+  #mobileQuickPenColors{
+    position:fixed;
+    z-index:10020;
+    display:flex;
+    flex-direction:row;
+    gap:5px;
+    padding:5px;
+    border-radius:14px;
+    background:rgba(25,25,25,.96);
+    box-shadow:0 10px 28px rgba(0,0,0,.25);
+    pointer-events:auto;
+  }
+  #mobileQuickPenColors button[data-quick-pen-color="#e53935"]{background:#e53935 !important;}
+  #mobileQuickPenColors button[data-quick-pen-color="#111111"]{background:#111111 !important;}
+  #mobileQuickPenColors button[data-quick-pen-color="#1976d2"]{background:#1976d2 !important;}
+  #mobileQuickPenColors button{
+    width:28px;height:28px;min-width:28px;
+    border-radius:50%;
+    border:2px solid #fff;
+    padding:0;
+    box-shadow:0 1px 5px rgba(0,0,0,.25);
+    cursor:pointer;
+  }
+  #mobileMarkerSettings{
+    display:none;position:fixed;inset:0;z-index:30001;
+    background:rgba(0,0,0,.28);align-items:flex-end;justify-content:center;
+    padding:14px;box-sizing:border-box;
+  }
+  #mobileMarkerSettings.open{display:flex;}
+  .mobile-marker-card{
+    width:min(420px,100%);background:#fff;border:1px solid #dfe4ea;
+    border-radius:18px;padding:16px;box-shadow:0 16px 45px rgba(0,0,0,.22);font-family:inherit;
+  }
+  .mobile-marker-card label{display:block;font-size:13px;font-weight:700;direction:ltr;text-align:left;margin-top:11px;}
+  .mobile-marker-card output{float:right;font-weight:700;direction:ltr;}
+  .mobile-marker-card input[type=range]{display:block;width:100%;margin:13px 0 12px;accent-color:#18202a;}
+  .mobile-marker-card input[type=color]{display:block;width:100%;height:42px;margin:8px 0 4px;border:1px solid #dfe4ea;border-radius:10px;padding:3px;background:#fff;}
+}
+
+@media screen and (max-width:760px) and (orientation:portrait){
+  #mobileQuickPenColors{left:calc(10px + 54px + 4px + 13px);bottom:72px;}
+}
+@media screen and (max-height:520px) and (max-width:900px){
+  #mobileQuickPenColors{bottom:66px;left:calc(7px + 58px + 4px + 14px);}
+}
+
+/* Never show the deleted fullscreen item inside Elements. */
+#mobileV2Bar #mobileFullscreen,#mobileV2Bar #mobileLandscapeFullscreen{display:none !important;}
+
+/* Fullscreen = clean canvas. Hide the mobile header + Elements bar, but keep
+   the quick pen colors and the side fullscreen/exit control available. */
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  body.in-fullscreen #mobilePhoneHeader,
+  body.mobile-css-fullscreen #mobilePhoneHeader,
+  body.in-fullscreen #mobileV2Bar,
+  body.mobile-css-fullscreen #mobileV2Bar,
+  body.in-fullscreen #mobileV2Menu,
+  body.mobile-css-fullscreen #mobileV2Menu,
+  body.in-fullscreen #exitFullscreenBtn,
+  body.mobile-css-fullscreen #exitFullscreenBtn{
+    display:none !important;
+  }
+  body.in-fullscreen #mobileQuickPenColors,
+  body.mobile-css-fullscreen #mobileQuickPenColors{
+    display:flex !important;
+    position:fixed !important;
+    left:50% !important;
+    right:auto !important;
+    top:auto !important;
+    bottom:max(72px, calc(env(safe-area-inset-bottom) + 66px)) !important;
+    transform:translateX(-50%) !important;
+    z-index:10000005 !important;
+  }
+}
+</style>
+
+<script id="mobile-quick-pen-marker-final">
+(function(){
+  'use strict';
+  const mobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const palette=document.getElementById('mobileQuickPenColors');
+  const markerPanel=document.getElementById('mobileMarkerSettings');
+  const markerColor=document.getElementById('mobileMarkerColor');
+  const markerSize=document.getElementById('mobileMarkerSize');
+  const markerOpacity=document.getElementById('mobileMarkerOpacity');
+
+  function placePalette(){
+    if(!palette) return;
+    const fs=document.body.classList.contains('in-fullscreen') || document.body.classList.contains('mobile-css-fullscreen');
+    const pen=document.querySelector('#mobileV2Bar [data-v2-tool="pen"]');
+    if(!mobile() || document.body.classList.contains('landing-active')){ palette.style.display='none'; return; }
+    if(fs){
+      palette.style.display='flex';
+      palette.style.left='50%';
+      palette.style.top='auto';
+      palette.style.bottom='max(72px, calc(env(safe-area-inset-bottom) + 66px))';
+      palette.style.transform='translateX(-50%)';
+      return;
+    }
+    if(!pen){ palette.style.display='none'; return; }
+    const r=pen.getBoundingClientRect();
+    palette.style.display='flex';
+    palette.style.left=Math.max(4, Math.round(r.left + r.width/2 - 19))+'px';
+    palette.style.top=Math.max(58, Math.round(r.top - 48))+'px';
+    palette.style.bottom='auto';
+    palette.style.transform='none';
+  }
+
+  palette?.querySelectorAll('[data-quick-pen-color]').forEach(b=>b.addEventListener('click',e=>{
+    e.preventDefault(); e.stopPropagation();
+    const c=b.dataset.quickPenColor;
+    const input=document.getElementById('color');
+    if(input){ input.value=c; input.dispatchEvent(new Event('input',{bubbles:true})); input.dispatchEvent(new Event('change',{bubbles:true})); }
+    if(typeof setTool==='function') setTool('pen');
+    document.querySelectorAll('#mobileV2Bar [data-v2-tool]').forEach(x=>x.classList.toggle('active',x.dataset.v2Tool==='pen'));
+  }));
+
+  ['resize','orientationchange','scroll','fullscreenchange','webkitfullscreenchange','mozfullscreenchange'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(placePalette,80),{passive:true}));
+  document.addEventListener('fullscreenchange',()=>{ setTimeout(placePalette,120); setTimeout(placePalette,350); });
+  document.addEventListener('webkitfullscreenchange',()=>{ setTimeout(placePalette,120); setTimeout(placePalette,350); });
+  document.getElementById('mobileV2Bar')?.addEventListener('scroll',()=>setTimeout(placePalette,20),{passive:true});
+  placePalette();
+
+  function openMarker(){
+    if(!markerPanel) return;
+    markerPanel.classList.add('open'); markerPanel.setAttribute('aria-hidden','false');
+    if(markerColor) { const c=markerColor.value||'#FFD54A'; const o=document.getElementById('mobileMarkerColorValue'); if(o)o.textContent=c.toUpperCase(); }
+    if(markerSize){ const o=document.getElementById('mobileMarkerSizeValue'); if(o)o.textContent=markerSize.value; }
+    if(markerOpacity){ const o=document.getElementById('mobileMarkerOpacityValue'); if(o)o.textContent=markerOpacity.value+'%'; }
+  }
+  function closeMarker(){ if(markerPanel){markerPanel.classList.remove('open');markerPanel.setAttribute('aria-hidden','true');} }
+  document.getElementById('mobileMarkerClose')?.addEventListener('click',closeMarker);
+  markerPanel?.addEventListener('pointerdown',e=>{ if(e.target===markerPanel) closeMarker(); },true);
+
+  function refreshMarker(){
+    if(markerColor){ const o=document.getElementById('mobileMarkerColorValue'); if(o)o.textContent=markerColor.value.toUpperCase(); }
+    if(markerSize){ const o=document.getElementById('mobileMarkerSizeValue'); if(o)o.textContent=markerSize.value; }
+    if(markerOpacity){ const o=document.getElementById('mobileMarkerOpacityValue'); if(o)o.textContent=markerOpacity.value+'%'; }
+    if(typeof applyBrushSettings==='function' && typeof tool!=='undefined' && tool==='highlighter') applyBrushSettings();
+  }
+  markerColor?.addEventListener('input',refreshMarker);
+  markerSize?.addEventListener('input',refreshMarker);
+  markerOpacity?.addEventListener('input',refreshMarker);
+  document.querySelectorAll('[data-marker-size]').forEach(b=>b.addEventListener('click',()=>{ if(markerSize){markerSize.value=b.dataset.markerSize; refreshMarker();} }));
+
+  let timer=null, longPressed=false;
+  document.addEventListener('pointerdown',e=>{
+    if(!mobile()) return;
+    const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]');
+    if(!b) return;
+    longPressed=false; clearTimeout(timer);
+    timer=setTimeout(()=>{longPressed=true;openMarker();},520);
+  },true);
+  ['pointerup','pointercancel','pointerleave'].forEach(type=>document.addEventListener(type,()=>{if(timer){clearTimeout(timer);timer=null;}},true));
+  document.addEventListener('click',e=>{
+    if(longPressed){ const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]'); if(b){e.preventDefault();e.stopImmediatePropagation();} longPressed=false; }
+  },true);
+
+  // Re-place after the landscape toolbar rebuilds its contents.
+  new MutationObserver(()=>setTimeout(placePalette,20)).observe(document.getElementById('mobileV2Bar')||document.body,{childList:true});
+})();
+</script>
+
+<script id="mobile-text-keyboard-lock-final">
+(function(){
+  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const d=document.getElementById('textDialog');
+  const ta=document.getElementById('textValue');
+  if(!d||!ta) return;
+  let sx=0,sy=0;
+  ta.addEventListener('focus',()=>{
+    if(!isMobile()) return;
+    sx=window.scrollX||0; sy=window.scrollY||0;
+    document.documentElement.style.scrollBehavior='auto';
+    document.body.style.scrollBehavior='auto';
+    requestAnimationFrame(()=>window.scrollTo(sx,sy));
+    setTimeout(()=>window.scrollTo(sx,sy),50);
+    setTimeout(()=>window.scrollTo(sx,sy),200);
+  },{passive:true});
+  window.visualViewport?.addEventListener('resize',()=>{
+    if(document.activeElement===ta && isMobile()) window.scrollTo(sx,sy);
+  },{passive:true});
+})();
+</script>\n
 </body>
 </html>
 
@@ -3597,17 +3771,6 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 </style>
 
 <style id="mobile-fullscreen-final">
-@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
-  #mobileV2Bar #mobileFullscreen{
-    display:flex !important;
-    visibility:visible !important;
-    opacity:1 !important;
-    flex:0 0 64px !important;
-    min-width:64px !important;
-    width:64px !important;
-    pointer-events:auto !important;
-  }
-}
 </style>
 <style id="mobile-elements-horizontal-scroll-final">
 @media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
