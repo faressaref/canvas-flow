@@ -3627,6 +3627,15 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   body.mobile-css-fullscreen #exitFullscreenBtn{
     display:none !important;
   }
+  body.in-fullscreen #mobilePages,
+  body.mobile-css-fullscreen #mobilePages{
+    display:flex !important;
+    position:fixed !important;
+    left:10px !important;
+    top:max(10px, env(safe-area-inset-top)) !important;
+    bottom:auto !important;
+    z-index:10000006 !important;
+  }
   body.in-fullscreen #mobileQuickPenColors,
   body.mobile-css-fullscreen #mobileQuickPenColors{
     display:flex !important;
