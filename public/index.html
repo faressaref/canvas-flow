@@ -3344,6 +3344,87 @@ updateZoom();
 })();
 </script>
 
+<!-- ===== LANDSCAPE SIDE FULLSCREEN BUTTON ===== -->
+<button id="mobileLandscapeSideFullscreen" type="button" aria-label="Fullscreen" title="Fullscreen">
+  <span class="v2icon">⛶</span>
+  <span class="side-fs-label">Fullscreen</span>
+</button>
+
+<style id="mobile-landscape-side-fullscreen-style">
+#mobileLandscapeSideFullscreen{display:none;}
+@media screen and (max-height:520px) and (max-width:900px){
+  #mobileLandscapeSideFullscreen{
+    display:flex !important;
+    position:fixed !important;
+    left:8px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    z-index:9999998 !important;
+    width:48px !important;
+    height:48px !important;
+    border:1px solid #dfe4ea !important;
+    border-radius:13px !important;
+    background:rgba(255,255,255,.96) !important;
+    color:#222 !important;
+    box-shadow:0 7px 22px rgba(0,0,0,.16) !important;
+    align-items:center !important;
+    justify-content:center !important;
+    flex-direction:column !important;
+    gap:1px !important;
+    font:800 7px/1 system-ui,sans-serif !important;
+    cursor:pointer !important;
+    padding:3px !important;
+    backdrop-filter:blur(10px);
+  }
+  #mobileLandscapeSideFullscreen .v2icon{font-size:20px !important;line-height:20px !important;}
+  #mobileLandscapeSideFullscreen.active{background:#18202a !important;color:#fff !important;border-color:#18202a !important;}
+}
+</style>
+
+<script id="mobile-landscape-side-fullscreen-final">
+(function(){
+  const btn=document.getElementById('mobileLandscapeSideFullscreen');
+  if(!btn) return;
+  const isLandscapePhone=()=>window.matchMedia('(max-height:520px) and (max-width:900px)').matches;
+  const nativeFS=()=>!!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement);
+  const cssFS=()=>document.body.classList.contains('mobile-css-fullscreen');
+  const isFS=()=>nativeFS()||cssFS();
+  function update(){
+    const on=isFS(); btn.classList.toggle('active',on);
+    const icon=btn.querySelector('.v2icon'), label=btn.querySelector('.side-fs-label');
+    if(icon) icon.textContent=on?'✕':'⛶';
+    if(label) label.textContent=on?'Exit':'Fullscreen';
+    btn.setAttribute('aria-label',on?'Exit fullscreen':'Fullscreen');
+    btn.title=on?'Exit fullscreen':'Fullscreen';
+  }
+  async function toggle(){
+    if(!isLandscapePhone()) return;
+    if(isFS()){
+      document.body.classList.remove('mobile-css-fullscreen');
+      document.getElementById('app')?.classList.remove('mobile-css-fullscreen');
+      try{
+        const fn=document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen||document.msExitFullscreen;
+        if(fn) await fn.call(document);
+      }catch(e){}
+    }else{
+      try{
+        const root=document.documentElement;
+        const fn=root.requestFullscreen||root.webkitRequestFullscreen||root.mozRequestFullScreen||root.msRequestFullscreen;
+        if(fn) await fn.call(root);
+        else throw new Error('no fullscreen api');
+      }catch(e){
+        document.body.classList.add('mobile-css-fullscreen');
+        document.getElementById('app')?.classList.add('mobile-css-fullscreen');
+      }
+    }
+    setTimeout(update,100);
+  }
+  btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();toggle();},true);
+  ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','orientationchange'].forEach(ev=>document.addEventListener(ev,()=>setTimeout(update,80),{passive:true}));
+  update();
+})();
+</script>
+
 <!-- ===== EXIT FULLSCREEN BUTTON ===== -->
 <button id="exitFullscreenBtn" type="button" aria-label="Exit fullscreen">
   <span class="v2icon">✕</span><span>Exit</span>
