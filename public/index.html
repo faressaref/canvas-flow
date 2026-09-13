@@ -1374,6 +1374,10 @@ let currentUser = null;
 let currentBoardId = null;
 let currentBoardName = "Unsaved board";
 const DEFAULT_BOARD_NAME = "My first board";
+// Multi-page board state: every page belongs to the same saved board.
+let boardPages = [];
+let boardPageIndex = 0;
+let boardPagesReady = false;
 let suppressSave = false;
 let saveTimer = null;
 let saveInProgress = false;
@@ -1501,6 +1505,7 @@ async function createNewBoard(){
   if(!requireLogin()) return;
   const name=(document.getElementById("newBoardName").value||"").trim() || `Board ${new Date().toLocaleDateString()}`;
   canvas.clear(); canvas.requestRenderAll();
+  boardPages=[canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"])]; boardPageIndex=0; boardPagesReady=true;
   currentBoardId=null; currentBoardName=name; updateAccountUI();
   historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons();
   setSaveState("saved","Unsaved");
@@ -1539,7 +1544,7 @@ async function deleteBoard(id){
   if(!currentUser) return;
   try {
     await boardsCollection().doc(id).delete();
-    if(id===currentBoardId){ currentBoardId=null; currentBoardName="Unsaved board"; canvas.clear(); canvas.requestRenderAll(); updateAccountUI(); }
+    if(id===currentBoardId){ currentBoardId=null; currentBoardName="Unsaved board"; boardPages=[{version:"6.0.0",objects:[]}]; boardPageIndex=0; boardPagesReady=true; canvas.clear(); canvas.requestRenderAll(); renderBoardPages?.(); updateAccountUI(); }
     await renderBoards();
   } catch(err){ console.error(err); alert("Could not delete board."); }
 }
@@ -1552,17 +1557,19 @@ async function loadBoardById(id){
     if(!snap.exists) return;
     const d=snap.data();
     currentBoardId=id; currentBoardName=d.name||"Untitled board"; updateAccountUI(); localStorage.setItem("canvasflow-last-board-"+currentUser.uid,id);
-    if(d.canvas){
-      suppressSave=true;
-      const data=JSON.parse(d.canvas);
-      canvas.loadFromJSON(data,()=>{
-        canvas.requestRenderAll(); suppressSave=false; historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons(); setSaveState("saved");
-      });
-    } else { canvas.clear(); canvas.requestRenderAll(); setSaveState("saved"); }
+    suppressSave=true;
+    const pages = Array.isArray(d.pages) && d.pages.length ? d.pages : (d.canvas ? [JSON.parse(d.canvas)] : [{}]);
+    boardPages = pages.map(x => typeof x === "string" ? JSON.parse(x) : x);
+    boardPageIndex = Math.max(0, Math.min(Number(d.pageIndex)||0, boardPages.length-1));
+    boardPagesReady=true;
+    const data=boardPages[boardPageIndex] || {};
+    canvas.loadFromJSON(data,()=>{
+      canvas.requestRenderAll(); suppressSave=false; historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons(); setSaveState("saved");
+      renderBoardPages();
+    });
     boardsModal.classList.remove("open");
   } catch(err){ console.error(err); suppressSave=false; setSaveState("error"); }
 }
-
 
 
 const pcModeBtn = document.getElementById("pcMode");
@@ -2196,10 +2203,14 @@ async function saveNow(force=false, forcedName=null) {
       const ref=await boardsCollection().add({name, canvas:"", createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
       currentBoardId=ref.id; currentBoardName=name; updateAccountUI();
     }
-    const json=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
+    ensureBoardPages();
+    boardPages[boardPageIndex] = canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
     await boardRef().set({
       name: currentBoardName,
-      canvas: JSON.stringify(json),
+      canvas: JSON.stringify(boardPages[boardPageIndex]),
+      pages: boardPages.map(pg => JSON.stringify(pg)),
+      pageIndex: boardPageIndex,
+      pageCount: boardPages.length,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
     setSaveState("saved");
@@ -2231,6 +2242,8 @@ function saveLocalDraft(){
   try {
     const payload = {
       canvas: canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]),
+      pages: getBoardPagesForSave(),
+      pageIndex: boardPageIndex,
       boardId: currentBoardId || null,
       boardName: currentBoardName || "Unsaved board",
       savedAt: Date.now()
@@ -2252,13 +2265,17 @@ function restoreLocalDraft(){
     const draft = JSON.parse(raw);
     if(!draft || !draft.canvas) return false;
     suppressSave=true;
-    canvas.loadFromJSON(draft.canvas, () => {
+    boardPages = Array.isArray(draft.pages) && draft.pages.length ? draft.pages : [draft.canvas];
+    boardPageIndex = Math.max(0, Math.min(Number(draft.pageIndex)||0, boardPages.length-1));
+    boardPagesReady=true;
+    canvas.loadFromJSON(boardPages[boardPageIndex] || {}, () => {
       currentBoardId = draft.boardId || null;
       currentBoardName = draft.boardName || "Unsaved board";
       updateAccountUI();
       canvas.requestRenderAll();
       suppressSave=false;
       historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons();
+      renderBoardPages();
       setSaveState("saved", "Restored ✓");
     });
     return true;
@@ -3034,14 +3051,61 @@ updateZoom();
   }
   sheetClass(); window.addEventListener('resize',sheetClass,{passive:true});
 
-  // Page UI: a safe lightweight page count/state. Actual multi-page persistence can be added without changing canvas data.
-  let pageCount=1, pageIndex=1;
+  // Real multi-page board system. Pages stay inside the same board.
   const label=document.getElementById('mobilePageLabel');
-  function renderPage(){ if(label) label.textContent=`Page ${pageIndex} / ${pageCount}`; }
-  document.getElementById('mobileAddPage')?.addEventListener('click',()=>{ pageCount++; pageIndex=pageCount; renderPage(); });
-  document.getElementById('mobileNextPage')?.addEventListener('click',()=>{ pageIndex=Math.min(pageCount,pageIndex+1); renderPage(); });
-  document.getElementById('mobilePrevPage')?.addEventListener('click',()=>{ pageIndex=Math.max(1,pageIndex-1); renderPage(); });
-  renderPage();
+  function ensureBoardPages(){
+    if(!Array.isArray(boardPages) || !boardPages.length){
+      boardPages=[canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"])];
+      boardPageIndex=0;
+    }
+    boardPageIndex=Math.max(0,Math.min(boardPageIndex,boardPages.length-1));
+    boardPagesReady=true;
+  }
+  function getBoardPagesForSave(){
+    ensureBoardPages();
+    boardPages[boardPageIndex]=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
+    return boardPages;
+  }
+  function renderBoardPages(){
+    ensureBoardPages();
+    if(label) label.textContent=`Page ${boardPageIndex+1} / ${boardPages.length}`;
+    const prev=document.getElementById('mobilePrevPage');
+    const next=document.getElementById('mobileNextPage');
+    if(prev) prev.disabled=boardPageIndex===0;
+    if(next) next.disabled=boardPageIndex===boardPages.length-1;
+  }
+  async function switchBoardPage(nextIndex){
+    ensureBoardPages();
+    const target=Math.max(0,Math.min(nextIndex,boardPages.length-1));
+    if(target===boardPageIndex) return;
+    boardPages[boardPageIndex]=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
+    boardPageIndex=target;
+    suppressSave=true;
+    canvas.discardActiveObject();
+    canvas.loadFromJSON(boardPages[boardPageIndex] || {},()=>{
+      canvas.requestRenderAll();
+      suppressSave=false;
+      historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons();
+      renderBoardPages();
+      saveLocalDraft();
+      scheduleSave(true);
+    });
+  }
+  document.getElementById('mobileAddPage')?.addEventListener('click',async()=>{
+    ensureBoardPages();
+    boardPages[boardPageIndex]=canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
+    boardPages.push({version:"6.0.0",objects:[]});
+    boardPageIndex=boardPages.length-1;
+    suppressSave=true;
+    canvas.clear(); canvas.requestRenderAll();
+    suppressSave=false; historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons();
+    renderBoardPages();
+    saveLocalDraft();
+    scheduleSave(true);
+  });
+  document.getElementById('mobileNextPage')?.addEventListener('click',()=>switchBoardPage(boardPageIndex+1));
+  document.getElementById('mobilePrevPage')?.addEventListener('click',()=>switchBoardPage(boardPageIndex-1));
+  ensureBoardPages(); renderBoardPages();
 })();
 
 </script>
@@ -4171,4 +4235,32 @@ body.in-fullscreen #boardsModal.open,
 body.mobile-css-fullscreen #boardsModal.open{z-index:2147483646 !important;}
 body.in-fullscreen #boardsModal.open .modal-card,
 body.mobile-css-fullscreen #boardsModal.open .modal-card{z-index:2147483647 !important;}
+
+/* Board pages: place the page navigator directly under the CanvasFlow logo on desktop/tablet. */
+@media screen and (min-width:761px){
+  #mobilePages{
+    display:flex !important;
+    position:fixed !important;
+    top:64px !important;
+    left:14px !important;
+    transform:none !important;
+    z-index:9990 !important;
+    align-items:center !important;
+    gap:4px !important;
+    padding:4px 6px !important;
+    background:rgba(255,255,255,.96) !important;
+    border:1px solid #dfe4ea !important;
+    border-radius:9px !important;
+    box-shadow:0 4px 14px rgba(0,0,0,.08) !important;
+  }
+  #mobilePages button{
+    width:28px !important; height:27px !important;
+  }
+  #mobilePageLabel{
+    min-width:68px !important; font-size:10px !important;
+  }
+  body.landing-active #mobilePages{
+    display:none !important;
+  }
+}
 </style>
