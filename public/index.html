@@ -1558,7 +1558,8 @@ function openAccountChooser(){
       if(auth) await auth.signOut();
     };
   }
-  modal.querySelector(".account-current-email").textContent=currentUser?.email || "Signed in";
+  const accountName = currentUser?.displayName || currentUser?.email || "Signed in";
+  modal.querySelector(".account-current-email").textContent = accountName;
   modal.classList.add("open");
 }
 
@@ -1589,7 +1590,11 @@ async function renderBoards(){
       del.onclick=async ev=>{ ev.stopPropagation(); if(confirm(`Delete “${d.name||"Untitled board"}”?`)){ await deleteBoard(doc.id); } };
       actions.append(rename,del);
       item.append(left,actions);
-      item.onclick=()=>loadBoardById(doc.id);
+      item.onclick=async()=>{
+        // Open the selected board immediately and close the boards menu.
+        boardsModal.classList.remove("open");
+        await loadBoardById(doc.id);
+      };
       list.appendChild(item);
     });
   } catch(err){ console.error(err); list.innerHTML='<div style="font-size:10px;color:#b33;padding:10px">Could not load boards. Check Firestore rules.</div>'; }
@@ -1646,25 +1651,52 @@ async function deleteBoard(id){
 async function loadBoardById(id){
   if(!currentUser) return;
   const ref=boardRef(id); if(!ref) return;
+
+  // Close the boards list as soon as a board is tapped/clicked.
+  boardsModal.classList.remove("open");
+  setSaveState("saving", "Opening...");
+
   try {
     const snap=await ref.get();
-    if(!snap.exists) return;
-    const d=snap.data();
-    currentBoardId=id; currentBoardName=d.name||"Untitled board"; updateAccountUI(); localStorage.setItem("canvasflow-last-board-"+currentUser.uid,id);
+    if(!snap.exists){
+      setSaveState("error", "Board not found");
+      return;
+    }
+
+    const d=snap.data()||{};
+    currentBoardId=id;
+    currentBoardName=d.name||"Untitled board";
+    updateAccountUI();
+    localStorage.setItem("canvasflow-last-board-"+currentUser.uid,id);
+
     suppressSave=true;
-    const pages = Array.isArray(d.pages) && d.pages.length ? d.pages : (d.canvas ? [JSON.parse(d.canvas)] : [{}]);
+    const pages = Array.isArray(d.pages) && d.pages.length
+      ? d.pages
+      : (d.canvas ? [JSON.parse(d.canvas)] : [{version:"6.0.0",objects:[]}]);
+
     boardPages = pages.map(x => typeof x === "string" ? JSON.parse(x) : x);
     boardPageIndex = Math.max(0, Math.min(Number(d.pageIndex)||0, boardPages.length-1));
     boardPagesReady=true;
-    const data=boardPages[boardPageIndex] || {};
+
+    const data=boardPages[boardPageIndex] || {version:"6.0.0",objects:[]};
     canvas.loadFromJSON(data,()=>{
-      canvas.requestRenderAll(); suppressSave=false; historyReady=true; undoStack=[]; redoStack=[]; updateHistoryButtons(); setSaveState("saved");
+      canvas.requestRenderAll();
+      suppressSave=false;
+      historyReady=true;
+      undoStack=[];
+      redoStack=[];
+      updateHistoryButtons();
+      setSaveState("saved", "Opened ✓");
       renderBoardPages();
     });
-    boardsModal.classList.remove("open");
-  } catch(err){ console.error(err); suppressSave=false; setSaveState("error"); }
+  } catch(err){
+    console.error("CanvasFlow board load failed:", err);
+    suppressSave=false;
+    const msg = err?.code ? `${err.code}: ${err.message||"Could not open board."}` : (err?.message || String(err) || "Could not open board.");
+    setSaveState("error", "Open failed");
+    console.error(msg);
+  }
 }
-
 
 const pcModeBtn = document.getElementById("pcMode");
 const tabletModeBtn = document.getElementById("tabletMode");
