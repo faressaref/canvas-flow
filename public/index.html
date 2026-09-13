@@ -1144,6 +1144,12 @@
       </div>
 
 
+      <div id="tabletQuickColors" aria-label="Tablet quick colors">
+        <button type="button" data-tablet-quick-color="#e53935" aria-label="Red" title="Red"></button>
+        <button type="button" data-tablet-quick-color="#111111" aria-label="Black" title="Black"></button>
+        <button type="button" data-tablet-quick-color="#1976d2" aria-label="Blue" title="Blue"></button>
+      </div>
+
       <aside id="aiPanel" aria-label="AI Study Tutor">
         <div class="ai-head">
           <div>
@@ -3636,17 +3642,6 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
     bottom:auto !important;
     z-index:10000006 !important;
   }
-  body.in-fullscreen #mobileQuickPenColors,
-  body.mobile-css-fullscreen #mobileQuickPenColors{
-    display:flex !important;
-    position:fixed !important;
-    left:50% !important;
-    right:auto !important;
-    top:auto !important;
-    bottom:max(72px, calc(env(safe-area-inset-bottom) + 66px)) !important;
-    transform:translateX(-50%) !important;
-    z-index:10000005 !important;
-  }
 }
 </style>
 
@@ -3771,6 +3766,33 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 }
 </style>
 
+
+<style id="tablet-quick-colors-restore">
+@media screen and (min-width:761px) and (max-width:1100px){
+  #tabletQuickColors{display:flex!important;position:fixed!important;left:10px!important;bottom:10px!important;top:auto!important;z-index:101!important;width:58px!important;justify-content:center!important;align-items:center!important;gap:4px!important;padding:5px 3px!important;background:rgba(255,255,255,.98)!important;border:1px solid #dfe4ea!important;border-radius:12px!important;box-shadow:0 6px 20px rgba(0,0,0,.09)!important;}
+  #tabletQuickColors button{width:14px!important;height:14px!important;min-width:14px!important;padding:0!important;border-radius:50%!important;border:2px solid #fff!important;box-shadow:0 1px 4px rgba(0,0,0,.25)!important;cursor:pointer!important;}
+  #tabletQuickColors button[data-tablet-quick-color="#e53935"]{background:#e53935!important;}
+  #tabletQuickColors button[data-tablet-quick-color="#111111"]{background:#111111!important;}
+  #tabletQuickColors button[data-tablet-quick-color="#1976d2"]{background:#1976d2!important;}
+}
+@media screen and (min-width:1101px){#tabletQuickColors{display:none!important;}}
+@media screen and (max-width:760px){#tabletQuickColors{display:none!important;}}
+</style>
+<script id="tablet-quick-colors-restore-js">
+(function(){
+  document.querySelectorAll('#tabletQuickColors [data-tablet-quick-color]').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      if(!document.body.classList.contains('tablet-mode')) return;
+      e.preventDefault(); e.stopPropagation();
+      var c=btn.dataset.tabletQuickColor;
+      var input=document.getElementById('color'), tc=document.getElementById('tabletColor');
+      if(input){input.value=c;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));}
+      if(tc){tc.value=c;tc.dispatchEvent(new Event('input',{bubbles:true}));}
+      if(typeof setTool==='function') setTool('pen');
+    });
+  });
+})();
+</script>
 </body>
 
 <style id="mobile-landing-final">
@@ -3803,6 +3825,135 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 }
 </style>
 
+
+<!-- ===== DESKTOP ONLY ISOLATION ===== -->
+<style id="desktop-only-isolation">
+/* IMPORTANT: a phone in landscape can be wider than 760px.
+   Keep the phone implementation active for BOTH phone orientations. */
+@media screen and (min-width:761px) and (min-height:521px),
+       screen and (min-width:901px){
+  /* Phone-only surfaces never render outside the phone breakpoint. */
+  #mobilePhoneHeader,
+  #mobileV2Bar,
+  #mobileV2Menu,
+  #mobilePenSettings,
+  #mobileMarkerSettings,
+  #mobileQuickPenColors,
+  #mobileV2LandscapeTools,
+  #mobileFontSizeControl{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+
+  /* Legacy phone floating UI stays disabled on desktop. */
+  #mobileDock,
+  #mobileQuick,
+  #mobileAI,
+  #mobileSaveState{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+
+  /* Tablet controls belong only to Tablet mode. */
+  body:not(.tablet-mode) #tabletControls,
+  body:not(.tablet-mode) #tabletAccount{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+
+  /* PC keeps the normal desktop toolbar and device switch. */
+  body:not(.tablet-mode) #topbar{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+  }
+  body:not(.tablet-mode) #topbar > .device-switch{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+  }
+}
+
+/* Device selector: computer/tablet only, never phone (portrait OR landscape). */
+@media screen and (min-width:761px) and (min-height:521px),
+       screen and (min-width:901px){
+  #topbar .device-switch{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+  }
+}
+@media screen and (max-width:760px),
+       screen and (max-height:520px) and (max-width:900px){
+  #topbar .device-switch{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+}
+</style>
+
+<style id="tablet-header-restored-final">
+/* Restore the desktop header when Tablet mode is selected.
+   Phone/mobile rules remain untouched. */
+@media screen and (min-width:761px){
+  body.tablet-mode #topbar{
+    height:56px!important;
+    flex:0 0 56px!important;
+    position:relative!important;
+    display:flex!important;
+    align-items:center!important;
+    padding:0 12px!important;
+    overflow:visible!important;
+    z-index:100!important;
+    background:rgba(255,255,255,.97)!important;
+    border-bottom:1px solid #dfe4ea!important;
+    box-shadow:none!important;
+  }
+  body.tablet-mode #topbar>.brand{
+    display:block!important;
+    position:static!important;
+    margin:0 auto 0 0!important;
+    font-size:16px!important;
+  }
+  body.tablet-mode #topbar>.device-switch{
+    display:flex!important;
+    position:static!important;
+    order:3;
+    margin-left:6px!important;
+  }
+  body.tablet-mode #topbar>#accountBar{
+    display:flex!important;
+    order:2;
+    margin-left:auto!important;
+    gap:5px!important;
+  }
+  body.tablet-mode #topbar>#accountBar #userEmail{display:none!important;}
+  body.tablet-mode #topbar>#accountBar .account-btn{
+    min-height:32px!important;
+    padding:6px 9px!important;
+  }
+  body.tablet-mode #topbar>.separator,
+  body.tablet-mode #topbar>.control,
+  body.tablet-mode #topbar>#saveState,
+  body.tablet-mode #topbar>#boardNameDisplay,
+  body.tablet-mode #topbar>#saveBoardBtn,
+  body.tablet-mode #topbar>#undoBtn,
+  body.tablet-mode #topbar>#redoBtn,
+  body.tablet-mode #topbar>#clearSelection,
+  body.tablet-mode #topbar>#fit{display:none!important;}
+  body.tablet-mode #topbar .toolgroup{
+    position:fixed!important;
+    left:10px!important;
+    top:68px!important;
+    z-index:25!important;
+  }
+  body.tablet-mode #tabletAccount{display:none!important;}
+}
+</style>
 </html>
 
 <style>
@@ -4271,5 +4422,51 @@ body.mobile-css-fullscreen #boardsModal.open .modal-card{z-index:2147483647 !imp
   body.landing-active #mobilePages{
     display:none !important;
   }
+}
+</style>
+
+<style id="tablet-pages-center-only">
+/* Tablet mode on desktop only: center the page navigator. Nothing else is changed. */
+@media screen and (min-width:761px){
+  body.tablet-mode #mobilePages{
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+  }
+}
+</style>
+
+<style id="fullscreen-tablet-colors-size-stroke">
+/* Only enlarge the fullscreen quick-color shortcut and use a black stroke. */
+body.in-fullscreen #tabletQuickColors button,
+body.mobile-css-fullscreen #tabletQuickColors button{
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  border:2px solid #111!important;
+}
+body.in-fullscreen #tabletQuickColors,
+body.mobile-css-fullscreen #tabletQuickColors{
+  gap:5px!important;
+  padding:6px 5px!important;
+}
+</style>
+
+<style id="fullscreen-tablet-colors-correct">
+/* Fullscreen: keep the tablet quick-color shortcut, but move it to the bottom center. */
+body.in-fullscreen #tabletQuickColors,
+body.mobile-css-fullscreen #tabletQuickColors{
+  display:flex!important;
+  position:fixed!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:72px!important;
+  top:auto!important;
+  transform:translateX(-50%)!important;
+  z-index:10000006!important;
+  width:auto!important;
+  min-width:58px!important;
+  justify-content:center!important;
+  align-items:center!important;
 }
 </style>
