@@ -334,6 +334,8 @@
     /* ================= MOBILE UX ================= */
     #mobileDock, #mobileQuick, #mobileAI, #mobilePages { display:none; }
     @media (max-width:760px) {
+      /* Phone = automatic mobile layout. Never expose the PC / Tablet switch. */
+      #topbar > .device-switch { display:none !important; visibility:hidden !important; pointer-events:none !important; }
       html, body { width:100%; height:100%; min-height:100dvh; overflow:hidden; }
       #app.entered { min-height:100dvh; height:100dvh; display:flex; flex-direction:column; }
       #workspace { min-height:0; flex:1 1 auto; padding-bottom:80px; }
@@ -418,6 +420,62 @@
       body.mobile-focus #mobileDock, body.mobile-focus #mobileQuick, body.mobile-focus #mobilePages, body.mobile-focus #mobileSaveState, body.mobile-focus #topbar, body.mobile-focus #tabletAccount, body.mobile-focus #zoom { opacity:0; pointer-events:none; transition:opacity .18s; }
       body.mobile-focus #workspace { padding-bottom:0; }
     }
+    /* Phone landscape: keep the interface compact and expose a dedicated Scroll button. */
+    @media (max-width:760px) and (orientation:landscape) {
+      #mobileDock {
+        left:8px; right:8px; bottom:max(7px, env(safe-area-inset-bottom));
+        height:54px; padding:4px; gap:3px; border-radius:13px;
+      }
+      .mobile-dock-btn { height:44px; font-size:8px; }
+      .mobile-dock-btn .mi { font-size:17px; line-height:18px; }
+
+      /* Reuse the existing scroll control, but show ONLY that control on landscape phones. */
+      #tabletControls {
+        display:block !important;
+        position:fixed !important;
+        left:8px !important;
+        bottom:66px !important;
+        top:auto !important;
+        width:auto !important;
+        max-height:none !important;
+        z-index:95 !important;
+        pointer-events:none;
+      }
+      #tabletControls > .tablet-control-card { display:none !important; }
+      #tabletControls > .tablet-scroll-card {
+        display:block !important;
+        width:58px !important;
+        padding:4px !important;
+        pointer-events:auto;
+        border-radius:10px;
+      }
+      #tabletControls > .tablet-scroll-card label {
+        font-size:7px !important;
+        margin-bottom:2px !important;
+      }
+      #tabletControls > .tablet-scroll-card button {
+        width:48px !important;
+        height:34px !important;
+        font-size:18px !important;
+      }
+      #tabletControls > .tablet-scroll-card #tabletScrollValue {
+        font-size:7px !important;
+      }
+
+      #aiPanel {
+        left:6px !important; right:6px !important;
+        bottom:62px !important;
+        height:min(78dvh,420px) !important;
+        max-height:78dvh !important;
+      }
+      #aiPanel .ai-body { padding:8px; }
+      #aiPanel #lessonInput { min-height:90px; max-height:150px; }
+      #aiPanel .ai-actions { grid-template-columns:repeat(4,1fr); gap:4px; }
+      #aiPanel .ai-action { padding:6px 4px; font-size:8px; }
+      #aiPanel .ai-action b { font-size:8px; }
+      #aiPanel .ai-action span { font-size:7px; }
+    }
+
     @media (max-width:390px) {
       #mobileDock { left:5px; right:5px; height:58px; }
       .mobile-dock-btn { height:47px; font-size:8px; }
@@ -927,6 +985,18 @@ function setDeviceMode(mode) {
 pcModeBtn.addEventListener("click", () => setDeviceMode("pc"));
 tabletModeBtn.addEventListener("click", () => setDeviceMode("tablet"));
 
+function enforcePhoneLayout() {
+  if (window.matchMedia("(max-width:760px)").matches) {
+    document.body.classList.remove("tablet-mode");
+    pcModeBtn.classList.add("active");
+    tabletModeBtn.classList.remove("active");
+    localStorage.setItem("canvasflow-device-mode", "pc");
+  }
+}
+window.addEventListener("resize", enforcePhoneLayout, {passive:true});
+window.addEventListener("orientationchange", () => setTimeout(enforcePhoneLayout, 60), {passive:true});
+enforcePhoneLayout();
+
 const canvas = new fabric.Canvas("board", {
   preserveObjectStacking: true,
   selection: true,
@@ -1085,10 +1155,20 @@ function setTool(next) {
 
   if (next === "pen" || next === "highlighter") applyBrushSettings();
 }
-document.querySelectorAll(".tool").forEach(b => b.addEventListener("click", () => {
+document.querySelectorAll(".tool").forEach(b => b.addEventListener("click", (e) => {
   const t = b.dataset.tool;
-  if (t === "image") { document.getElementById("fileInput").click(); return; }
-  if (t === "ai") { document.getElementById("aiToggle")?.click(); return; }
+  if (t === "image") { e.preventDefault(); document.getElementById("fileInput").click(); return; }
+  if (t === "ai") {
+    e.preventDefault();
+    const panel = document.getElementById("aiPanel");
+    const toggle = document.getElementById("aiToggle");
+    if (panel) {
+      const open = !panel.classList.contains("open");
+      panel.classList.toggle("open", open);
+      toggle?.classList.toggle("active", open);
+    }
+    return;
+  }
   setTool(t);
 }));
 
@@ -2063,7 +2143,7 @@ updateZoom();
     let menu=document.getElementById('mobileToolsMenu');
     if(!menu){
       menu=document.createElement('div'); menu.id='mobileToolsMenu';
-      menu.style.cssText='position:fixed;left:8px;right:8px;bottom:76px;z-index:125;background:#fff;border:1px solid #dfe4ea;border-radius:15px;padding:8px;box-shadow:0 12px 35px rgba(0,0,0,.16);display:grid;grid-template-columns:repeat(4,1fr);gap:6px;';
+      menu.style.cssText='position:fixed;left:8px;right:8px;bottom:max(76px,calc(72px + env(safe-area-inset-bottom)));max-height:calc(100dvh - 90px);overflow:auto;z-index:125;background:#fff;border:1px solid #dfe4ea;border-radius:15px;padding:8px;box-shadow:0 12px 35px rgba(0,0,0,.16);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;';
       tools.forEach(t=>{
         const b=document.createElement('button'); b.type='button'; b.textContent=labels[t];
         b.style.cssText='border:1px solid #dfe4ea;background:#fff;border-radius:9px;padding:9px 4px;font-size:10px;cursor:pointer;';
@@ -2076,13 +2156,13 @@ updateZoom();
   function openMobileAI(){ mobileAI?.classList.add('open'); mobileAI?.setAttribute('aria-hidden','false'); }
   function closeMobileAI(){ mobileAI?.classList.remove('open'); mobileAI?.setAttribute('aria-hidden','true'); }
   mobileAIButton?.addEventListener('click', () => {
-    // On mobile: directly open the AI panel (skip the intermediate sheet)
+    // On mobile: directly toggle the real AI panel.
     const panel = document.getElementById('aiPanel');
     const tog = document.getElementById('aiToggle');
-    if (panel) {
-      panel.classList.add('open');
-      if (tog) tog.classList.add('active');
-    }
+    if (!panel) return;
+    const open = !panel.classList.contains('open');
+    panel.classList.toggle('open', open);
+    if (tog) tog.classList.toggle('active', open);
   });
   mobileCloseAI?.addEventListener('click',closeMobileAI);
   mobileOpenAI?.addEventListener('click',()=>{
