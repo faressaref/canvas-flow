@@ -1437,6 +1437,10 @@ if (FIREBASE_READY) {
     db = firebase.firestore();
     storage = firebase.storage();
     auth = firebase.auth();
+    // Keep the Firebase session on the device/browser between launches.
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => {
+      console.warn("Firebase LOCAL persistence could not be enabled:", err);
+    });
   } catch (err) {
     console.error(err);
     document.getElementById("firebaseWarning").style.display = "block";
@@ -2364,8 +2368,6 @@ async function saveNow(force=false, forcedName=null) {
   saveInProgress=true;
   setSaveState("saving", "Saving...");
   try {
-    // Create the board automatically the first time something needs to be saved.
-    // Never interrupt the user with a naming prompt.
     if(!currentBoardId){
       const name=(forcedName||currentBoardName||DEFAULT_BOARD_NAME).trim() || DEFAULT_BOARD_NAME;
       const ref=await boardsCollection().add({
@@ -2383,26 +2385,45 @@ async function saveNow(force=false, forcedName=null) {
     }
 
     ensureBoardPages();
-    boardPages[boardPageIndex] = canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
+    const currentPageJson = canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);
+    boardPages[boardPageIndex] = currentPageJson;
 
-    await boardRef().set({
+    // Serialize before sending to Firestore so a serialization problem is
+    // reported clearly instead of being swallowed as an "unknown" error.
+    const canvasJson = JSON.stringify(currentPageJson);
+    const pagesJson = boardPages.map((pg, i) => {
+      try { return JSON.stringify(pg); }
+      catch(e) { throw new Error("Page " + (i + 1) + " could not be serialized: " + (e.message || e)); }
+    });
+
+    const ref = boardRef();
+    if(!ref) throw new Error("Board reference is missing.");
+
+    await ref.set({
       name: currentBoardName || DEFAULT_BOARD_NAME,
-      canvas: JSON.stringify(boardPages[boardPageIndex]),
-      pages: boardPages.map(pg => JSON.stringify(pg)),
+      canvas: canvasJson,
+      pages: pagesJson,
       pageIndex: boardPageIndex,
       pageCount: boardPages.length,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
 
     setSaveState("saved", "Saved ✓");
-    localStorage.setItem("canvasflow-last-board-"+currentUser.uid,currentBoardId);
+    try {
+      localStorage.setItem("canvasflow-last-board-"+currentUser.uid,currentBoardId);
+      localStorage.removeItem("canvasflow-last-save-error");
+    } catch(storageErr) {
+      console.warn("Save succeeded, but local browser storage could not be updated:", storageErr);
+    }
   } catch(err) {
     const code = err && err.code ? String(err.code) : "unknown";
+    const name = err && err.name ? String(err.name) : "Error";
     const message = err && err.message ? String(err.message) : String(err || "Unknown error");
-    console.error("CanvasFlow auto-save failed:", code, message, err);
-    setSaveState("error", "Save failed: " + code);
+    const detail = code !== "unknown" ? code + " — " + message : name + " — " + message;
+    console.error("CanvasFlow auto-save failed:", {code, name, message, error:err});
+    setSaveState("error", "Save failed: " + detail);
     try {
-      localStorage.setItem("canvasflow-last-save-error", JSON.stringify({code, message, at:Date.now()}));
+      localStorage.setItem("canvasflow-last-save-error", JSON.stringify({code,name,message,at:Date.now()}));
     } catch(e) {}
   } finally {
     saveInProgress=false;
