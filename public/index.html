@@ -1930,12 +1930,16 @@ document.getElementById("addText").onclick = () => {
 };
 
 async function addImageFileToCanvas(file) {
+  // Load the selected image locally first so it is added even when
+  // Firebase Storage or browser CORS handling is unavailable.
   const localUrl = URL.createObjectURL(file);
   await new Promise((resolve) => {
-    fabric.Image.fromURL(localUrl, async img => {
+    const finish = () => { try { URL.revokeObjectURL(localUrl); } catch(e) {} resolve(); };
+    const addImage = async (img) => {
+      if (!img) { finish(); return; }
       img.set({left:canvas.getCenter().left-150, top:canvas.getCenter().top-100, objectRole:"image", fileName:file.name});
       const maxW=420, maxH=300;
-      const scale=Math.min(maxW/img.width, maxH/img.height, 1);
+      const scale=Math.min(maxW/(img.width||1), maxH/(img.height||1), 1);
       img.scale(scale);
       canvas.add(img);
       canvas.setActiveObject(img);
@@ -1944,11 +1948,12 @@ async function addImageFileToCanvas(file) {
       if (FIREBASE_READY && storage) {
         try {
           setSaveState("saving");
-          const ref = storage.ref("whiteboard-images/" + Date.now() + "_" + file.name.replace(/[^w.-]/g,"_"));
+          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+          const ref = storage.ref("whiteboard-images/" + Date.now() + "_" + safeName);
           await ref.put(file);
           const url = await ref.getDownloadURL();
           img.set({srcUrl:url});
-          URL.revokeObjectURL(localUrl);
+          canvas.requestRenderAll();
           scheduleSave(true);
         } catch (err) {
           console.error(err);
@@ -1960,8 +1965,10 @@ async function addImageFileToCanvas(file) {
         img.set({srcUrl:localUrl});
         scheduleSave(true);
       }
-      resolve();
-    }, {crossOrigin:"anonymous"});
+      finish();
+    };
+
+    fabric.Image.fromURL(localUrl, addImage, {crossOrigin:"anonymous"});
   });
 }
 
@@ -3683,6 +3690,7 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
     const input=document.getElementById('color');
     if(input){ input.value=c; input.dispatchEvent(new Event('input',{bubbles:true})); input.dispatchEvent(new Event('change',{bubbles:true})); }
     if(typeof setTool==='function') setTool('pen');
+    if(typeof canvas!=='undefined' && canvas.freeDrawingBrush){ canvas.freeDrawingBrush.color=c; }
     document.querySelectorAll('#mobileV2Bar [data-v2-tool]').forEach(x=>x.classList.toggle('active',x.dataset.v2Tool==='pen'));
   }));
 
@@ -3782,17 +3790,29 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 (function(){
   document.querySelectorAll('#tabletQuickColors [data-tablet-quick-color]').forEach(function(btn){
     btn.addEventListener('click',function(e){
-      if(!document.body.classList.contains('tablet-mode')) return;
       e.preventDefault(); e.stopPropagation();
       var c=btn.dataset.tabletQuickColor;
       var input=document.getElementById('color'), tc=document.getElementById('tabletColor');
       if(input){input.value=c;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));}
-      if(tc){tc.value=c;tc.dispatchEvent(new Event('input',{bubbles:true}));}
+      if(tc){tc.value=c;tc.dispatchEvent(new Event('input',{bubbles:true}));tc.dispatchEvent(new Event('change',{bubbles:true}));}
       if(typeof setTool==='function') setTool('pen');
+      if(typeof canvas!=='undefined' && canvas.freeDrawingBrush){
+        canvas.freeDrawingBrush.color=c;
+      }
+      if(typeof placePalette==='function') placePalette();
     });
   });
 })();
 </script>
+<style id="quick-colors-above-pen-final">
+@media screen and (max-width:760px){
+  body:not(.in-fullscreen):not(.mobile-css-fullscreen) #mobileQuickPenColors{
+    display:flex !important;
+    position:fixed !important;
+    z-index:100000 !important;
+  }
+}
+</style>
 </body>
 
 <style id="mobile-landing-final">
