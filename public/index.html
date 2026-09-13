@@ -1217,6 +1217,9 @@
     <button type="button" id="mobileFullscreen" aria-label="Fullscreen" title="Fullscreen"><span class="v2icon">⛶</span><span>Fullscreen</span></button>
     <button type="button" id="mobileV2Scroll" aria-label="Scroll board"><span class="v2icon">↕</span><span>Scroll</span></button>
     <button type="button" id="mobileV2AI"><span class="v2icon">✦</span><span>AI</span></button>
+    <label id="mobileFontSizeControl" title="Font size">
+      <span class="v2icon">A</span><input id="mobileFontSize" type="range" min="10" max="72" value="22" aria-label="Font size"><span id="mobileFontSizeValue">22</span>
+    </label>
     <button type="button" id="mobileV2More"><span class="v2icon">⋯</span><span>More</span></button>
   </div>
   <div id="mobileV2Menu" aria-label="More mobile tools"></div>
@@ -1791,7 +1794,7 @@ document.getElementById("addText").onclick = () => {
   if (!val || !pendingTextPoint) return document.getElementById("textDialog").style.display="none";
   const obj = new fabric.IText(val, {
     left: pendingTextPoint.x, top: pendingTextPoint.y, fill:document.getElementById("color").value,
-    fontSize:22, fontFamily:"Inter, Arial, sans-serif", objectRole:"text"
+    fontSize:Number(document.getElementById("mobileFontSize")?.value || 22), fontFamily:"Inter, Arial, sans-serif", objectRole:"text"
   });
   canvas.add(obj); canvas.setActiveObject(obj); canvas.requestRenderAll();
   document.getElementById("textDialog").style.display="none";
@@ -3236,6 +3239,126 @@ updateZoom();
   else setup();
 })();
 </script>
+
+
+<script id="mobile-fontsize-and-fullscreen-final">
+(function(){
+  const mobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const fs=()=>document.getElementById('mobileFullscreen');
+  const font=document.getElementById('mobileFontSize');
+  const fontValue=document.getElementById('mobileFontSizeValue');
+
+  if(font){
+    font.addEventListener('input',()=>{
+      if(fontValue) fontValue.textContent=font.value;
+      const active=(typeof canvas!=='undefined' && canvas.getActiveObject) ? canvas.getActiveObject() : null;
+      if(active && (active.type==='i-text'||active.type==='textbox'||active.type==='text')){
+        active.set('fontSize',Number(font.value));
+        active.setCoords?.();
+        canvas.requestRenderAll();
+        if(typeof scheduleSave==='function') scheduleSave(true);
+      }
+    });
+  }
+
+  const button=fs();
+  if(button && !button.dataset.fontFsFinal){
+    button.dataset.fontFsFinal='1';
+
+    // Remove all previous listeners from this specific button while preserving its markup.
+    const clean=button.cloneNode(true);
+    clean.dataset.fontFsFinal='1';
+    button.replaceWith(clean);
+
+    const enter=async()=>{
+      const root=document.documentElement;
+      const fn=root.requestFullscreen || root.webkitRequestFullscreen || root.msRequestFullscreen;
+      if(!fn) throw new Error('fullscreen unsupported');
+      return fn.call(root);
+    };
+    const leave=async()=>{
+      const fn=document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      if(fn) return fn.call(document);
+    };
+
+    clean.addEventListener('click',async e=>{
+      e.preventDefault(); e.stopPropagation();
+      if(!mobile()) return;
+      const native=!!(document.fullscreenElement||document.webkitFullscreenElement);
+      try{
+        if(native){
+          await leave();
+        }else{
+          await enter();
+        }
+      }catch(err){
+        // Browser denied/doesn't support native fullscreen: use an app fullscreen fallback.
+        document.body.classList.toggle('mobile-css-fullscreen');
+      }
+      const active=!!(document.fullscreenElement||document.webkitFullscreenElement||document.body.classList.contains('mobile-css-fullscreen'));
+      clean.classList.toggle('active',active);
+      const icon=clean.querySelector('.v2icon');
+      const label=clean.querySelector('span:last-child');
+      if(icon) icon.textContent=active?'×':'⛶';
+      if(label) label.textContent=active?'Exit':'Fullscreen';
+    },{passive:false});
+
+    const sync=()=>{
+      const active=!!(document.fullscreenElement||document.webkitFullscreenElement||document.body.classList.contains('mobile-css-fullscreen'));
+      clean.classList.toggle('active',active);
+      const icon=clean.querySelector('.v2icon');
+      const label=clean.querySelector('span:last-child');
+      if(icon) icon.textContent=active?'×':'⛶';
+      if(label) label.textContent=active?'Exit':'Fullscreen';
+    };
+    document.addEventListener('fullscreenchange',sync);
+    document.addEventListener('webkitfullscreenchange',sync);
+    sync();
+  }
+})();
+</script>
+<style id="mobile-fontsize-fullscreen-style-final">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  #mobileFontSizeControl{
+    display:flex !important;
+    flex:0 0 78px !important;
+    width:78px !important;
+    min-width:78px !important;
+    height:100% !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:2px !important;
+    flex-direction:column !important;
+    border:0 !important;
+    background:transparent !important;
+    color:inherit !important;
+  }
+  #mobileFontSizeControl input{
+    width:58px !important;
+    max-width:58px !important;
+    height:16px !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+  #mobileFontSizeValue{font-size:9px !important;line-height:10px !important;font-weight:700 !important;}
+  body.mobile-css-fullscreen{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100dvh !important;
+    overflow:hidden !important;
+    z-index:999999 !important;
+  }
+  body.mobile-css-fullscreen #app{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100dvh !important;
+    min-height:100dvh !important;
+    z-index:1000000 !important;
+  }
+}
+</style>
 
 </body>
 </html>
