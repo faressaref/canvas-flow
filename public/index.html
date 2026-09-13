@@ -990,7 +990,24 @@
   #mobileV2Bar .mobile-v2-font input{width:75px;accent-color:#18202a}
   #mobileV2Bar .mobile-v2-font .font-value{font-size:10px;min-width:16px}
 }
-</style></head>
+</style>
+<style id="mobile-landing-no-fullscreen">
+@media screen and (max-width:760px){
+  #landing #mobileFullscreen,
+  #landing #mobileLandscapeFullscreen,
+  #landing #mobileLandscapeSideFullscreen,
+  #landing #mobileFocus,
+  #landing [id*="fullscreen" i],
+  #landing [class*="fullscreen" i],
+  #landing [aria-label*="fullscreen" i],
+  #landing [title*="fullscreen" i]{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+}
+</style>
+</head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
 
@@ -3668,7 +3685,51 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   },{passive:true});
 })();
 </script>
+
+<style id="hide-fullscreen-on-landing-final">
+@media screen and (max-width:760px), screen and (max-height:520px) and (max-width:900px){
+  body.landing-active #mobileLandscapeSideFullscreen,
+  body.landing-active #mobileFullscreen,
+  body.landing-active #mobileLandscapeFullscreen{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+}
+</style>
+
 </body>
+
+<style id="mobile-landing-final">
+/* MOBILE LANDING ONLY — PC untouched */
+@media screen and (max-width:760px){
+  #landing{align-items:flex-start!important;justify-content:center!important;padding:22px 14px!important;overflow-y:auto!important;}
+  .landing-card{width:100%!important;max-width:430px!important;padding:0!important;}
+  .landing-brand{font-size:14px!important;margin-bottom:18px!important;}
+  .landing-title{font-size:clamp(27px,8vw,35px)!important;line-height:1.05!important;margin-bottom:9px!important;}
+  .landing-sub{max-width:360px!important;margin:0 auto 20px!important;font-size:12px!important;line-height:1.5!important;}
+  .mode-cards{display:grid!important;grid-template-columns:1fr!important;gap:12px!important;width:100%!important;}
+  .mode-card{min-height:0!important;height:auto!important;padding:18px!important;border-radius:17px!important;}
+  .mode-icon{width:44px!important;height:44px!important;border-radius:12px!important;font-size:21px!important;margin-bottom:12px!important;}
+  .mode-card h2{font-size:19px!important;margin-bottom:7px!important;}
+  .mode-card p{font-size:12px!important;line-height:1.5!important;}
+  .mode-card .mode-list{font-size:11px!important;line-height:1.8!important;margin-top:11px!important;}
+}
+@media screen and (max-width:380px){
+  #landing{padding:18px 11px!important;}
+  .landing-card{max-width:350px!important;}
+  .landing-brand{margin-bottom:14px!important;}
+  .landing-title{font-size:27px!important;}
+  .landing-sub{font-size:11px!important;margin-bottom:15px!important;}
+  .mode-cards{gap:9px!important;}
+  .mode-card{padding:15px!important;border-radius:15px!important;}
+  .mode-icon{width:40px!important;height:40px!important;font-size:19px!important;margin-bottom:10px!important;}
+  .mode-card h2{font-size:17px!important;}
+  .mode-card p{font-size:11px!important;}
+  .mode-card .mode-list{font-size:10px!important;line-height:1.7!important;}
+}
+</style>
+
 </html>
 
 <style>
