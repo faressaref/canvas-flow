@@ -2304,6 +2304,10 @@ function scheduleSave(major=false) {
   if(!suppressSave) saveLocalDraft();
   if (!FIREBASE_READY || !db || suppressSave || !currentUser) return;
 
+  // Show the status immediately so the user can always see that auto-save is queued.
+  if(FIREBASE_READY && db && currentUser){
+    setSaveState("saving", "Saving...");
+  }
   clearTimeout(saveTimer);
   // Major changes can still use the same debounce so rapid canvas operations
   // are grouped into one reliable Firestore write.
@@ -3959,6 +3963,43 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   }
 }
 </style>
+
+<style id="canvasflow-mobile-autosave-visible-final">
+/* FINAL OVERRIDE: show the live auto-save indicator in phone landscape. */
+@media screen and (max-width:760px) and (orientation:landscape){
+  #mobileSaveState{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    position:fixed !important;
+    left:max(8px, env(safe-area-inset-left)) !important;
+    bottom:calc(72px + env(safe-area-inset-bottom)) !important;
+    top:auto !important;
+    right:auto !important;
+    z-index:2147483000 !important;
+    width:max-content !important;
+    max-width:120px !important;
+    min-width:0 !important;
+    height:auto !important;
+    padding:3px 6px !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+    border:1px solid #dfe4ea !important;
+    border-radius:6px !important;
+    background:rgba(255,255,255,.96) !important;
+    box-shadow:0 3px 10px rgba(0,0,0,.10) !important;
+    font-size:8px !important;
+    line-height:12px !important;
+    font-weight:800 !important;
+    white-space:nowrap !important;
+    pointer-events:none !important;
+  }
+  #mobileSaveState.saving{color:#7c5cff !important;}
+  #mobileSaveState.saved{color:#2d8a5b !important;}
+  #mobileSaveState.error{color:#c33b3b !important;}
+}
+</style>
+
 </body>
 
 <style id="mobile-landing-final">
@@ -4636,3 +4677,44 @@ body.mobile-css-fullscreen #tabletQuickColors{
   align-items:center!important;
 }
 </style>
+
+<!-- ===== PHONE LANDSCAPE AUTO-SAVE INDICATOR — FINAL OVERRIDE ===== -->
+<style id="phone-landscape-autosave-indicator-final">
+/* iPhone landscape is commonly 812–932px wide and only ~375–430px tall.
+   Do not use width alone: detect short landscape phone screens too. */
+@media screen and (max-width:900px) and (max-height:520px) and (orientation:landscape){
+  #mobileSaveState{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    position:fixed !important;
+    left:8px !important;
+    right:auto !important;
+    top:auto !important;
+    bottom:calc(69px + env(safe-area-inset-bottom)) !important;
+    z-index:2147483647 !important;
+    width:auto !important;
+    min-width:0 !important;
+    max-width:110px !important;
+    height:18px !important;
+    padding:2px 6px !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+    display:flex !important;
+    align-items:center !important;
+    border:1px solid #dfe4ea !important;
+    border-radius:5px !important;
+    background:rgba(255,255,255,.96) !important;
+    box-shadow:0 2px 8px rgba(0,0,0,.10) !important;
+    font-size:8px !important;
+    line-height:12px !important;
+    font-weight:800 !important;
+    white-space:nowrap !important;
+    pointer-events:none !important;
+  }
+  #mobileSaveState.saving{color:#7c5cff !important;}
+  #mobileSaveState.saved{color:#2d8a5b !important;}
+  #mobileSaveState.error{color:#c33b3b !important;}
+}
+</style>
+
