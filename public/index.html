@@ -3187,6 +3187,56 @@ updateZoom();
 }
 </style>
 
+
+<script id="fullscreen-single-handler-final">
+(function(){
+  function setup(){
+    const old=document.getElementById('mobileFullscreen');
+    if(!old || old.dataset.finalFsReady) return;
+    const b=old.cloneNode(true); // removes every previously attached click listener
+    b.dataset.finalFsReady='1';
+    old.replaceWith(b);
+
+    const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+    const native=()=>document.fullscreenElement||document.webkitFullscreenElement;
+
+    b.addEventListener('click',function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(!isMobile()) return;
+
+      if(native()){
+        const fn=document.exitFullscreen||document.webkitExitFullscreen;
+        if(fn){ try{ const r=fn.call(document); if(r&&r.catch)r.catch(()=>{}); }catch(_){} }
+      }else{
+        const el=document.documentElement;
+        const fn=el.requestFullscreen||el.webkitRequestFullscreen;
+        if(fn){
+          try{
+            const r=fn.call(el);
+            if(r&&r.catch)r.catch(()=>{});
+          }catch(_){}
+        }
+      }
+    });
+
+    function sync(){
+      const fs=!!native();
+      b.classList.toggle('active',fs);
+      const icon=b.querySelector('.v2icon');
+      const label=b.querySelector('span:last-child');
+      if(icon) icon.textContent=fs?'×':'⛶';
+      if(label) label.textContent=fs?'Exit':'Fullscreen';
+    }
+    document.addEventListener('fullscreenchange',sync);
+    document.addEventListener('webkitfullscreenchange',sync);
+    sync();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup);
+  else setup();
+})();
+</script>
+
 </body>
 </html>
 
