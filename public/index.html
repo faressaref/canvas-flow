@@ -965,7 +965,32 @@
   #mobileV2Menu input[type=color]{width:28px !important;height:22px !important;border:0 !important;padding:0 !important;background:transparent !important;}
 }
 </style>
-</head>
+<style id="mobile-pen-settings-css">
+#mobilePenSettings{display:none;position:fixed;inset:0;z-index:30000;background:rgba(0,0,0,.28);align-items:flex-end;justify-content:center;padding:14px;box-sizing:border-box}
+#mobilePenSettings.open{display:flex}
+.mobile-pen-card{width:min(420px,100%);background:#fff;border:1px solid #dfe4ea;border-radius:18px;padding:16px;box-shadow:0 16px 45px rgba(0,0,0,.22);font-family:inherit}
+.mobile-pen-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-size:16px;direction:rtl}
+.mobile-pen-head button{border:0;background:#f1f3f5;border-radius:9px;width:34px;height:34px;font-size:22px;cursor:pointer}
+.mobile-pen-card label{display:block;font-size:13px;font-weight:700;direction:rtl;text-align:right}
+.mobile-pen-card output{float:left;font-weight:700;direction:ltr}
+.mobile-pen-card input[type=range]{display:block;width:100%;margin:13px 0 15px;accent-color:#18202a}
+.mobile-pen-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;direction:rtl}
+.mobile-pen-presets button{border:1px solid #dfe4ea;background:#fff;border-radius:10px;padding:9px 4px;font-size:11px;cursor:pointer}
+.mobile-pen-presets button:active{background:#18202a;color:#fff}
+.mobile-calligraphy-row{margin-top:15px !important}
+.mobile-calligraphy-toggle{display:flex !important;align-items:center;gap:8px;margin-top:8px;font-size:13px !important;direction:ltr !important;text-align:left !important}
+.mobile-calligraphy-toggle input{width:18px;height:18px}
+.mobile-nib-preview{height:42px;margin-top:12px;border:1px solid #dfe4ea;border-radius:10px;background:#fafbfc;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mobile-nib-preview span{display:block;width:7px;height:30px;background:#18202a;border-radius:1px;transform:rotate(45deg);transform-origin:center;transition:transform .12s ease}
+
+@media (max-height:520px) and (max-width:900px){
+  #mobileV2Bar{overflow-x:auto!important;overflow-y:hidden!important;white-space:nowrap!important;justify-content:flex-start!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:none!important}
+  #mobileV2Bar::-webkit-scrollbar{display:none}
+  #mobileV2Bar .mobile-v2-font{display:inline-flex!important;flex:0 0 auto!important;align-items:center;gap:5px;height:40px;padding:0 7px;border:1px solid #dfe4ea;border-radius:9px;background:#f7f8fa}
+  #mobileV2Bar .mobile-v2-font input{width:75px;accent-color:#18202a}
+  #mobileV2Bar .mobile-v2-font .font-value{font-size:10px;min-width:16px}
+}
+</style></head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
 
@@ -1223,6 +1248,25 @@
     <button type="button" id="mobileV2More"><span class="v2icon">⋯</span><span>More</span></button>
   </div>
   <div id="mobileV2Menu" aria-label="More mobile tools"></div>
+<div id="mobilePenSettings" aria-hidden="true">
+  <div class="mobile-pen-card">
+    <div class="mobile-pen-head"><strong>Pen Settings</strong><button type="button" id="mobilePenClose" aria-label="Close">×</button></div>
+    <label>Pen Size <output id="mobilePenSizeValue">4</output>
+      <input id="mobilePenSize" type="range" min="1" max="40" value="4" step="1">
+    </label>
+    <div class="mobile-pen-presets">
+      <button type="button" data-pen-size="2">Thin</button>
+      <button type="button" data-pen-size="4">Medium</button>
+      <button type="button" data-pen-size="8">Bold</button>
+      <button type="button" data-pen-size="16">Extra Bold</button>
+    </div>
+    <label class="mobile-calligraphy-row">Nib Angle <output id="mobilePenAngleValue">45°</output>
+      <input id="mobilePenAngle" type="range" min="0" max="180" value="45" step="1">
+    </label>
+    <label class="mobile-calligraphy-toggle"><input id="mobileCalligraphy" type="checkbox"> <span>Calligraphy nib</span></label>
+    <div class="mobile-nib-preview" id="mobileNibPreview"><span></span></div>
+  </div>
+</div>
   <div id="mobileV2LandscapeTools" aria-label="Mobile landscape tools"></div>
 
   <input id="fileInput" type="file" accept="image/*" />
@@ -1630,9 +1674,17 @@ function hexToRgba(hex, alpha) {
 }
 
 function applyBrushSettings() {
-  if (!canvas.freeDrawingBrush) canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
   const baseColor = document.getElementById("color").value;
   const size = +document.getElementById("size").value;
+  const calligraphy = !!document.getElementById("mobileCalligraphy")?.checked;
+  if (calligraphy && tool === "pen" && window.createCalligraphyBrush) {
+    canvas.freeDrawingBrush = window.createCalligraphyBrush(canvas);
+    canvas.freeDrawingBrush.color = baseColor;
+    canvas.freeDrawingBrush.width = size;
+    canvas.freeDrawingBrush.nibAngle = +(document.getElementById("mobilePenAngle")?.value || 45);
+    return;
+  }
+  if (!(canvas.freeDrawingBrush instanceof fabric.PencilBrush) || calligraphy) canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
   if (tool === "highlighter") {
     canvas.freeDrawingBrush.color = hexToRgba(baseColor, 0.30);
     canvas.freeDrawingBrush.width = Math.max(14, size * 3.2);
@@ -2795,7 +2847,18 @@ updateZoom();
       });
       bar.appendChild(b);
     });
-    // Landscape: keep Color and Fullscreen directly in the Elements bar (no More).
+    // Landscape: keep Font Size, Color and Fullscreen directly in the Elements bar (no More).
+    const font=document.createElement('label');
+    font.className='mobile-v2-font'; font.setAttribute('aria-label','Font size');
+    font.innerHTML='<span class="v2icon">A</span><input id="mobileV2FontLandscape" type="range" min="10" max="72" value="22" aria-label="Font size"><span class="font-value">22</span>';
+    const fi=font.querySelector('input');
+    const mobileFont=document.getElementById('mobileFontSize');
+    if(fi && mobileFont) fi.value=mobileFont.value;
+    fi?.addEventListener('input',()=>{
+      if(mobileFont){ mobileFont.value=fi.value; mobileFont.dispatchEvent(new Event('input',{bubbles:true})); }
+      const out=font.querySelector('.font-value'); if(out) out.textContent=fi.value;
+    });
+    bar.appendChild(font);
     const color=document.createElement('label');
     color.className='mobile-v2-color'; color.setAttribute('aria-label','Color');
     color.innerHTML='<span class="v2icon">●</span><input id="mobileV2ColorLandscape" type="color" aria-label="Color">';
@@ -3360,6 +3423,84 @@ updateZoom();
 }
 </style>
 
+<script id="mobile-calligraphy-brush">
+(function(){
+  function makeBrush(canvas){
+    const brush = new fabric.BaseBrush(canvas);
+    brush._points=[]; brush.nibAngle=45; brush.width=4; brush.color="#18202a";
+    brush._prepareForDrawing=function(pointer){ this._points=[pointer]; };
+    brush.onMouseDown=function(pointer){ this._prepareForDrawing(pointer); };
+    brush.onMouseMove=function(pointer){
+      this._points.push(pointer);
+      if(this.canvas.contextTop) this.canvas.clearContext(this.canvas.contextTop);
+      this._renderPreview();
+    };
+    brush.onMouseUp=function(){
+      if(this._points.length<2){this._points=[];return false;}
+      const pts=this._points.slice();
+      const a=(this.nibAngle||45)*Math.PI/180;
+      const nx=Math.cos(a)*this.width/2, ny=Math.sin(a)*this.width/2;
+      const poly=[];
+      pts.forEach(p=>poly.push([p.x-nx,p.y-ny]));
+      for(let i=pts.length-1;i>=0;i--) poly.push([pts[i].x+nx,pts[i].y+ny]);
+      const d='M '+poly.map((p,i)=>(i?'L ':'')+p[0]+' '+p[1]).join(' ')+' Z';
+      const path=new fabric.Path(d,{fill:this.color,stroke:null,objectRole:'calligraphy'});
+      this.canvas.add(path); this.canvas.requestRenderAll(); this._points=[];
+      return true;
+    };
+    brush._renderPreview=function(){};
+    return brush;
+  }
+  window.createCalligraphyBrush=makeBrush;
+})();
+</script>
+<script id="mobile-pen-longpress-final">
+(function(){
+  const bar=()=>document.getElementById('mobileV2Bar');
+  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const panel=()=>document.getElementById('mobilePenSettings');
+  let timer=null, longPressed=false;
+  function open(){
+    const p=panel(); if(!p) return;
+    const input=document.getElementById('mobilePenSize');
+    const size=document.getElementById('size');
+    if(input && size) input.value=size.value||4;
+    const out=document.getElementById('mobilePenSizeValue'); if(out) out.textContent=input?.value||'4';
+    p.classList.add('open'); p.setAttribute('aria-hidden','false');
+  }
+  function close(){ const p=panel(); if(p){p.classList.remove('open');p.setAttribute('aria-hidden','true');} }
+  function apply(v){
+    const n=Math.max(1,Math.min(40,Number(v)||4));
+    const main=document.getElementById('size'); if(main){main.value=n; main.dispatchEvent(new Event('input',{bubbles:true})); main.dispatchEvent(new Event('change',{bubbles:true}));}
+    const out=document.getElementById('mobilePenSizeValue'); if(out) out.textContent=String(n);
+    if(typeof applyBrushSettings==='function') applyBrushSettings();
+  }
+  document.addEventListener('pointerdown',e=>{
+    if(!isMobile()) return;
+    const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
+    if(!b) return;
+    longPressed=false; clearTimeout(timer);
+    timer=setTimeout(()=>{longPressed=true;open();},520);
+  },true);
+  ['pointerup','pointercancel','pointerleave'].forEach(type=>document.addEventListener(type,e=>{
+    if(timer){ clearTimeout(timer); timer=null; }
+  },true));
+  document.addEventListener('click',e=>{
+    if(longPressed){ const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]'); if(b){e.preventDefault();e.stopImmediatePropagation();} longPressed=false; }
+  },true);
+  document.getElementById('mobilePenClose')?.addEventListener('click',close);
+  document.getElementById('mobilePenSize')?.addEventListener('input',e=>apply(e.target.value));
+  const angle=document.getElementById('mobilePenAngle');
+  const angleOut=document.getElementById('mobilePenAngleValue');
+  const preview=document.querySelector('#mobileNibPreview span');
+  angle?.addEventListener('input',e=>{ if(angleOut) angleOut.textContent=e.target.value+'°'; if(preview) preview.style.transform='rotate('+e.target.value+'deg)'; if(typeof applyBrushSettings==='function') applyBrushSettings(); });
+  document.getElementById('mobileCalligraphy')?.addEventListener('change',()=>{ if(typeof applyBrushSettings==='function') applyBrushSettings(); });
+  document.querySelectorAll('[data-pen-size]').forEach(b=>b.addEventListener('click',()=>apply(b.dataset.penSize)));
+  document.addEventListener('pointerdown',e=>{
+    const p=panel(); if(p?.classList.contains('open') && e.target===p) close();
+  },true);
+})();
+</script>
 </body>
 </html>
 
