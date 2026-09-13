@@ -1929,10 +1929,28 @@ document.getElementById("addText").onclick = () => {
   scheduleSave(true);
 };
 
-async function addImageFileToCanvas(file) {
-  // Use a data URL for the Fabric image. This is reliable across browsers
-  // and does not depend on Firebase Storage or blob/CORS behavior.
+let pendingImagePoint = null;
+
+function rememberImagePoint(e) {
+  try {
+    if (!canvas) return;
+    const target = e?.target;
+    if (target && target.closest && (target.closest('#mobileV2Bar') || target.closest('#mobileV2Menu') || target.closest('#topbar'))) return;
+    const pt = canvas.getPointer(e);
+    if (pt && Number.isFinite(pt.x) && Number.isFinite(pt.y)) {
+      pendingImagePoint = { x: pt.x, y: pt.y };
+    }
+  } catch (_) {}
+}
+
+// Keep the last real board position so an image selected from the phone is
+// inserted exactly where the user was working, rather than at a fixed center.
+canvas.on('mouse:down', rememberImagePoint);
+canvas.on('touch:start', rememberImagePoint);
+
+async function addImageFileToCanvas(file, requestedPoint) {
   return new Promise((resolve) => {
+    if (!file || !(file.type || '').startsWith('image/')) { resolve(); return; }
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
@@ -1940,52 +1958,59 @@ async function addImageFileToCanvas(file) {
       imgEl.onload = async () => {
         try {
           const img = new fabric.Image(imgEl);
-          const center = canvas.getCenter();
-          img.set({
-            left: center.left - 150,
-            top: center.top - 100,
-            objectRole: "image",
-            fileName: file.name,
-            srcUrl: dataUrl
-          });
+          const rect = canvas.upperCanvasEl.getBoundingClientRect();
+          const screenCenterEvent = {clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2};
+          const screenCenter = canvas.getPointer(screenCenterEvent, true);
+          const point = {x: screenCenter.x, y: screenCenter.y};
           const maxW = 420, maxH = 300;
           const scale = Math.min(maxW / (img.width || 1), maxH / (img.height || 1), 1);
+          img.set({
+            left: point.x - ((img.width || 1) * scale) / 2,
+            top: point.y - ((img.height || 1) * scale) / 2,
+            objectRole: 'image',
+            fileName: file.name,
+            srcUrl: dataUrl,
+            selectable: true,
+            evented: true
+          });
           img.scale(scale);
           canvas.add(img);
           canvas.setActiveObject(img);
+          canvas.setCursor('default');
           canvas.requestRenderAll();
           scheduleSave(true);
+          pendingImagePoint = null;
 
           if (FIREBASE_READY && storage) {
             try {
-              setSaveState("saving");
-              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-              const ref = storage.ref("whiteboard-images/" + Date.now() + "_" + safeName);
+              setSaveState('saving');
+              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+              const ref = storage.ref('whiteboard-images/' + Date.now() + '_' + safeName);
               await ref.put(file);
               img.set({srcUrl: await ref.getDownloadURL()});
               canvas.requestRenderAll();
               scheduleSave(true);
             } catch (err) {
-              console.error("Image Storage upload failed:", err);
-              setSaveState("error", "Image added locally — Firebase Storage failed");
+              console.error('Image Storage upload failed:', err);
+              setSaveState('error', 'Image added locally — Firebase Storage failed');
             }
           }
         } catch (err) {
-          console.error("Image add failed:", err);
-          setSaveState("error", "Could not add image");
+          console.error('Image add failed:', err);
+          setSaveState('error', 'Could not add image');
         }
         resolve();
       };
       imgEl.onerror = (err) => {
-        console.error("Image decode failed:", err);
-        setSaveState("error", "Could not load image");
+        console.error('Image decode failed:', err);
+        setSaveState('error', 'Could not load image');
         resolve();
       };
       imgEl.src = dataUrl;
     };
     reader.onerror = (err) => {
-      console.error("FileReader failed:", err);
-      setSaveState("error", "Could not read image");
+      console.error('FileReader failed:', err);
+      setSaveState('error', 'Could not read image');
       resolve();
     };
     reader.readAsDataURL(file);
@@ -2038,8 +2063,12 @@ async function handleDroppedFiles(files) {
 
 document.getElementById("fileInput").addEventListener("change", async e => {
   const files = Array.from(e.target.files || []);
+  const point = pendingImagePoint ? {...pendingImagePoint} : null;
   e.target.value = "";
-  await handleDroppedFiles(files);
+  for (const file of files) {
+    if ((file.type || '').startsWith('image/')) await addImageFileToCanvas(file, point);
+    else await addFileAttachment(file);
+  }
 });
 
 // Drag files from the desktop/file manager directly onto the whiteboard.
@@ -2857,7 +2886,9 @@ updateZoom();
     e.preventDefault(); e.stopPropagation();
     const name=btn.dataset.v2Tool;
     if(name==='image'){
-      document.getElementById('fileInput')?.click();
+      pendingImagePoint = pendingImagePoint || (() => { const c=canvas.getCenter(); return {x:c.left,y:c.top}; })();
+      const input=document.getElementById('fileInput');
+      if(input) input.click();
       setTool('select');
     } else {
       setTabletScrollMode(false);
@@ -2885,7 +2916,9 @@ updateZoom();
       b.addEventListener('click',e=>{
         e.preventDefault(); e.stopPropagation();
         if(name==='image'){
-          document.getElementById('fileInput')?.click();
+          pendingImagePoint = pendingImagePoint || (() => { const c=canvas.getCenter(); return {x:c.left,y:c.top}; })();
+          const input=document.getElementById('fileInput');
+          if(input) input.click();
           setTool?.('select');
         } else {
           setTabletScrollMode?.(false); setTool?.(name);
@@ -2961,7 +2994,7 @@ updateZoom();
           document.getElementById('aiToggle')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
           return;
         }
-        if(name==='image'){ document.getElementById('fileInput')?.click(); return; }
+        if(name==='image'){ pendingImagePoint = pendingImagePoint || (() => { const c=canvas.getCenter(); return {x:c.left,y:c.top}; })(); const input=document.getElementById('fileInput'); if(input) input.click(); return; }
         if(name==='scroll'){ window.__mobileScrollOn=!window.__mobileScrollOn; setTabletScrollMode(window.__mobileScrollOn); sync(); return; }
         setTabletScrollMode(false); setTool(name); sync();
       });
@@ -3216,7 +3249,9 @@ updateZoom();
     }
 
     if(name==='image'){
-      document.getElementById('fileInput')?.click();
+      pendingImagePoint = pendingImagePoint || (() => { const c=canvas.getCenter(); return {x:c.left,y:c.top}; })();
+      const input=document.getElementById('fileInput');
+      if(input) input.click();
       if(typeof setTool==='function') setTool('select');
       return;
     }
