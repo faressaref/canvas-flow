@@ -89,11 +89,11 @@ else s=s.replace('</body>',injected+'\n</body>');
 
 const css=`
 <style id="canvasflow-mobile-ai-panel-css">
-/* Mobile only: keep the AI panel above the whiteboard, but compact enough to expose the controls below it. */
 body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{z-index:99999 !important;}
 body.canvasflow-mobile-ai #aiPanel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai .ai-panel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai [class*="ai-panel"].canvasflow-mobile-ai-ready{transform:none !important;}
+/* Keep the mobile AI window short so the controls underneath remain visible. */
 body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{
- max-height:65dvh !important;height:65dvh !important;overflow-y:auto !important;
+ height:52dvh !important;max-height:52dvh !important;overflow-y:auto !important;
 }
 body.canvasflow-mobile-ai [data-canvasflow-ai-resize]{
  position:absolute !important;left:5px !important;top:5px !important;right:auto !important;bottom:auto !important;
@@ -108,13 +108,21 @@ body.canvasflow-mobile-ai [data-canvasflow-ai-resize] span{
  border-radius:4px 0 0 0 !important;opacity:.75 !important;
 }
 body.canvasflow-mobile-ai [data-canvasflow-ai-resize].active span{opacity:1 !important;transform:scale(1.12) !important;}
-@media (max-height:500px){
+@media (orientation:landscape) and (max-width:900px){
  body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{
-  height:58dvh !important;max-height:58dvh !important;
+  height:45dvh !important;max-height:45dvh !important;
  }
 }
 </style>`;
-if(!s.includes('id="canvasflow-mobile-ai-panel-css"'))s=s.replace('</head>',css+'\n</head>');
+
+const cssMarker='<style id="canvasflow-mobile-ai-panel-css">';
+const cssStart=s.indexOf(cssMarker);
+if(cssStart>=0){
+  const cssEnd=s.indexOf('</style>',cssStart);
+  if(cssEnd>=0)s=s.slice(0,cssStart)+css+s.slice(cssEnd+8);
+}else{
+  s=s.replace('</head>',css+'\n</head>');
+}
 
 fs.writeFileSync(file,s);
-console.log('CanvasFlow: compacted the mobile AI panel while keeping it above the whiteboard.');
+console.log('CanvasFlow: mobile AI panel height fixed and CSS replacement enabled.');
