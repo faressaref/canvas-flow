@@ -3,8 +3,6 @@ import fs from "node:fs";
 const file = "public/index.html";
 let s = fs.readFileSync(file, "utf8");
 
-/* Save-time image handling must be local and fast. Firebase Storage uploads are
-   already handled when an image is added; saveNow must never upload again. */
 const injected = `<script id="canvasflow-image-persistence-fix">(function(){
   const MAX_PAGE_FIELD=700*1024;
   const isDataImage=u=>typeof u==="string"&&u.indexOf("data:image/")===0;
@@ -15,11 +13,9 @@ const injected = `<script id="canvasflow-image-persistence-fix">(function(){
   async function compressImage(u,maxSide,q){try{const im=await loadImage(u),ow=im.naturalWidth||im.width||1,oh=im.naturalHeight||im.height||1,scale=Math.min(1,maxSide/Math.max(ow,oh)),nw=Math.max(1,Math.round(ow*scale)),nh=Math.max(1,Math.round(oh*scale)),c=document.createElement("canvas");c.width=nw;c.height=nh;const ctx=c.getContext("2d");if(!ctx)return null;ctx.drawImage(im,0,0,nw,nh);const b=await new Promise(r=>c.toBlob(r,"image/webp",q));return b?{dataUrl:await blobToDataUrl(b),nw,nh,size:b.size}:null}catch(e){console.warn("CanvasFlow: image compression failed",e);return null}}
   async function prepareObject(o){
     if(!o)return;
-    /* Permanent Storage URL wins over the old embedded Base64 source. */
     if(isHttp(o.srcUrl)){o.src=o.srcUrl;return}
     if(!isDataImage(o.src))return;
     const oldW=Number(o.width)||1,oldH=Number(o.height)||1,oldSX=Number(o.scaleX)||1,oldSY=Number(o.scaleY)||1;
-    /* Only compress as a fallback. Never start a network request from Save. */
     for(const pair of [[1200,.58],[1000,.45],[850,.34],[720,.26]]){
       const r=await compressImage(o.src,pair[0],pair[1]);
       if(r){o.src=r.dataUrl;o.width=r.nw;o.height=r.nh;o.scaleX=(oldW*oldSX)/r.nw;o.scaleY=(oldH*oldSY)/r.nh;break}
@@ -29,28 +25,10 @@ const injected = `<script id="canvasflow-image-persistence-fix">(function(){
   async function preparePages(pages){
     if(!Array.isArray(pages))return pages;
     let hasData=false;
-    for(const p of pages){
-      if(!p||!Array.isArray(p.objects))continue;
-      for(const o of p.objects){if(o&&isDataImage(o.src)){hasData=true;break}}
-      if(hasData)break;
-    }
-    /* Normal case: all images have permanent URLs. This path is effectively free. */
-    if(!hasData){
-      for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects){if(o&&isHttp(o.srcUrl))o.src=o.srcUrl}}
-      return pages;
-    }
+    for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects){if(o&&isDataImage(o.src)){hasData=true;break}}if(hasData)break}
+    if(!hasData){for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects){if(o&&isHttp(o.srcUrl))o.src=o.srcUrl}}return pages}
     for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects)await prepareObject(o)}
-    if(byteSize(pages)>MAX_PAGE_FIELD){
-      for(const p of pages){
-        if(!p||!Array.isArray(p.objects))continue;
-        for(const o of p.objects){
-          if(!o||!isDataImage(o.src))continue;
-          const oldW=Number(o.width)||1,oldH=Number(o.height)||1,oldSX=Number(o.scaleX)||1,oldSY=Number(o.scaleY)||1;
-          const r=await compressImage(o.src,520,.16);
-          if(r){o.src=r.dataUrl;o.width=r.nw;o.height=r.nh;o.scaleX=(oldW*oldSX)/r.nw;o.scaleY=(oldH*oldSY)/r.nh}
-        }
-      }
-    }
+    if(byteSize(pages)>MAX_PAGE_FIELD){for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects){if(!o||!isDataImage(o.src))continue;const oldW=Number(o.width)||1,oldH=Number(o.height)||1,oldSX=Number(o.scaleX)||1,oldSY=Number(o.scaleY)||1,r=await compressImage(o.src,520,.16);if(r){o.src=r.dataUrl;o.width=r.nw;o.height=r.nh;o.scaleX=(oldW*oldSX)/r.nw;o.scaleY=(oldH*oldSY)/r.nh}}}}
     return pages;
   }
   window.canvasflowPrepareFirestorePages=preparePages;
@@ -67,5 +45,35 @@ if(s.includes(exactBase) && !s.includes("let pagesForSave = boardPages;"))s=s.re
 s=s.replace('const pagesJson = boardPages.map((pg, i) => {','const pagesJson = pagesForSave.map((pg, i) => {');
 s=s.replace('      canvas: canvasJson,\n      pages: pagesJson,','      canvas: "",\n      pages: pagesJson,');
 
+/* Important runtime fix: after Storage upload, replace Fabric's underlying
+   image source with the permanent URL. Otherwise every local-draft save still
+   serializes the original multi-megabyte Base64 data URL. */
+const oldUploadLine=`              img.set({srcUrl: await ref.getDownloadURL()});\n              canvas.requestRenderAll();\n              scheduleSave(true);`;
+const newUploadLine=`              const imageUrl = await ref.getDownloadURL();\n              if (typeof img.setSrc === "function") {\n                await new Promise(resolve => img.setSrc(imageUrl, () => resolve()));\n              } else {\n                img.set({src:imageUrl});\n              }\n              img.set({srcUrl:imageUrl});\n              canvas.requestRenderAll();\n              scheduleSave(true);`;
+if(s.includes(oldUploadLine))s=s.replace(oldUploadLine,newUploadLine);
+
+/* Do not let the first object:added event serialize the raw Base64 image while
+   its Storage upload is still running. The image is saved immediately after
+   upload (or after the fallback error path). */
+const oldReaderStart=`    reader.onload = () => {\n      const dataUrl = reader.result;`;
+const newReaderStart=`    reader.onload = () => {\n      const dataUrl = reader.result;\n      const previousImageSaveSuppress = suppressSave;\n      suppressSave = true;`;
+if(s.includes(oldReaderStart))s=s.replace(oldReaderStart,newReaderStart);
+
+const noFirebaseLine=`          if (FIREBASE_READY && storage) {`;
+const noFirebaseInsert=`          if (FIREBASE_READY && storage) {`;
+
+/* Release the save lock in every image completion path. */
+const successNeedle=`              canvas.requestRenderAll();\n              scheduleSave(true);\n            } catch (err) {`;
+const successReplacement=`              canvas.requestRenderAll();\n              suppressSave = previousImageSaveSuppress;\n              scheduleSave(true);\n            } catch (err) {`;
+if(s.includes(successNeedle))s=s.replace(successNeedle,successReplacement);
+
+const catchNeedle=`            } catch (err) {\n              console.error('Image Storage upload failed:', err);\n              setSaveState('error', 'Image added locally — Firebase Storage failed');\n            }\n          }\n        } catch (err) {`;
+const catchReplacement=`            } catch (err) {\n              console.error('Image Storage upload failed:', err);\n              setSaveState('error', 'Image added locally — Firebase Storage failed');\n              suppressSave = previousImageSaveSuppress;\n              scheduleSave(true);\n            }\n          } else {\n            suppressSave = previousImageSaveSuppress;\n            scheduleSave(true);\n          }\n        } catch (err) {`;
+if(s.includes(catchNeedle))s=s.replace(catchNeedle,catchReplacement);
+
+const outerCatchNeedle=`        } catch (err) {\n          console.error('Image add failed:', err);\n          setSaveState('error', 'Could not add image');\n        }`;
+const outerCatchReplacement=`        } catch (err) {\n          console.error('Image add failed:', err);\n          suppressSave = previousImageSaveSuppress;\n          setSaveState('error', 'Could not add image');\n          scheduleSave(true);\n        }`;
+if(s.includes(outerCatchNeedle))s=s.replace(outerCatchNeedle,outerCatchReplacement);
+
 fs.writeFileSync(file,s,"utf8");
-console.log("CanvasFlow: fast non-blocking image persistence installed.");
+console.log("CanvasFlow: autosave no longer serializes large Base64 image sources.");
