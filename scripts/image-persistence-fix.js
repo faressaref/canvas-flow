@@ -62,5 +62,16 @@ const decodeNeedle=`      imgEl.onerror = (err) => {\n        console.error('Ima
 const decodeReplacement=`      imgEl.onerror = (err) => {\n        console.error('Image decode failed:', err);\n        suppressSave = previousImageSaveSuppress;\n        setSaveState('error', 'Could not load image');\n        resolve();\n      };`;
 if(s.includes(decodeNeedle))s=s.replace(decodeNeedle,decodeReplacement);
 
+// Storage upload is not the Firestore save. Do not show the main "Saving" state
+// while a potentially large file is still uploading; scheduleSave() will update
+// the real save state after the permanent URL is available.
+const imageUploadSaving=`try {\n              setSaveState('saving');\n              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');\n              const ref = storage.ref('whiteboard-images/' + Date.now() + '_' + safeName);`;
+const imageUploadNoSaving=`try {\n              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');\n              const ref = storage.ref('whiteboard-images/' + Date.now() + '_' + safeName);`;
+if(s.includes(imageUploadSaving))s=s.replace(imageUploadSaving,imageUploadNoSaving);
+
+const fileUploadSaving=`try {\n              setSaveState("saving");\n              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");\n              const ref = storage.ref("whiteboard-files/" + Date.now() + "_" + safeName);`;
+const fileUploadNoSaving=`try {\n              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");\n              const ref = storage.ref("whiteboard-files/" + Date.now() + "_" + safeName);`;
+if(s.includes(fileUploadSaving))s=s.replace(fileUploadSaving,fileUploadNoSaving);
+
 fs.writeFileSync(file,s,"utf8");
 console.log("CanvasFlow: fast autosave image handling installed.");
