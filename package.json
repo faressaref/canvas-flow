@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build": "node scripts/pastel-ai-note.js && node scripts/multi-image-fix.js && node scripts/firestore-size-fix.js && node scripts/image-persistence-fix.js"
+    "build": "node scripts/pastel-ai-note.js && node scripts/multi-image-fix.js && node scripts/firestore-size-fix.js && node scripts/image-persistence-fix.js && node scripts/page-state-fix.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
