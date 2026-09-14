@@ -71,7 +71,6 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
         panel.style.setProperty('bottom',Math.max(8,window.innerHeight-r.top+8)+'px','important');
         panel.style.setProperty('top','auto','important');
       }
-      panel.style.setProperty('max-height',Math.max(160,window.innerHeight-16)+'px','important');
       panel.style.setProperty('overflow-y','auto','important');
     }
     panel.classList.add('canvasflow-mobile-ai-ready');
@@ -90,9 +89,12 @@ else s=s.replace('</body>',injected+'\n</body>');
 
 const css=`
 <style id="canvasflow-mobile-ai-panel-css">
-/* Mobile AI must sit above the whiteboard and all interactive elements. */
+/* Mobile only: keep the AI panel above the whiteboard, but compact enough to expose the controls below it. */
 body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{z-index:99999 !important;}
 body.canvasflow-mobile-ai #aiPanel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai .ai-panel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai [class*="ai-panel"].canvasflow-mobile-ai-ready{transform:none !important;}
+body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{
+ max-height:65dvh !important;height:65dvh !important;overflow-y:auto !important;
+}
 body.canvasflow-mobile-ai [data-canvasflow-ai-resize]{
  position:absolute !important;left:5px !important;top:5px !important;right:auto !important;bottom:auto !important;
  width:32px !important;height:32px !important;z-index:999999 !important;display:flex !important;
@@ -106,9 +108,13 @@ body.canvasflow-mobile-ai [data-canvasflow-ai-resize] span{
  border-radius:4px 0 0 0 !important;opacity:.75 !important;
 }
 body.canvasflow-mobile-ai [data-canvasflow-ai-resize].active span{opacity:1 !important;transform:scale(1.12) !important;}
-@media (max-height:500px){body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{max-height:calc(100dvh - 16px) !important;}}
+@media (max-height:500px){
+ body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{
+  height:58dvh !important;max-height:58dvh !important;
+ }
+}
 </style>`;
 if(!s.includes('id="canvasflow-mobile-ai-panel-css"'))s=s.replace('</head>',css+'\n</head>');
 
 fs.writeFileSync(file,s);
-console.log('CanvasFlow: mobile AI panel is forced above whiteboard elements.');
+console.log('CanvasFlow: compacted the mobile AI panel while keeping it above the whiteboard.');
