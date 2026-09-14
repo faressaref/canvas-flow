@@ -16,10 +16,7 @@ const injected = `<script id="canvasflow-image-persistence-fix">(function(){
     if(isHttp(o.srcUrl)){o.src=o.srcUrl;return}
     if(!isDataImage(o.src))return;
     const oldW=Number(o.width)||1,oldH=Number(o.height)||1,oldSX=Number(o.scaleX)||1,oldSY=Number(o.scaleY)||1;
-    for(const pair of [[1200,.58],[1000,.45],[850,.34],[720,.26]]){
-      const r=await compressImage(o.src,pair[0],pair[1]);
-      if(r){o.src=r.dataUrl;o.width=r.nw;o.height=r.nh;o.scaleX=(oldW*oldSX)/r.nw;o.scaleY=(oldH*oldSY)/r.nh;break}
-    }
+    for(const pair of [[1200,.58],[1000,.45],[850,.34],[720,.26]]){const r=await compressImage(o.src,pair[0],pair[1]);if(r){o.src=r.dataUrl;o.width=r.nw;o.height=r.nh;o.scaleX=(oldW*oldSX)/r.nw;o.scaleY=(oldH*oldSY)/r.nh;break}}
     if(isDataImage(o.srcUrl))delete o.srcUrl;
   }
   async function preparePages(pages){
@@ -45,27 +42,13 @@ if(s.includes(exactBase) && !s.includes("let pagesForSave = boardPages;"))s=s.re
 s=s.replace('const pagesJson = boardPages.map((pg, i) => {','const pagesJson = pagesForSave.map((pg, i) => {');
 s=s.replace('      canvas: canvasJson,\n      pages: pagesJson,','      canvas: "",\n      pages: pagesJson,');
 
-/* Important runtime fix: after Storage upload, replace Fabric's underlying
-   image source with the permanent URL. Otherwise every local-draft save still
-   serializes the original multi-megabyte Base64 data URL. */
 const oldUploadLine=`              img.set({srcUrl: await ref.getDownloadURL()});\n              canvas.requestRenderAll();\n              scheduleSave(true);`;
-const newUploadLine=`              const imageUrl = await ref.getDownloadURL();\n              if (typeof img.setSrc === "function") {\n                await new Promise(resolve => img.setSrc(imageUrl, () => resolve()));\n              } else {\n                img.set({src:imageUrl});\n              }\n              img.set({srcUrl:imageUrl});\n              canvas.requestRenderAll();\n              scheduleSave(true);`;
+const newUploadLine=`              const imageUrl = await ref.getDownloadURL();\n              if (typeof img.setSrc === "function") {\n                await new Promise(resolve => img.setSrc(imageUrl, () => resolve()));\n              } else {\n                img.set({src:imageUrl});\n              }\n              img.set({srcUrl:imageUrl});\n              canvas.requestRenderAll();\n              suppressSave = previousImageSaveSuppress;\n              scheduleSave(true);`;
 if(s.includes(oldUploadLine))s=s.replace(oldUploadLine,newUploadLine);
 
-/* Do not let the first object:added event serialize the raw Base64 image while
-   its Storage upload is still running. The image is saved immediately after
-   upload (or after the fallback error path). */
 const oldReaderStart=`    reader.onload = () => {\n      const dataUrl = reader.result;`;
 const newReaderStart=`    reader.onload = () => {\n      const dataUrl = reader.result;\n      const previousImageSaveSuppress = suppressSave;\n      suppressSave = true;`;
 if(s.includes(oldReaderStart))s=s.replace(oldReaderStart,newReaderStart);
-
-const noFirebaseLine=`          if (FIREBASE_READY && storage) {`;
-const noFirebaseInsert=`          if (FIREBASE_READY && storage) {`;
-
-/* Release the save lock in every image completion path. */
-const successNeedle=`              canvas.requestRenderAll();\n              scheduleSave(true);\n            } catch (err) {`;
-const successReplacement=`              canvas.requestRenderAll();\n              suppressSave = previousImageSaveSuppress;\n              scheduleSave(true);\n            } catch (err) {`;
-if(s.includes(successNeedle))s=s.replace(successNeedle,successReplacement);
 
 const catchNeedle=`            } catch (err) {\n              console.error('Image Storage upload failed:', err);\n              setSaveState('error', 'Image added locally — Firebase Storage failed');\n            }\n          }\n        } catch (err) {`;
 const catchReplacement=`            } catch (err) {\n              console.error('Image Storage upload failed:', err);\n              setSaveState('error', 'Image added locally — Firebase Storage failed');\n              suppressSave = previousImageSaveSuppress;\n              scheduleSave(true);\n            }\n          } else {\n            suppressSave = previousImageSaveSuppress;\n            scheduleSave(true);\n          }\n        } catch (err) {`;
@@ -75,5 +58,9 @@ const outerCatchNeedle=`        } catch (err) {\n          console.error('Image 
 const outerCatchReplacement=`        } catch (err) {\n          console.error('Image add failed:', err);\n          suppressSave = previousImageSaveSuppress;\n          setSaveState('error', 'Could not add image');\n          scheduleSave(true);\n        }`;
 if(s.includes(outerCatchNeedle))s=s.replace(outerCatchNeedle,outerCatchReplacement);
 
+const decodeNeedle=`      imgEl.onerror = (err) => {\n        console.error('Image decode failed:', err);\n        setSaveState('error', 'Could not load image');\n        resolve();\n      };`;
+const decodeReplacement=`      imgEl.onerror = (err) => {\n        console.error('Image decode failed:', err);\n        suppressSave = previousImageSaveSuppress;\n        setSaveState('error', 'Could not load image');\n        resolve();\n      };`;
+if(s.includes(decodeNeedle))s=s.replace(decodeNeedle,decodeReplacement);
+
 fs.writeFileSync(file,s,"utf8");
-console.log("CanvasFlow: autosave no longer serializes large Base64 image sources.");
+console.log("CanvasFlow: fast autosave image handling installed.");
