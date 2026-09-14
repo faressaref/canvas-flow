@@ -5,7 +5,7 @@ let s = fs.readFileSync(file, "utf8");
 
 const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
   function mobile(){
-    return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && Math.min(window.innerWidth,window.innerHeight) <= 700;
+    return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && Math.min(window.innerWidth,window.innerHeight) <= 900;
   }
   function boot(){
     if(!mobile()){ document.body.classList.remove('canvasflow-mobile-ai'); return; }
@@ -14,6 +14,9 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
     const toggle=document.getElementById('aiToggle') || document.querySelector('[class*="ai-toggle"],[aria-label*="AI"],[title*="AI"]');
     if(!panel)return;
 
+    /* Do not intercept, replace, or stop the real AI toggle click. We only
+       reposition the panel after the app has opened/closed it. This is
+       important on touch devices in landscape mode. */
     let resizeBtn=panel.querySelector('[data-canvasflow-ai-resize]');
     if(!resizeBtn){
       resizeBtn=document.createElement('button');
@@ -51,9 +54,9 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
 
     panel.classList.add('canvasflow-mobile-ai-ready');
     requestPosition();
-    if(toggle)toggle.addEventListener('click',()=>setTimeout(requestPosition,0));
+    if(toggle)toggle.addEventListener('click',function(){setTimeout(requestPosition,0);});
     window.addEventListener('resize',requestPosition,{passive:true});
-    window.addEventListener('orientationchange',()=>setTimeout(requestPosition,80),{passive:true});
+    window.addEventListener('orientationchange',function(){setTimeout(requestPosition,80);},{passive:true});
     new MutationObserver(requestPosition).observe(panel,{attributes:true,attributeFilter:['class','style']});
   }
   boot();
@@ -113,4 +116,4 @@ body.canvasflow-mobile-ai .ai-panel[data-canvasflow-ai-size="compact"]{width:min
 if(!s.includes('id="canvasflow-mobile-ai-panel-css"'))s=s.replace('</head>',css+'\n</head>');
 
 fs.writeFileSync(file,s,'utf8');
-console.log('CanvasFlow: mobile-only AI panel positioning and resize control installed.');
+console.log('CanvasFlow: AI toggle kept native; mobile landscape positioning fixed.');
