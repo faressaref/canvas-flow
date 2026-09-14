@@ -37,11 +37,10 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
       e.preventDefault();e.stopPropagation();
     },{passive:false});
     handle.addEventListener('pointermove',function(e){
-      if(!resizing){if(Math.hypot(e.clientX-startX,e.clientY-startY)>10)clearTimer();return;}
+      if(!resizing){if(Math.hypot(e.clientX-startX,e.clientY-startY)>14)clearTimer();return;}
       if(e.pointerId!==pointerId)return;
       const dx=e.clientX-startX,dy=e.clientY-startY;
       const minW=220,minH=150,maxW=Math.max(minW,window.innerWidth-16),maxH=Math.max(minH,window.innerHeight-16);
-      // Top-left handle: dragging left/up grows the panel; right/down shrinks it.
       const w=Math.max(minW,Math.min(maxW,startW-dx));
       const h=Math.max(minH,Math.min(maxH,startH-dy));
       panel.style.setProperty('width',w+'px','important');
@@ -91,11 +90,12 @@ else s=s.replace('</body>',injected+'\n</body>');
 
 const css=`
 <style id="canvasflow-mobile-ai-panel-css">
-body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{z-index:90 !important;}
+/* Mobile AI must sit above the whiteboard and all interactive elements. */
+body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{z-index:99999 !important;}
 body.canvasflow-mobile-ai #aiPanel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai .ai-panel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai [class*="ai-panel"].canvasflow-mobile-ai-ready{transform:none !important;}
 body.canvasflow-mobile-ai [data-canvasflow-ai-resize]{
  position:absolute !important;left:5px !important;top:5px !important;right:auto !important;bottom:auto !important;
- width:32px !important;height:32px !important;z-index:9999 !important;display:flex !important;
+ width:32px !important;height:32px !important;z-index:999999 !important;display:flex !important;
  align-items:flex-start !important;justify-content:flex-start !important;cursor:nwse-resize !important;
  touch-action:none !important;user-select:none !important;-webkit-user-select:none !important;
  background:transparent !important;border:0 !important;padding:0 !important;
@@ -110,5 +110,5 @@ body.canvasflow-mobile-ai [data-canvasflow-ai-resize].active span{opacity:1 !imp
 </style>`;
 if(!s.includes('id="canvasflow-mobile-ai-panel-css"'))s=s.replace('</head>',css+'\n</head>');
 
-fs.writeFileSync(file,'utf8'=== 'utf8' ? s : s);
-console.log('CanvasFlow: mobile AI resize handle moved to top-left.');
+fs.writeFileSync(file,s);
+console.log('CanvasFlow: mobile AI panel is forced above whiteboard elements.');
