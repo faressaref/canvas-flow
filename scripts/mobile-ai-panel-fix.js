@@ -12,11 +12,9 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
     document.body.classList.add('canvasflow-mobile-ai');
     const panel=document.getElementById('aiPanel') || document.querySelector('.ai-panel,[class*="ai-panel"]');
     const toggle=document.getElementById('aiToggle') || document.querySelector('[class*="ai-toggle"],[aria-label*="AI"],[title*="AI"]');
-    if(!panel)return;
+    if(!panel || panel.dataset.canvasflowMobileAiInstalled==='1')return;
+    panel.dataset.canvasflowMobileAiInstalled='1';
 
-    /* Do not intercept, replace, or stop the real AI toggle click. We only
-       reposition the panel after the app has opened/closed it. This is
-       important on touch devices in landscape mode. */
     let resizeBtn=panel.querySelector('[data-canvasflow-ai-resize]');
     if(!resizeBtn){
       resizeBtn=document.createElement('button');
@@ -27,7 +25,8 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
       resizeBtn.textContent='↗';
       panel.appendChild(resizeBtn);
       resizeBtn.addEventListener('click',function(e){
-        e.preventDefault();e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
         const sizes=['normal','large','compact'];
         const current=panel.dataset.canvasflowAiSize||'normal';
         const next=sizes[(sizes.indexOf(current)+1)%sizes.length];
@@ -38,26 +37,31 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
     }
 
     function position(){
-      if(!mobile()||!panel.classList.contains('open'))return;
+      if(!mobile())return;
+      const cs=getComputedStyle(panel);
+      const rect=panel.getBoundingClientRect();
+      const visible=cs.display!=='none' && cs.visibility!=='hidden' && rect.width>0 && rect.height>0;
+      if(!visible)return;
       if(toggle){
         const r=toggle.getBoundingClientRect();
-        panel.style.position='fixed';
-        panel.style.left=Math.max(8,Math.min(r.left,window.innerWidth-panel.offsetWidth-8))+'px';
-        panel.style.bottom=Math.max(8,window.innerHeight-r.top+8)+'px';
-        panel.style.top='auto';
+        const width=panel.offsetWidth||330;
+        const left=Math.max(8,Math.min(r.left,window.innerWidth-width-8));
+        const bottom=Math.max(8,window.innerHeight-r.top+8);
+        panel.style.setProperty('position','fixed','important');
+        panel.style.setProperty('left',left+'px','important');
+        panel.style.setProperty('bottom',bottom+'px','important');
+        panel.style.setProperty('top','auto','important');
       }
-      const maxH=Math.max(160,window.innerHeight-(parseFloat(panel.style.bottom)||8)-8);
-      panel.style.maxHeight=Math.min(maxH,window.innerHeight-16)+'px';
-      panel.style.overflowY='auto';
+      panel.style.setProperty('max-height',Math.max(160,window.innerHeight-16)+'px','important');
+      panel.style.setProperty('overflow-y','auto','important');
     }
     function requestPosition(){requestAnimationFrame(position)}
 
     panel.classList.add('canvasflow-mobile-ai-ready');
-    requestPosition();
-    if(toggle)toggle.addEventListener('click',function(){setTimeout(requestPosition,0);});
+    if(toggle)toggle.addEventListener('click',function(){setTimeout(requestPosition,50);});
     window.addEventListener('resize',requestPosition,{passive:true});
-    window.addEventListener('orientationchange',function(){setTimeout(requestPosition,80);},{passive:true});
-    new MutationObserver(requestPosition).observe(panel,{attributes:true,attributeFilter:['class','style']});
+    window.addEventListener('orientationchange',function(){setTimeout(requestPosition,100);},{passive:true});
+    requestPosition();
   }
   boot();
   setTimeout(boot,250);
@@ -116,4 +120,4 @@ body.canvasflow-mobile-ai .ai-panel[data-canvasflow-ai-size="compact"]{width:min
 if(!s.includes('id="canvasflow-mobile-ai-panel-css"'))s=s.replace('</head>',css+'\n</head>');
 
 fs.writeFileSync(file,s,'utf8');
-console.log('CanvasFlow: AI toggle kept native; mobile landscape positioning fixed.');
+console.log('CanvasFlow: mobile AI event loop removed; native toggle preserved.');
