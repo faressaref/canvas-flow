@@ -4,9 +4,7 @@ const file = "public/index.html";
 let s = fs.readFileSync(file, "utf8");
 
 const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
-  function mobile(){
-    return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && Math.min(window.innerWidth,window.innerHeight) <= 900;
-  }
+  function mobile(){return ('ontouchstart' in window || navigator.maxTouchPoints>0) && Math.min(window.innerWidth,window.innerHeight)<=900;}
   function boot(){
     if(!mobile()){document.body.classList.remove('canvasflow-mobile-ai');return;}
     document.body.classList.add('canvasflow-mobile-ai');
@@ -15,28 +13,26 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
     if(!panel || panel.dataset.canvasflowMobileAiInstalled==='1')return;
     panel.dataset.canvasflowMobileAiInstalled='1';
 
-    // Remove the old top-left button from previous mobile fixes.
-    panel.querySelectorAll('[data-canvasflow-ai-resize]').forEach(function(el){el.remove();});
-
+    panel.querySelectorAll('[data-canvasflow-ai-resize],[data-canvasflow-ai-corner-resize]').forEach(el=>el.remove());
     const handle=document.createElement('div');
-    handle.setAttribute('data-canvasflow-ai-corner-resize','1');
+    handle.setAttribute('data-canvasflow-ai-resize','1');
     handle.setAttribute('aria-label','اضغط مطولاً واسحب لتغيير حجم قائمة AI');
-    handle.title='اضغط مطولاً واسحب';
+    handle.title='اضغط مطولاً واسحب لتغيير الحجم';
     handle.innerHTML='<span></span>';
     panel.appendChild(handle);
 
-    let timer=null, resizing=false, pointerId=null, startX=0, startY=0, startW=0, startH=0;
+    let timer=null,resizing=false,pointerId=null,startX=0,startY=0,startW=0,startH=0;
     function clearTimer(){if(timer){clearTimeout(timer);timer=null;}}
     function begin(e){
       if(!mobile())return;
-      resizing=true; pointerId=e.pointerId; startX=e.clientX; startY=e.clientY;
-      const r=panel.getBoundingClientRect(); startW=r.width; startH=r.height;
+      resizing=true;pointerId=e.pointerId;startX=e.clientX;startY=e.clientY;
+      const r=panel.getBoundingClientRect();startW=r.width;startH=r.height;
       handle.classList.add('active');
       try{handle.setPointerCapture(pointerId);}catch(_){ }
       e.preventDefault();e.stopPropagation();
     }
     handle.addEventListener('pointerdown',function(e){
-      clearTimer(); pointerId=e.pointerId; startX=e.clientX; startY=e.clientY;
+      clearTimer();pointerId=e.pointerId;startX=e.clientX;startY=e.clientY;
       timer=setTimeout(function(){begin(e);},450);
       e.preventDefault();e.stopPropagation();
     },{passive:false});
@@ -45,9 +41,9 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
       if(e.pointerId!==pointerId)return;
       const dx=e.clientX-startX,dy=e.clientY-startY;
       const minW=220,minH=150,maxW=Math.max(minW,window.innerWidth-16),maxH=Math.max(minH,window.innerHeight-16);
-      // Bottom-right handle: dragging right/down grows the panel, left/up shrinks it.
-      const w=Math.max(minW,Math.min(maxW,startW+dx));
-      const h=Math.max(minH,Math.min(maxH,startH+dy));
+      // Top-left handle: dragging left/up grows the panel; right/down shrinks it.
+      const w=Math.max(minW,Math.min(maxW,startW-dx));
+      const h=Math.max(minH,Math.min(maxH,startH-dy));
       panel.style.setProperty('width',w+'px','important');
       panel.style.setProperty('height',h+'px','important');
       panel.style.setProperty('max-height',maxH+'px','important');
@@ -97,22 +93,22 @@ const css=`
 <style id="canvasflow-mobile-ai-panel-css">
 body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{z-index:90 !important;}
 body.canvasflow-mobile-ai #aiPanel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai .ai-panel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai [class*="ai-panel"].canvasflow-mobile-ai-ready{transform:none !important;}
-body.canvasflow-mobile-ai [data-canvasflow-ai-corner-resize]{
- position:absolute !important;right:5px !important;bottom:5px !important;left:auto !important;top:auto !important;
- width:30px !important;height:30px !important;z-index:9999 !important;display:flex !important;
- align-items:flex-end !important;justify-content:flex-end !important;cursor:se-resize !important;
+body.canvasflow-mobile-ai [data-canvasflow-ai-resize]{
+ position:absolute !important;left:5px !important;top:5px !important;right:auto !important;bottom:auto !important;
+ width:32px !important;height:32px !important;z-index:9999 !important;display:flex !important;
+ align-items:flex-start !important;justify-content:flex-start !important;cursor:nwse-resize !important;
  touch-action:none !important;user-select:none !important;-webkit-user-select:none !important;
  background:transparent !important;border:0 !important;padding:0 !important;
 }
-body.canvasflow-mobile-ai [data-canvasflow-ai-corner-resize] span{
+body.canvasflow-mobile-ai [data-canvasflow-ai-resize] span{
  display:block !important;width:22px !important;height:22px !important;
- border-right:3px solid #697383 !important;border-bottom:3px solid #697383 !important;
- border-radius:0 0 4px 0 !important;opacity:.75 !important;
+ border-left:3px solid #697383 !important;border-top:3px solid #697383 !important;
+ border-radius:4px 0 0 0 !important;opacity:.75 !important;
 }
-body.canvasflow-mobile-ai [data-canvasflow-ai-corner-resize].active span{opacity:1 !important;transform:scale(1.12) !important;}
+body.canvasflow-mobile-ai [data-canvasflow-ai-resize].active span{opacity:1 !important;transform:scale(1.12) !important;}
 @media (max-height:500px){body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{max-height:calc(100dvh - 16px) !important;}}
 </style>`;
 if(!s.includes('id="canvasflow-mobile-ai-panel-css"'))s=s.replace('</head>',css+'\n</head>');
 
-fs.writeFileSync(file,s,'utf8');
-console.log('CanvasFlow: mobile AI panel now uses bottom-right long-press resize handle.');
+fs.writeFileSync(file,'utf8'=== 'utf8' ? s : s);
+console.log('CanvasFlow: mobile AI resize handle moved to top-left.');
