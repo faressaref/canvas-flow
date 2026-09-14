@@ -20,24 +20,87 @@ const injected = `<script id="canvasflow-mobile-ai-panel-fix">(function(){
       resizeBtn=document.createElement('button');
       resizeBtn.type='button';
       resizeBtn.setAttribute('data-canvasflow-ai-resize','1');
-      resizeBtn.setAttribute('aria-label','تغيير حجم قائمة AI');
-      resizeBtn.title='تغيير حجم القائمة';
+      resizeBtn.setAttribute('aria-label','الضغط المطول والسحب لتغيير حجم قائمة AI');
+      resizeBtn.title='اضغط مطولاً واسحب للتحكم في الحجم';
       resizeBtn.textContent='↗';
       panel.appendChild(resizeBtn);
     }
 
-    function resizePanel(e){
+    let pressTimer=null;
+    let resizing=false;
+    let pointerId=null;
+    let startX=0;
+    let startY=0;
+    let startW=0;
+    let startH=0;
+    let suppressClickUntil=0;
+
+    function stopPress(){
+      if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}
+    }
+    function startResize(e){
+      if(!mobile())return;
+      resizing=true;
+      pointerId=e.pointerId;
+      startX=e.clientX;
+      startY=e.clientY;
+      const r=panel.getBoundingClientRect();
+      startW=r.width;
+      startH=r.height;
+      resizeBtn.classList.add('canvasflow-ai-resizing');
+      suppressClickUntil=Date.now()+500;
+      try{resizeBtn.setPointerCapture(pointerId);}catch(_){ }
       e.preventDefault();
       e.stopPropagation();
-      const sizes=['normal','large','compact'];
-      const current=panel.dataset.canvasflowAiSize||'normal';
-      const next=sizes[(sizes.indexOf(current)+1)%sizes.length];
-      panel.dataset.canvasflowAiSize=next;
-      resizeBtn.textContent=next==='compact'?'↘':next==='large'?'↙':'↗';
-      requestPosition();
     }
-    resizeBtn.addEventListener('click',resizePanel);
-    resizeBtn.addEventListener('pointerup',resizePanel);
+    function resizeMove(e){
+      if(!resizing || e.pointerId!==pointerId)return;
+      const dx=e.clientX-startX;
+      const dy=e.clientY-startY;
+      const maxW=Math.max(260,window.innerWidth-16);
+      const maxH=Math.max(180,window.innerHeight-16);
+      const minW=220;
+      const minH=150;
+      const newW=Math.max(minW,Math.min(maxW,startW-dx));
+      const newH=Math.max(minH,Math.min(maxH,startH-dy));
+      panel.dataset.canvasflowAiSize='custom';
+      panel.style.setProperty('width',newW+'px','important');
+      panel.style.setProperty('height',newH+'px','important');
+      panel.style.setProperty('max-height',maxH+'px','important');
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    function endResize(e){
+      if(!resizing || (e.pointerId!=null && e.pointerId!==pointerId))return;
+      resizing=false;
+      pointerId=null;
+      stopPress();
+      resizeBtn.classList.remove('canvasflow-ai-resizing');
+      try{resizeBtn.releasePointerCapture(e.pointerId);}catch(_){ }
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    resizeBtn.addEventListener('pointerdown',function(e){
+      if(!mobile())return;
+      stopPress();
+      pointerId=e.pointerId;
+      pressTimer=setTimeout(function(){startResize(e);},350);
+      e.preventDefault();
+      e.stopPropagation();
+    },{passive:false});
+    resizeBtn.addEventListener('pointermove',function(e){
+      if(!resizing){
+        if(Math.abs(e.clientX-startX)>8 || Math.abs(e.clientY-startY)>8)stopPress();
+        return;
+      }
+      resizeMove(e);
+    },{passive:false});
+    resizeBtn.addEventListener('pointerup',endResize,{passive:false});
+    resizeBtn.addEventListener('pointercancel',endResize,{passive:false});
+    resizeBtn.addEventListener('click',function(e){
+      if(Date.now()<suppressClickUntil){e.preventDefault();e.stopPropagation();}
+    },true);
 
     function position(){
       if(!mobile())return;
@@ -87,7 +150,11 @@ body.canvasflow-mobile-ai [data-canvasflow-ai-resize]{
   border:1px solid #dfe4ea !important; border-radius:7px !important; background:#fff !important;
   color:#39424e !important; box-shadow:0 3px 10px rgba(0,0,0,.10) !important;
   display:flex !important; align-items:center !important; justify-content:center !important;
-  font-size:15px !important; cursor:pointer !important; touch-action:manipulation !important;
+  font-size:15px !important; cursor:grab !important; touch-action:none !important;
+  user-select:none !important; -webkit-user-select:none !important;
+}
+body.canvasflow-mobile-ai [data-canvasflow-ai-resize].canvasflow-ai-resizing{
+  cursor:grabbing !important; transform:scale(1.06) !important;
 }
 body.canvasflow-mobile-ai #aiPanel[data-canvasflow-ai-size="normal"],
 body.canvasflow-mobile-ai .ai-panel[data-canvasflow-ai-size="normal"]{width:min(330px,calc(100vw - 16px)) !important;}
@@ -104,4 +171,4 @@ body.canvasflow-mobile-ai .ai-panel[data-canvasflow-ai-size="compact"]{width:min
 if(!s.includes('id="canvasflow-mobile-ai-panel-css"'))s=s.replace('</head>',css+'\n</head>');
 
 fs.writeFileSync(file,s,'utf8');
-console.log('CanvasFlow: mobile AI resize control fixed.');
+console.log('CanvasFlow: mobile AI resize handle now uses long-press + drag.');
