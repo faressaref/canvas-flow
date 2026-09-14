@@ -91,9 +91,9 @@ const css=`
 <style id="canvasflow-mobile-ai-panel-css">
 body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{z-index:99999 !important;}
 body.canvasflow-mobile-ai #aiPanel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai .ai-panel.canvasflow-mobile-ai-ready,body.canvasflow-mobile-ai [class*="ai-panel"].canvasflow-mobile-ai-ready{transform:none !important;}
-/* Keep the mobile AI window short so the controls underneath remain visible. */
+/* Mobile only: keep the AI window compact so the controls underneath stay visible. */
 body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{
- height:52dvh !important;max-height:52dvh !important;overflow-y:auto !important;
+ height:35dvh !important;max-height:35dvh !important;overflow-y:auto !important;
 }
 body.canvasflow-mobile-ai [data-canvasflow-ai-resize]{
  position:absolute !important;left:5px !important;top:5px !important;right:auto !important;bottom:auto !important;
@@ -110,7 +110,7 @@ body.canvasflow-mobile-ai [data-canvasflow-ai-resize] span{
 body.canvasflow-mobile-ai [data-canvasflow-ai-resize].active span{opacity:1 !important;transform:scale(1.12) !important;}
 @media (orientation:landscape) and (max-width:900px){
  body.canvasflow-mobile-ai #aiPanel,body.canvasflow-mobile-ai .ai-panel,body.canvasflow-mobile-ai [class*="ai-panel"]{
-  height:45dvh !important;max-height:45dvh !important;
+  height:30dvh !important;max-height:30dvh !important;
  }
 }
 </style>`;
@@ -125,4 +125,4 @@ if(cssStart>=0){
 }
 
 fs.writeFileSync(file,s);
-console.log('CanvasFlow: mobile AI panel height fixed and CSS replacement enabled.');
+console.log('CanvasFlow: reduced mobile AI panel height.');
