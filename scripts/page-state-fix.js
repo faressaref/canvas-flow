@@ -5,7 +5,8 @@ let s = fs.readFileSync(file, "utf8");
 
 const injected = `<script id="canvasflow-page-state-fix">(function(){
   /* Keep page state authoritative without repeatedly serializing the entire
-     canvas. Sync immediately before both local and cloud saves. */
+     canvas. Images are uploaded to Storage first; never push their temporary
+     base64 payload into localStorage during upload. */
   function boot(){
     try {
       if (typeof canvas === "undefined" || !canvas || typeof boardPages === "undefined") {
@@ -22,22 +23,28 @@ const injected = `<script id="canvasflow-page-state-fix">(function(){
         try { return canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]); }
         catch (e) { console.warn("CanvasFlow: page snapshot failed", e); return null; }
       }
+      function hasTemporaryDataImages(snap){
+        return !!(snap && Array.isArray(snap.objects) && snap.objects.some(o =>
+          o && typeof o.src === "string" && o.src.indexOf("data:image/") === 0 &&
+          !(typeof o.srcUrl === "string" && /^https?:\\/\\//i.test(o.srcUrl))
+        ));
+      }
       function syncNow(){
         if (restoring || typeof boardPageIndex !== "number") return;
         const snap = snapshot();
         if (!snap) return;
         try {
           boardPages[boardPageIndex] = snap;
-          /* scheduleSave() runs before this listener on Fabric events, so also
-             refresh the local draft here. The next debounced cloud save reads
-             the same authoritative boardPages state. */
-          if (typeof saveLocalDraft === "function" && !suppressSave) saveLocalDraft();
+          /* Do not write a huge temporary image into localStorage while the
+             Storage upload is still running. The image-persisted event below
+             performs the first durable local sync after the URL is ready. */
+          if (typeof saveLocalDraft === "function" && !suppressSave && !hasTemporaryDataImages(snap)) saveLocalDraft();
         } catch (e) { console.warn("CanvasFlow: page state sync failed", e); }
       }
       function syncSoon(){
         if (restoring) return;
         clearTimeout(syncTimer);
-        syncTimer = setTimeout(syncNow, 0);
+        syncTimer = setTimeout(syncNow, 60);
       }
 
       ["object:added","object:modified","object:removed","path:created","text:changed"]
@@ -64,15 +71,13 @@ const injected = `<script id="canvasflow-page-state-fix">(function(){
         }
       };
 
-      /* Guests keep a durable local draft too. If the user refreshes while
-         already inside the app, restore the latest local board automatically. */
       if (!currentUser && localStorage.getItem("canvasflow-app-entered") === "1" &&
           !canvas.getObjects().length && typeof restoreLocalDraft === "function") {
         restoreLocalDraft();
       }
 
       syncNow();
-      console.log("CanvasFlow: reliable page-state persistence installed");
+      console.log("CanvasFlow: fast page-state persistence installed");
     } catch (e) {
       console.warn("CanvasFlow: page-state fix boot failed", e);
       setTimeout(boot, 500);
@@ -91,4 +96,4 @@ if (start >= 0) {
 }
 
 fs.writeFileSync(file, s, "utf8");
-console.log("CanvasFlow: reliable page-state persistence installed.");
+console.log("CanvasFlow: fast page-state persistence installed.");
