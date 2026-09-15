@@ -3,75 +3,61 @@ import fs from "node:fs";
 const file = "public/index.html";
 let s = fs.readFileSync(file, "utf8");
 
+// Images must NEVER be autosaved as base64 while they are still uploading.
+// The old patch depended on exact indentation and therefore often missed the
+// real upload block. Use small, anchored replacements instead.
+const marker = '<script id="canvasflow-image-persistence-fix">';
 const injected = `<script id="canvasflow-image-persistence-fix">(function(){
-  const MAX_PAGE_FIELD=700*1024;
-  const isDataImage=u=>typeof u==="string"&&u.indexOf("data:image/")===0;
+  // Safety net for legacy boards: if an image already has a permanent Storage
+  // URL, make Fabric deserialize/render from that URL instead of stale base64.
   const isHttp=u=>typeof u==="string"&&/^https?:\\/\\//i.test(u);
-  const byteSize=v=>{try{return new Blob([typeof v==="string"?v:JSON.stringify(v)]).size}catch(_){return String(v||"").length*2}};
-  function loadImage(u){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error("تعذر تجهيز الصورة للحفظ"));im.src=u})}
-  function blobToDataUrl(b){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(b)})}
-  async function compressImage(u,maxSide,q){try{const im=await loadImage(u),ow=im.naturalWidth||im.width||1,oh=im.naturalHeight||im.height||1,scale=Math.min(1,maxSide/Math.max(ow,oh)),nw=Math.max(1,Math.round(ow*scale)),nh=Math.max(1,Math.round(oh*scale)),c=document.createElement("canvas");c.width=nw;c.height=nh;const ctx=c.getContext("2d");if(!ctx)return null;ctx.drawImage(im,0,0,nw,nh);const b=await new Promise(r=>c.toBlob(r,"image/webp",q));return b?{dataUrl:await blobToDataUrl(b),nw,nh,size:b.size}:null}catch(e){console.warn("CanvasFlow: image compression failed",e);return null}}
-  async function prepareObject(o){
-    if(!o)return;
-    if(isHttp(o.srcUrl)){o.src=o.srcUrl;return}
-    if(!isDataImage(o.src))return;
-    const oldW=Number(o.width)||1,oldH=Number(o.height)||1,oldSX=Number(o.scaleX)||1,oldSY=Number(o.scaleY)||1;
-    for(const pair of [[1200,.58],[1000,.45],[850,.34],[720,.26]]){const r=await compressImage(o.src,pair[0],pair[1]);if(r){o.src=r.dataUrl;o.width=r.nw;o.height=r.nh;o.scaleX=(oldW*oldSX)/r.nw;o.scaleY=(oldH*oldSY)/r.nh;break}}
-    if(isDataImage(o.srcUrl))delete o.srcUrl;
-  }
-  async function preparePages(pages){
-    if(!Array.isArray(pages))return pages;
-    let hasData=false;
-    for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects){if(o&&isDataImage(o.src)){hasData=true;break}}if(hasData)break}
-    if(!hasData){for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects){if(o&&isHttp(o.srcUrl))o.src=o.srcUrl}}return pages}
-    for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects)await prepareObject(o)}
-    if(byteSize(pages)>MAX_PAGE_FIELD){for(const p of pages){if(!p||!Array.isArray(p.objects))continue;for(const o of p.objects){if(!o||!isDataImage(o.src))continue;const oldW=Number(o.width)||1,oldH=Number(o.height)||1,oldSX=Number(o.scaleX)||1,oldSY=Number(o.scaleY)||1,r=await compressImage(o.src,520,.16);if(r){o.src=r.dataUrl;o.width=r.nw;o.height=r.nh;o.scaleX=(oldW*oldSX)/r.nw;o.scaleY=(oldH*oldSY)/r.nh}}}}
+  window.canvasflowPrepareFirestorePages=async function(pages){
+    if(!Array.isArray(pages)) return pages;
+    for(const p of pages){
+      if(!p||!Array.isArray(p.objects)) continue;
+      for(const o of p.objects){
+        if(o&&isHttp(o.srcUrl)) o.src=o.srcUrl;
+      }
+    }
     return pages;
-  }
-  window.canvasflowPrepareFirestorePages=preparePages;
-  console.log("CanvasFlow: fast image persistence fix installed");
+  };
+  console.log("CanvasFlow: reliable image persistence fix installed");
 })();</script>`;
 
-const marker='<script id="canvasflow-image-persistence-fix">';
 const start=s.indexOf(marker);
-if(start>=0){const end=s.indexOf("</script>",start);if(end>=0)s=s.slice(0,start)+injected+s.slice(end+9)}else{s=s.replace("</body>",injected+"\n</body>")}
+if(start>=0){
+  const end=s.indexOf("</script>",start);
+  if(end>=0) s=s.slice(0,start)+injected+s.slice(end+9);
+} else {
+  s=s.replace("</body>",injected+"\n</body>");
+}
 
-const prepareBlock=`    let pagesForSave = boardPages;\n    if (typeof window.canvasflowPrepareFirestorePages === "function") {\n      pagesForSave = await window.canvasflowPrepareFirestorePages(boardPages);\n    }`;
-const exactBase=`    const currentPageJson = canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]);\n    boardPages[boardPageIndex] = currentPageJson;`;
-if(s.includes(exactBase) && !s.includes("let pagesForSave = boardPages;"))s=s.replace(exactBase,exactBase+"\n\n"+prepareBlock);
-s=s.replace('const pagesJson = boardPages.map((pg, i) => {','const pagesJson = pagesForSave.map((pg, i) => {');
-s=s.replace('      canvas: canvasJson,\n      pages: pagesJson,','      canvas: "",\n      pages: pagesJson,');
+// 1) Stop putting the temporary base64 URL into the custom srcUrl field.
+// Fabric's internal src is still used only in-memory until Storage finishes.
+s=s.replace(/objectRole:\s*'image',\s*fileName:\s*file\.name,\s*srcUrl:\s*dataUrl,/, "objectRole: 'image', fileName: file.name,");
+s=s.replace(/objectRole:\s*"image",\s*fileName:\s*file\.name,\s*srcUrl:\s*dataUrl,/, 'objectRole: "image", fileName: file.name,');
 
-const oldUploadLine=`              img.set({srcUrl: await ref.getDownloadURL()});\n              canvas.requestRenderAll();\n              scheduleSave(true);`;
-const newUploadLine=`              const imageUrl = await ref.getDownloadURL();\n              if (typeof img.setSrc === "function") {\n                await new Promise(resolve => img.setSrc(imageUrl, () => resolve()));\n              } else {\n                img.set({src:imageUrl});\n              }\n              img.set({srcUrl:imageUrl});\n              canvas.requestRenderAll();\n              suppressSave = previousImageSaveSuppress;\n              scheduleSave(true);`;
-if(s.includes(oldUploadLine))s=s.replace(oldUploadLine,newUploadLine);
+// 2) Lock autosave BEFORE canvas.add(img), so object:added/page-state cannot
+// serialize the huge temporary data URL.
+const addNeedle = `          img.scale(scale);\n          canvas.add(img);\n          canvas.setActiveObject(img);\n          canvas.setCursor('default');\n          canvas.requestRenderAll();\n          scheduleSave(true);\n          pendingImagePoint = null;`;
+const addReplacement = `          img.scale(scale);\n          const previousImageSaveSuppress = suppressSave;\n          suppressSave = true;\n          canvas.add(img);\n          canvas.setActiveObject(img);\n          canvas.setCursor('default');\n          canvas.requestRenderAll();\n          pendingImagePoint = null;`;
+if(s.includes(addNeedle)) s=s.replace(addNeedle,addReplacement);
 
-const oldReaderStart=`    reader.onload = () => {\n      const dataUrl = reader.result;`;
-const newReaderStart=`    reader.onload = () => {\n      const dataUrl = reader.result;\n      const previousImageSaveSuppress = suppressSave;\n      suppressSave = true;`;
-if(s.includes(oldReaderStart))s=s.replace(oldReaderStart,newReaderStart);
+// 3) Once Storage succeeds, replace Fabric's actual image source with the
+// permanent URL. Setting only srcUrl was the core bug: Fabric kept serializing
+// the original base64 src.
+const uploadNeedle = `              await ref.put(file);\n              img.set({srcUrl: await ref.getDownloadURL()});\n              canvas.requestRenderAll();\n              scheduleSave(true);`;
+const uploadReplacement = `              await ref.put(file);\n              const imageUrl = await ref.getDownloadURL();\n              await new Promise((resolve, reject) => {\n                if (typeof img.setSrc !== 'function') {\n                  img.set({src:imageUrl});\n                  resolve();\n                  return;\n                }\n                img.setSrc(imageUrl, () => resolve());\n              });\n              img.set({srcUrl:imageUrl});\n              canvas.requestRenderAll();\n              suppressSave = previousImageSaveSuppress;\n              try { window.dispatchEvent(new CustomEvent('canvasflow:image-persisted')); } catch (_) {}\n              scheduleSave(true);`;
+if(s.includes(uploadNeedle)) s=s.replace(uploadNeedle,uploadReplacement);
 
-const catchNeedle=`            } catch (err) {\n              console.error('Image Storage upload failed:', err);\n              setSaveState('error', 'Image added locally — Firebase Storage failed');\n            }\n          }\n        } catch (err) {`;
-const catchReplacement=`            } catch (err) {\n              console.error('Image Storage upload failed:', err);\n              setSaveState('error', 'Image added locally — Firebase Storage failed');\n              suppressSave = previousImageSaveSuppress;\n              scheduleSave(true);\n            }\n          } else {\n            suppressSave = previousImageSaveSuppress;\n            scheduleSave(true);\n          }\n        } catch (err) {`;
-if(s.includes(catchNeedle))s=s.replace(catchNeedle,catchReplacement);
+// 4) Always release the lock on Storage failure or when Storage is unavailable.
+const catchNeedle = `            } catch (err) {\n              console.error('Image Storage upload failed:', err);\n              setSaveState('error', 'Image added locally — Firebase Storage failed');\n            }\n          }\n        } catch (err) {`;
+const catchReplacement = `            } catch (err) {\n              console.error('Image Storage upload failed:', err);\n              suppressSave = previousImageSaveSuppress;\n              setSaveState('error', 'Image added locally — Firebase Storage failed');\n              scheduleSave(true);\n            }\n          } else {\n            suppressSave = previousImageSaveSuppress;\n            scheduleSave(true);\n          }\n        } catch (err) {`;
+if(s.includes(catchNeedle)) s=s.replace(catchNeedle,catchReplacement);
 
-const outerCatchNeedle=`        } catch (err) {\n          console.error('Image add failed:', err);\n          setSaveState('error', 'Could not add image');\n        }`;
-const outerCatchReplacement=`        } catch (err) {\n          console.error('Image add failed:', err);\n          suppressSave = previousImageSaveSuppress;\n          setSaveState('error', 'Could not add image');\n          scheduleSave(true);\n        }`;
-if(s.includes(outerCatchNeedle))s=s.replace(outerCatchNeedle,outerCatchReplacement);
-
-const decodeNeedle=`      imgEl.onerror = (err) => {\n        console.error('Image decode failed:', err);\n        setSaveState('error', 'Could not load image');\n        resolve();\n      };`;
-const decodeReplacement=`      imgEl.onerror = (err) => {\n        console.error('Image decode failed:', err);\n        suppressSave = previousImageSaveSuppress;\n        setSaveState('error', 'Could not load image');\n        resolve();\n      };`;
-if(s.includes(decodeNeedle))s=s.replace(decodeNeedle,decodeReplacement);
-
-// Storage upload is not the Firestore save. Do not show the main "Saving" state
-// while a potentially large file is still uploading; scheduleSave() will update
-// the real save state after the permanent URL is available.
-const imageUploadSaving=`try {\n              setSaveState('saving');\n              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');\n              const ref = storage.ref('whiteboard-images/' + Date.now() + '_' + safeName);`;
-const imageUploadNoSaving=`try {\n              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');\n              const ref = storage.ref('whiteboard-images/' + Date.now() + '_' + safeName);`;
-if(s.includes(imageUploadSaving))s=s.replace(imageUploadSaving,imageUploadNoSaving);
-
-const fileUploadSaving=`try {\n              setSaveState("saving");\n              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");\n              const ref = storage.ref("whiteboard-files/" + Date.now() + "_" + safeName);`;
-const fileUploadNoSaving=`try {\n              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");\n              const ref = storage.ref("whiteboard-files/" + Date.now() + "_" + safeName);`;
-if(s.includes(fileUploadSaving))s=s.replace(fileUploadSaving,fileUploadNoSaving);
+const outerCatchNeedle = `        } catch (err) {\n          console.error('Image add failed:', err);\n          setSaveState('error', 'Could not add image');\n        }`;
+const outerCatchReplacement = `        } catch (err) {\n          console.error('Image add failed:', err);\n          try { suppressSave = previousImageSaveSuppress; } catch (_) {}\n          setSaveState('error', 'Could not add image');\n          scheduleSave(true);\n        }`;
+if(s.includes(outerCatchNeedle)) s=s.replace(outerCatchNeedle,outerCatchReplacement);
 
 fs.writeFileSync(file,s,"utf8");
-console.log("CanvasFlow: fast autosave image handling installed.");
+console.log("CanvasFlow: reliable image upload/save patch installed.");
