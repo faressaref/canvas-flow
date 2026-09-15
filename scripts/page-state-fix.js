@@ -5,8 +5,7 @@ let s = fs.readFileSync(file, "utf8");
 
 const injected = `<script id="canvasflow-page-state-fix">(function(){
   /* Keep page state authoritative without repeatedly serializing the entire
-     canvas. The previous 500ms poll was expensive for image-heavy boards and
-     could make Saving... appear stuck. */
+     canvas. Sync immediately before both local and cloud saves. */
   function boot(){
     try {
       if (typeof canvas === "undefined" || !canvas || typeof boardPages === "undefined") {
@@ -18,7 +17,6 @@ const injected = `<script id="canvasflow-page-state-fix">(function(){
 
       let restoring = false;
       let syncTimer = null;
-      let lastSnapshot = "";
 
       function snapshot(){
         try { return canvas.toJSON(["objectRole","srcUrl","nodeId","arrowHead"]); }
@@ -30,7 +28,10 @@ const injected = `<script id="canvasflow-page-state-fix">(function(){
         if (!snap) return;
         try {
           boardPages[boardPageIndex] = snap;
-          lastSnapshot = JSON.stringify(snap);
+          /* scheduleSave() runs before this listener on Fabric events, so also
+             refresh the local draft here. The next debounced cloud save reads
+             the same authoritative boardPages state. */
+          if (typeof saveLocalDraft === "function" && !suppressSave) saveLocalDraft();
         } catch (e) { console.warn("CanvasFlow: page state sync failed", e); }
       }
       function syncSoon(){
@@ -42,9 +43,6 @@ const injected = `<script id="canvasflow-page-state-fix">(function(){
       ["object:added","object:modified","object:removed","path:created","text:changed"]
         .forEach(eventName => canvas.on(eventName, syncSoon));
 
-      /* Explicitly sync after asynchronous image work. The image persistence
-         code calls scheduleSave after replacing the source with its permanent
-         URL, so no high-frequency polling is necessary. */
       window.addEventListener("canvasflow:image-persisted", syncSoon);
 
       const originalLoadFromJSON = canvas.loadFromJSON.bind(canvas);
@@ -57,7 +55,7 @@ const injected = `<script id="canvasflow-page-state-fix">(function(){
             } finally {
               restoring = false;
               const snap = snapshot();
-              if (snap) lastSnapshot = JSON.stringify(snap);
+              if (snap && typeof boardPageIndex === "number") boardPages[boardPageIndex] = snap;
             }
           }, reviver);
         } catch (e) {
@@ -67,7 +65,7 @@ const injected = `<script id="canvasflow-page-state-fix">(function(){
       };
 
       syncNow();
-      console.log("CanvasFlow: page-state persistence fix installed (no polling)");
+      console.log("CanvasFlow: reliable page-state persistence installed");
     } catch (e) {
       console.warn("CanvasFlow: page-state fix boot failed", e);
       setTimeout(boot, 500);
@@ -86,4 +84,4 @@ if (start >= 0) {
 }
 
 fs.writeFileSync(file, s, "utf8");
-console.log("CanvasFlow: page-state persistence fix installed without polling.");
+console.log("CanvasFlow: reliable page-state persistence installed.");
