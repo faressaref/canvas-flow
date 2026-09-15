@@ -18,12 +18,54 @@ const js = `<script id="canvasflow-mobile-ai-chat-fix">(function(){
 
     const composer=document.createElement('div');
     composer.id='canvasflowMobileChatComposer';
-    composer.innerHTML='<button type="button" class="cf-chat-image" title="رفع صور">＋</button><div class="cf-chat-input"></div><button type="button" class="cf-chat-send" title="إرسال">➤</button>';
+    composer.innerHTML='<button type="button" class="cf-chat-image" title="إرفاق صورة أو ملف">📎</button><div class="cf-chat-input"></div><button type="button" class="cf-chat-send" title="إرسال">➤</button>';
     composer.querySelector('.cf-chat-input').appendChild(input);
     body.appendChild(composer);
 
-    const imageBtn=composer.querySelector('.cf-chat-image');
-    imageBtn.onclick=e=>{e.preventDefault();e.stopPropagation();images?.click();};
+    // Chat-style attachment button. Images continue through the existing
+    // lessonImages pipeline; other files are shown as an attachment chip.
+    const attach=composer.querySelector('.cf-chat-image');
+    const fileInput=document.createElement('input');
+    fileInput.type='file';
+    fileInput.accept='image/*,.pdf,.txt,.doc,.docx,.ppt,.pptx';
+    fileInput.style.display='none';
+    fileInput.id='canvasflowChatFileInput';
+    document.body.appendChild(fileInput);
+
+    attach.onclick=e=>{
+      e.preventDefault();e.stopPropagation();
+      fileInput.value='';
+      fileInput.click();
+    };
+    fileInput.onchange=()=>{
+      const file=fileInput.files&&fileInput.files[0];
+      if(!file) return;
+      if(file.type.startsWith('image/')){
+        // Use the original image input so the existing AI image processing is untouched.
+        try{
+          const dt=new DataTransfer();
+          dt.items.add(file);
+          images.files=dt.files;
+          images.dispatchEvent(new Event('change',{bubbles:true}));
+        }catch(_){ images?.click(); }
+      }else{
+        let chip=document.getElementById('canvasflowChatAttachment');
+        if(!chip){
+          chip=document.createElement('div');
+          chip.id='canvasflowChatAttachment';
+          chip.className='cf-chat-attachment';
+          composer.parentElement.insertBefore(chip,composer);
+        }
+        chip.textContent='📎 '+file.name;
+        chip.title=file.name;
+        if(file.type==='text/plain'){
+          const reader=new FileReader();
+          reader.onload=()=>{input.value=String(reader.result||'').slice(0,12000);input.dispatchEvent(new Event('input',{bubbles:true}));};
+          reader.readAsText(file);
+        }
+      }
+    };
+
     composer.querySelector('.cf-chat-send').onclick=e=>{
       e.preventDefault();e.stopPropagation();
       const b=actions?.querySelector('[data-ai="explain"]');
@@ -33,7 +75,7 @@ const js = `<script id="canvasflow-mobile-ai-chat-fix">(function(){
     if(drop) drop.style.display='none';
     if(result){
       result.classList.add('cf-chat-messages');
-      if(result.classList.contains('empty')) result.textContent='ابدأ المحادثة 👋\nابعتلي الدرس أو ارفع صوره، واختار اللي عايزه من الأزرار فوق.';
+      if(result.classList.contains('empty')) result.textContent='ابدأ المحادثة 👋\nابعت سؤالك أو ارفع صورة/ملف من 📎.';
     }
     actions?.classList.add('cf-chat-actions');
   }
@@ -68,6 +110,7 @@ const css=`<style id="canvasflow-mobile-ai-chat-css">
   #canvasflowMobileChatComposer button{flex:0 0 32px!important;width:32px!important;height:32px!important;border:0!important;border-radius:10px!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;font-size:16px!important;cursor:pointer!important;}
   #canvasflowMobileChatComposer .cf-chat-image{background:#eef1f5!important;color:#39424e!important;}
   #canvasflowMobileChatComposer .cf-chat-send{background:#18202a!important;color:#fff!important;}
+  #canvasflowChatAttachment{flex:0 0 auto!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;border:1px solid #dfe4ea!important;border-radius:9px!important;background:#f7f8fa!important;padding:5px 8px!important;font-size:9px!important;color:#39424e!important;}
   #aiPanel .ai-footer{padding:5px 7px!important;flex:0 0 auto!important;}
   #aiPanel .ai-footer button{font-size:7px!important;padding:5px!important;}
   @media (orientation:landscape){
@@ -88,4 +131,4 @@ if(cs>=0){const ce=s.indexOf('</style>',cs);if(ce>=0)s=s.slice(0,cs)+css+s.slice
 else s=s.replace('</head>',css+'\n</head>');
 
 fs.writeFileSync(file,s);
-console.log('CanvasFlow: mobile AI chat UI added.');
+console.log('CanvasFlow: restored mobile AI chat composer with paperclip attachments.');
