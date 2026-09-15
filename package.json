@@ -9,6 +9,7 @@
     "build": "node scripts/pastel-ai-note.js && node scripts/multi-image-fix.js && node scripts/firestore-size-fix.js && node scripts/image-persistence-fix.js && node scripts/page-state-fix.js && node scripts/mobile-ai-panel-fix.js && node scripts/mobile-ai-chat-fix.js && node scripts/desktop-ai-chat-fix.js"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.1.0"
