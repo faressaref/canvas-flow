@@ -16,8 +16,7 @@ const injected = `<script id="canvasflow-image-persistence-fix">(function(){
       if(canvas.__canvasflowImageRuntime) return;
       canvas.__canvasflowImageRuntime = true;
 
-      // Do NOT replace the Firestore size helper installed by firestore-size-fix.js.
-      // Chain it so large fallback images are still compressed when Storage fails.
+      // Preserve the Firestore compression helper installed earlier in the build.
       const previousPrepare = window.canvasflowPrepareFirestorePages;
       window.canvasflowPrepareFirestorePages = async function(pages){
         if(typeof previousPrepare === "function") return previousPrepare(pages);
@@ -43,7 +42,7 @@ const injected = `<script id="canvasflow-image-persistence-fix">(function(){
         const oldSuppress = typeof suppressSave !== "undefined" ? suppressSave : false;
         try{
           if(typeof suppressSave !== "undefined") suppressSave = true;
-          if(typeof storage === "undefined' || !storage || !currentUser){
+          if(typeof storage === "undefined" || !storage || typeof currentUser === "undefined" || !currentUser){
             throw new Error("Image storage is not ready");
           }
           const safeName = String(obj.fileName || "image.png").replace(/[^a-zA-Z0-9._-]/g,"_");
@@ -80,24 +79,18 @@ const injected = `<script id="canvasflow-image-persistence-fix">(function(){
         }
       }
 
-      // Critical: suppress autosave BEFORE Fabric fires object:added. This prevents
-      // the first save from serializing the huge Base64 image while Storage upload runs.
+      // Suppress autosave BEFORE Fabric fires object:added, so the huge Base64
+      // image cannot race the Storage upload into Firestore.
       const originalAdd = canvas.add.bind(canvas);
       canvas.add = function(){
         const args = Array.from(arguments);
         const imageArgs = args.filter(o => o && o.type === "image" && isDataImage(o.src) && !o.srcUrl);
         if(imageArgs.length && typeof suppressSave !== "undefined") suppressSave = true;
         const result = originalAdd.apply(canvas,args);
-        for(const obj of imageArgs){
-          setTimeout(()=>uploadImageObject(obj),50);
-        }
-        if(!imageArgs.length && typeof suppressSave !== "undefined"){
-          // Leave normal behavior untouched for non-image objects.
-        }
+        for(const obj of imageArgs) setTimeout(()=>uploadImageObject(obj),50);
         return result;
       };
 
-      // Catch images added through code paths that bypass the wrapper.
       canvas.on("object:added", function(e){
         const obj=e && e.target;
         if(obj && obj.type === "image" && isDataImage(obj.src) && !obj.srcUrl && !obj.__canvasflowImageUploading){
