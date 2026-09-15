@@ -6,7 +6,7 @@ const css=`<style id="canvasflow-mobile-ai-resize-css">
 @media screen and (max-width:760px),screen and (max-height:520px) and (max-width:900px){
 #aiPanel{position:fixed!important;z-index:99999!important;overflow:hidden!important}
 @media (orientation:landscape){
-#aiPanel{width:280px!important;height:175px!important;min-width:280px!important;min-height:175px!important;max-width:280px!important;max-height:175px!important}
+#aiPanel{width:280px!important;height:175px!important;min-width:280px!important;min-height:175px!important;max-width:280px!important;max-height:175px!important;left:12px!important;right:auto!important;top:auto!important;bottom:12px!important;transform:none!important}
 #aiPanel .ai-body{padding:5px!important;gap:4px!important}
 .cf-mobile-messages{min-height:48px!important;padding:6px!important;gap:4px!important}
 .cf-mobile-welcome,.cf-mobile-bubble{font-size:10px!important;line-height:1.35!important;padding:5px 7px!important}
@@ -24,4 +24,4 @@ const css=`<style id="canvasflow-mobile-ai-resize-css">
 const start=s.indexOf(marker);
 if(start>=0){const end=s.indexOf('</style>',start);if(end>=0)s=s.slice(0,start)+css+s.slice(end+8);}else{s=s.replace('</head>',css+'</head>');}
 fs.writeFileSync(file,s,"utf8");
-console.log('CanvasFlow: mobile AI compact sizing fixed.');
+console.log('CanvasFlow: mobile AI landscape position fixed.');
