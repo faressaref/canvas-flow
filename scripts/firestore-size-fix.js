@@ -4,7 +4,61 @@ const file = "public/index.html";
 let s = fs.readFileSync(file, "utf8");
 
 const helperId = 'id="canvasflow-firestore-size-fix"';
-const injected = `<script ${helperId}>(function(){const DOC_BUDGET=600*1024;function isDataImage(u){return typeof u==="string"&&u.indexOf("data:image/")===0}function loadImage(u){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error("تعذر تجهيز صورة للحفظ"));im.src=u})}function blobToDataUrl(b){return new Promise((resolve,reject)=>{const f=new FileReader();f.onload=()=>resolve(f.result);f.onerror=reject;f.readAsDataURL(b)})}async function makeWebp(u,maxSide,q){try{const im=await loadImage(u);let w=im.naturalWidth||im.width||1,h=im.naturalHeight||im.height||1;const scale=Math.min(1,maxSide/Math.max(w,h));w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.drawImage(im,0,0,w,h);const b=await new Promise(r=>c.toBlob(r,"image/webp",q));return b?{blob:b,dataUrl:await blobToDataUrl(b)}:null}catch(e){console.warn("CanvasFlow: image compression failed",e);return null}}async function prepareObject(o){if(!o||!isDataImage(o.src))return;const levels=[[1400,.55],[1100,.42],[900,.32],[760,.24],[620,.18],[520,.12]];for(const pair of levels){const r=await makeWebp(o.src,pair[0],pair[1]);if(r){o.src=r.dataUrl;if(typeof o.srcUrl==="string"&&isDataImage(o.srcUrl))delete o.srcUrl;return}}}async function shrinkPage(page,budget){if(!page||!Array.isArray(page.objects))return;for(const o of page.objects){if(o&&isDataImage(o.src))await prepareObject(o)}const size=()=>JSON.stringify(page).length;if(size()<=budget)return;const levels=[[900,.12],[760,.09],[620,.07],[520,.05]];for(const pair of levels){for(const o of page.objects){if(o&&isDataImage(o.src)){const r=await makeWebp(o.src,pair[0],pair[1]);if(r)o.src=r.dataUrl;if(typeof o.srcUrl==="string"&&isDataImage(o.srcUrl))delete o.srcUrl}}if(size()<=budget)break}}window.canvasflowPrepareFirestorePages=async function(pages){if(!Array.isArray(pages))return;const budget=Math.max(80*1024,Math.floor(DOC_BUDGET/Math.max(1,pages.length)));for(const p of pages)await shrinkPage(p,budget)};})();</script>`;
+const injected = `<script ${helperId}>(function(){
+const DOC_BUDGET=600*1024;
+function isDataImage(u){return typeof u==="string"&&u.indexOf("data:image/")===0}
+function loadImage(u){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error("تعذر تجهيز صورة للحفظ"));im.src=u})}
+function blobToDataUrl(b){return new Promise((resolve,reject)=>{const f=new FileReader();f.onload=()=>resolve(f.result);f.onerror=reject;f.readAsDataURL(b)})}
+async function makeWebp(u,maxSide,q){try{const im=await loadImage(u);let w=im.naturalWidth||im.width||1,h=im.naturalHeight||im.height||1;const scale=Math.min(1,maxSide/Math.max(w,h));w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");if(!x)return null;x.drawImage(im,0,0,w,h);const b=await new Promise(r=>c.toBlob(r,"image/webp",q));return b?{dataUrl:await blobToDataUrl(b),width:w,height:h}:null}catch(e){console.warn("CanvasFlow: image compression failed",e);return null}}
+
+// Compress the stored bitmap WITHOUT changing the image's visible size on the board.
+function applyCompressedSource(o,r){
+  if(!o||!r)return;
+  const displayW=(Number(o.width)||1)*(Number(o.scaleX)||1);
+  const displayH=(Number(o.height)||1)*(Number(o.scaleY)||1);
+  o.src=r.dataUrl;
+  o.width=r.width;
+  o.height=r.height;
+  o.scaleX=displayW/r.width;
+  o.scaleY=displayH/r.height;
+}
+
+async function prepareObject(o){
+  if(!o||!isDataImage(o.src))return;
+  const levels=[[1400,.55],[1100,.42],[900,.32],[760,.24],[620,.18],[520,.12]];
+  for(const pair of levels){
+    const r=await makeWebp(o.src,pair[0],pair[1]);
+    if(r){
+      applyCompressedSource(o,r);
+      if(typeof o.srcUrl==="string"&&isDataImage(o.srcUrl))delete o.srcUrl;
+      return;
+    }
+  }
+}
+
+async function shrinkPage(page,budget){
+  if(!page||!Array.isArray(page.objects))return;
+  for(const o of page.objects){if(o&&isDataImage(o.src))await prepareObject(o)}
+  const size=()=>JSON.stringify(page).length;
+  if(size()<=budget)return;
+  const levels=[[900,.12],[760,.09],[620,.07],[520,.05]];
+  for(const pair of levels){
+    for(const o of page.objects){
+      if(!o||!isDataImage(o.src))continue;
+      const r=await makeWebp(o.src,pair[0],pair[1]);
+      if(r)applyCompressedSource(o,r);
+      if(typeof o.srcUrl==="string"&&isDataImage(o.srcUrl))delete o.srcUrl;
+    }
+    if(size()<=budget)break;
+  }
+}
+
+window.canvasflowPrepareFirestorePages=async function(pages){
+  if(!Array.isArray(pages))return;
+  const budget=Math.max(80*1024,Math.floor(DOC_BUDGET/Math.max(1,pages.length)));
+  for(const p of pages)await shrinkPage(p,budget);
+};
+})();</script>`;
 
 const start = s.indexOf('<script id="canvasflow-firestore-size-fix">');
 if (start >= 0) {
@@ -28,4 +82,4 @@ const newSet = `    const savePayload = {\n      name: currentBoardName || DEFAU
 if (s.includes(oldSet)) s = s.replace(oldSet, newSet);
 
 fs.writeFileSync(file, s, "utf8");
-console.log("CanvasFlow: Firestore size protection + save timeout installed.");
+console.log("CanvasFlow: Firestore compression now preserves image display size.");
