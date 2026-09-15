@@ -64,6 +64,13 @@ const injected = `<script id="canvasflow-page-state-fix">(function(){
         }
       };
 
+      /* Guests keep a durable local draft too. If the user refreshes while
+         already inside the app, restore the latest local board automatically. */
+      if (!currentUser && localStorage.getItem("canvasflow-app-entered") === "1" &&
+          !canvas.getObjects().length && typeof restoreLocalDraft === "function") {
+        restoreLocalDraft();
+      }
+
       syncNow();
       console.log("CanvasFlow: reliable page-state persistence installed");
     } catch (e) {
