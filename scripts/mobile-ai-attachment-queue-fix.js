@@ -56,7 +56,7 @@ const js = `<script id="canvasflow-mobile-ai-attachment-queue-fix">(function(){
       pending=[];render();input.value='';
       if(button)button.click();
     };
-    const style=document.createElement('style');style.textContent=`#canvasflowMobilePendingFiles{display:none;flex-wrap:wrap;gap:4px;max-height:42px;overflow:auto;margin:0 0 4px;padding:2px 0}.cf-pending-file{display:flex;align-items:center;gap:5px;max-width:100%;padding:4px 7px;border:1px solid #dfe4ea;border-radius:9px;background:#f7f8fa;color:#39424e;font-size:10px;direction:rtl}.cf-pending-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cf-pending-file button{border:0;background:transparent;color:#a33;font-size:15px;cursor:pointer;padding:0 2px}`;
+    const style=document.createElement('style');style.textContent='\n#canvasflowMobilePendingFiles{display:none;flex-wrap:wrap;gap:4px;max-height:42px;overflow:auto;margin:0 0 4px;padding:2px 0}.cf-pending-file{display:flex;align-items:center;gap:5px;max-width:100%;padding:4px 7px;border:1px solid #dfe4ea;border-radius:9px;background:#f7f8fa;color:#39424e;font-size:10px;direction:rtl}.cf-pending-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cf-pending-file button{border:0;background:transparent;color:#a33;font-size:15px;cursor:pointer;padding:0 2px}\n';
     document.head.appendChild(style);
     installed=true;
   }
