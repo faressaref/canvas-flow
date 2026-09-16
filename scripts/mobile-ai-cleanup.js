@@ -13,8 +13,10 @@ const legacyScriptIds = [
 ];
 
 for (const id of legacyScriptIds) {
-  const escaped = id.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
-  html = html.replace(new RegExp(`<script\\s+id=["']${escaped}["'][\\s\\S]*?<\\/script>\\s*`, 'gi'), '');
+  html = html.replace(
+    new RegExp(`<script\\s+[^>]*id=["']${id}["'][^>]*>[\\s\\S]*?<\\/script>\\s*`, 'gi'),
+    ''
+  );
 }
 
 const legacyStyleIds = [
@@ -24,8 +26,10 @@ const legacyStyleIds = [
 ];
 
 for (const id of legacyStyleIds) {
-  const escaped = id.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
-  html = html.replace(new RegExp(`<style\\s+id=["']${escaped}["'][\\s\\S]*?<\\/style>\\s*`, 'gi'), '');
+  html = html.replace(
+    new RegExp(`<style\\s+[^>]*id=["']${id}["'][^>]*>[\\s\\S]*?<\\/style>\\s*`, 'gi'),
+    ''
+  );
 }
 
 fs.writeFileSync(file, html, 'utf8');
