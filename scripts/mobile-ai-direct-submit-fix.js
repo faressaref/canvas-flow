@@ -1,48 +1,132 @@
 import fs from "node:fs";
+
 const file = "public/index.html";
 let s = fs.readFileSync(file, "utf8");
+
 const js = `<script id="canvasflow-mobile-ai-direct-submit-fix">(function(){
-  const isMobile=()=>matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  'use strict';
+  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
   let pending=[];
+  let selectedMode='summary';
+  const modeLabels={summary:'ملخص كامل',explain:'اشرحلي',important:'المهم',quiz:'امتحان',flashcards:'Flashcards',recall:'Active Recall',mindmap:'Mind Map',studyplan:'Study Plan'};
+
   function boot(){
     if(!isMobile()) return;
     const chat=document.getElementById('canvasflowMobileChat');
+    const composer=chat?.querySelector('.cf-mobile-composer');
     const input=document.getElementById('lessonInput');
     const images=document.getElementById('lessonImages');
-    if(!chat||!input||!images||chat.dataset.directSubmitFix==='1') return;
-    chat.dataset.directSubmitFix='1';
-    const attach=chat.querySelector('.cf-mobile-attach');
-    const send=chat.querySelector('.cf-mobile-send');
-    if(!attach||!send) return;
-    const picker=document.createElement('input');
-    picker.type='file'; picker.multiple=true; picker.accept='image/*,.pdf,.txt,.doc,.docx,.ppt,.pptx'; picker.hidden=true;
-    document.body.appendChild(picker);
-    let bar=document.getElementById('cfDirectFiles');
-    if(!bar){bar=document.createElement('div');bar.id='cfDirectFiles';chat.querySelector('.cf-mobile-composer').parentNode.insertBefore(bar,chat.querySelector('.cf-mobile-composer'));}
-    const style=document.createElement('style');style.textContent='#cfDirectFiles{display:none!important;flex-wrap:wrap;gap:5px;padding:6px;margin:0 0 6px;border:1px solid #dfe4ea;border-radius:10px;background:#f7f8fa;direction:rtl;max-height:80px;overflow:auto}#cfDirectFiles.show{display:flex!important}#cfDirectFiles .df{display:flex;align-items:center;gap:5px;padding:5px 8px;background:#fff;border:1px solid #d6dce4;border-radius:8px;color:#303844;font-size:11px}#cfDirectFiles button{border:0;background:transparent;color:#c62828;font-size:18px}';document.head.appendChild(style);
-    function render(){bar.innerHTML='';bar.classList.toggle('show',pending.length>0);pending.forEach((f,i)=>{const d=document.createElement('div');d.className='df';d.append(document.createTextNode('📎 '+f.name));const x=document.createElement('button');x.type='button';x.textContent='×';x.onclick=e=>{e.preventDefault();e.stopPropagation();pending.splice(i,1);render();};d.append(x);bar.append(d);});}
-    attach.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();picker.value='';picker.click();},true);
-    picker.addEventListener('change',()=>{for(const f of Array.from(picker.files||[])){if(!pending.some(p=>p.name===f.name&&p.size===f.size&&p.lastModified===f.lastModified))pending.push(f);}picker.value='';render();});
-    function submit(e){
-      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-      const text=input.value.trim()||'لخص الدرس الموجود في الملف المرفق';
-      if(!pending.length){if(!input.value.trim())return;}
-      const selected=pending.slice();
-      window.lessonImageFiles=selected.filter(f=>(f.type||'').startsWith('image/'));
-      try{const dt=new DataTransfer();selected.forEach(f=>dt.items.add(f));images.files=dt.files;}catch(_){ }
-      input.value=text;
-      pending=[];render();
-      setTimeout(()=>{if(typeof window.runAI==='function'){window.runAI('explain');}},50);
+    if(!chat||!composer||!input||!images||chat.dataset.cleanAiFlow==='1') return;
+    chat.dataset.cleanAiFlow='1';
+
+    const oldAttach=chat.querySelector('.cf-mobile-attach');
+    const oldSend=chat.querySelector('.cf-mobile-send');
+    if(!oldAttach||!oldSend) return;
+
+    const attach=oldAttach.cloneNode(true);
+    const send=oldSend.cloneNode(true);
+    oldAttach.replaceWith(attach);
+    oldSend.replaceWith(send);
+
+    let bar=document.getElementById('cfCleanQueuedFiles');
+    if(!bar){
+      bar=document.createElement('div');
+      bar.id='cfCleanQueuedFiles';
+      composer.parentNode.insertBefore(bar,composer);
     }
-    send.addEventListener('click',submit,true);
-    send.addEventListener('pointerdown',e=>{e.stopImmediatePropagation();},true);
+
+    const style=document.createElement('style');
+    style.textContent='#cfCleanQueuedFiles{display:none;align-items:center;flex-wrap:wrap;gap:5px;padding:6px;margin:0 0 6px;border:1px solid #dfe4ea;border-radius:10px;background:#f7f8fa;direction:rtl;max-height:78px;overflow:auto}#cfCleanQueuedFiles.show{display:flex!important}#cfCleanQueuedFiles .cf-file-chip{display:flex;align-items:center;gap:5px;max-width:100%;padding:5px 8px;border:1px solid #d6dce4;border-radius:8px;background:#fff;color:#303844;font-size:11px;direction:ltr}#cfCleanQueuedFiles .cf-file-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px}#cfCleanQueuedFiles .cf-file-chip button{border:0;background:#18202a;color:#fff;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:16px;line-height:20px}';
+    document.head.appendChild(style);
+
+    const picker=document.createElement('input');
+    picker.type='file'; picker.multiple=true; picker.accept='image/*'; picker.hidden=true;
+    document.body.appendChild(picker);
+
+    function render(){
+      bar.innerHTML='';
+      bar.classList.toggle('show',pending.length>0);
+      pending.forEach((f,i)=>{
+        const chip=document.createElement('div'); chip.className='cf-file-chip';
+        const name=document.createElement('span'); name.textContent='📎 '+f.name;
+        const remove=document.createElement('button'); remove.type='button'; remove.textContent='×'; remove.setAttribute('aria-label','Remove file');
+        remove.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pending.splice(i,1);render();},true);
+        chip.append(name,remove); bar.appendChild(chip);
+      });
+    }
+
+    attach.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();picker.value='';picker.click();},true);
+    picker.addEventListener('change',()=>{
+      for(const f of Array.from(picker.files||[])){
+        if(!f.type.startsWith('image/')) continue;
+        if(!pending.some(p=>p.name===f.name&&p.size===f.size&&p.lastModified===f.lastModified)) pending.push(f);
+      }
+      picker.value=''; render();
+      if(pending.length) chat.querySelector('.cf-mobile-messages')?.scrollTo?.({top:999999,behavior:'smooth'});
+    });
+
+    // Quick actions only fill the command. They never call the AI by themselves.
+    chat.parentElement?.querySelectorAll('.ai-action').forEach(button=>{
+      const clean=button.cloneNode(true);
+      button.replaceWith(clean);
+      clean.addEventListener('click',e=>{
+        e.preventDefault(); e.stopImmediatePropagation();
+        selectedMode=clean.dataset.ai||'summary';
+        input.value=modeLabels[selectedMode]||selectedMode;
+        input.focus();
+        chat.querySelectorAll('.ai-action').forEach(b=>b.classList.toggle('selected',b===clean));
+      },true);
+    });
+
+    function send(e){
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      const command=input.value.trim();
+      if(!pending.length){
+        input.placeholder='ارفع ملف الدرس الأول من 📎';
+        return;
+      }
+      if(!command){
+        input.placeholder='اكتب الأمر الأول ثم اضغط إرسال';
+        input.focus();
+        return;
+      }
+
+      const selected=pending.slice();
+      // The native change handler updates the real lexical lessonImageFiles array.
+      try{
+        const dt=new DataTransfer();
+        selected.forEach(f=>dt.items.add(f));
+        images.files=dt.files;
+      }catch(err){ console.warn('CanvasFlow: could not assign queued files',err); }
+      images.dispatchEvent(new Event('change',{bubbles:true}));
+
+      const mode=selectedMode;
+      const message=command;
+      pending=[]; render();
+      const messages=chat.querySelector('.cf-mobile-messages');
+      if(messages){
+        const bubble=document.createElement('div'); bubble.className='cf-mobile-bubble user'; bubble.textContent=message; messages.appendChild(bubble); messages.scrollTop=messages.scrollHeight;
+      }
+      input.value='';
+      setTimeout(()=>{
+        if(typeof window.runAI==='function') window.runAI(mode);
+        else console.error('CanvasFlow: runAI is unavailable');
+      },0);
+    }
+
+    send.addEventListener('click',send,true);
+    input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){send(e);}});
     render();
   }
-  [0,300,800,1600,3000,6000].forEach(t=>setTimeout(boot,t));
+
+  [0,250,700,1400,3000,6000].forEach(t=>setTimeout(boot,t));
   new MutationObserver(boot).observe(document.documentElement,{childList:true,subtree:true});
 })();</script>`;
+
 const marker='<script id="canvasflow-mobile-ai-direct-submit-fix">';
 const start=s.indexOf(marker);
-if(start>=0){const end=s.indexOf('</script>',start);if(end>=0)s=s.slice(0,start)+js+s.slice(end+9);}else{s=s.replace('</body>',js+'\n</body>');}
-fs.writeFileSync(file,s,'utf8');
-console.log('CanvasFlow: direct mobile AI submit installed.');
+if(start>=0){const end=s.indexOf('</script>',start);if(end>=0)s=s.slice(0,start)+js+s.slice(end+9);}
+else s=s.replace('</body>',js+'\\n</body>');
+
+fs.writeFileSync(file,'utf8'=== 'utf8' ? s : s,'utf8');
+console.log('CanvasFlow: clean mobile AI queue and explicit submit flow installed.');
