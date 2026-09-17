@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build": "node scripts/pastel-ai-note.js && node scripts/multi-image-fix.js && node scripts/firestore-size-fix.js && node scripts/image-persistence-fix.js && node scripts/page-state-fix.js && node scripts/save-flow-fix.js && node scripts/mobile-ai-cleanup.js && node scripts/mobile-ai-panel-fix.js && node scripts/mobile-ai-chat-fix.js && node scripts/mobile-ai-resize-fix.js && node scripts/desktop-ai-chat-fix.js && node scripts/landing-color-shortcut-fix.js && node scripts/mobile-ai-direct-submit-fix.js && node scripts/mobile-landscape-reference.js && node scripts/mobile-landscape-reference-order.js"
+    "build": "node scripts/pastel-ai-note.js && node scripts/multi-image-fix.js && node scripts/firestore-size-fix.js && node scripts/image-persistence-fix.js && node scripts/page-state-fix.js && node scripts/save-flow-fix.js && node scripts/mobile-ai-cleanup.js && node scripts/mobile-ai-panel-fix.js && node scripts/mobile-ai-chat-fix.js && node scripts/mobile-ai-resize-fix.js && node scripts/desktop-ai-chat-fix.js && node scripts/landing-color-shortcut-fix.js && node scripts/mobile-ai-direct-submit-fix.js && node scripts/mobile-landscape-reference.js && node scripts/mobile-landscape-reference-order.js && node scripts/mobile-landscape-reference-exact.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
