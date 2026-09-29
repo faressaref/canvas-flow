@@ -1362,23 +1362,8 @@
     <button type="button" data-quick-pen-color="#1976d2" aria-label="Blue pen" title="Blue"></button>
   </div>
 
-  <!-- Marker settings: long-press Highlight. -->
+  <!-- Marker settings -->
   <div id="mobileMarkerSettings" aria-hidden="true">
-    <div id="mobileEraserSettings" aria-hidden="true">
-    <div class="mobile-pen-card mobile-eraser-card">
-      <div class="mobile-pen-head"><strong>Eraser Settings</strong><button type="button" id="mobileEraserClose" aria-label="Close">×</button></div>
-      <label>Eraser Size <output id="mobileEraserSizeValue">24</output>
-        <input id="mobileEraserSize" type="range" min="6" max="120" value="24" step="1">
-      </label>
-      <div class="mobile-pen-presets">
-        <button type="button" data-eraser-size="12">12</button>
-        <button type="button" data-eraser-size="24">24</button>
-        <button type="button" data-eraser-size="48">48</button>
-        <button type="button" data-eraser-size="72">72</button>
-      </div>
-    </div>
-  </div>
-
   <div class="mobile-marker-card">
       <div class="mobile-pen-head"><strong>Marker Settings</strong><button type="button" id="mobileMarkerClose" aria-label="Close">×</button></div>
       <label>Marker Color <output id="mobileMarkerColorValue">#FFD54A</output>
@@ -1396,6 +1381,22 @@
       <label>Opacity <output id="mobileMarkerOpacityValue">30%</output>
         <input id="mobileMarkerOpacity" type="range" min="10" max="70" value="30" step="5">
       </label>
+    </div>
+  </div>
+</div>
+
+  <div id="mobileEraserSettings" aria-hidden="true">
+    <div class="mobile-pen-card mobile-eraser-card">
+      <div class="mobile-pen-head"><strong>Eraser Settings</strong><button type="button" id="mobileEraserClose" aria-label="Close">×</button></div>
+      <label>Eraser Size <output id="mobileEraserSizeValue">24</output>
+        <input id="mobileEraserSize" type="range" min="6" max="120" value="24" step="1">
+      </label>
+      <div class="mobile-pen-presets">
+        <button type="button" data-eraser-size="12">12</button>
+        <button type="button" data-eraser-size="24">24</button>
+        <button type="button" data-eraser-size="48">48</button>
+        <button type="button" data-eraser-size="72">72</button>
+      </div>
     </div>
   </div>
 
@@ -6439,3 +6440,19 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
   }
 }
 </style>
+<script id="canvasflow-eraser-drag-final">
+(function(){
+  'use strict';
+  if(typeof canvas==='undefined') return;
+  let erasing=false;
+  canvas.on('mouse:down',opt=>{
+    if(typeof tool==='string' && tool==='eraser') erasing=true;
+  });
+  canvas.on('mouse:move',opt=>{
+    if(!erasing || typeof tool!=='string' || tool!=='eraser') return;
+    eraseAtPoint(opt.e);
+  });
+  canvas.on('mouse:up',()=>{erasing=false;});
+  canvas.on('mouse:out',()=>{erasing=false;});
+})();
+</script>
