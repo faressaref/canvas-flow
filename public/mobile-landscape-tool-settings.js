@@ -1,6 +1,5 @@
 /* CanvasFlow — mobile landscape tool settings
-   Scope: touch devices in landscape. Uses the app's landscape class as a
-   fallback because iPadOS can report a non-coarse pointer. */
+   Single tap selects Pen/Marker. Double tap opens settings. */
 (function(){
   'use strict';
 
@@ -42,46 +41,22 @@
     panel.setAttribute('aria-hidden','false');
   }
 
-  let lastTool=null;
-  let lastTime=0;
-
-  function record(tool){
-    if(!isLandscapeTouch())return;
-    const now=performance.now();
-    if(lastTool===tool && now-lastTime<=700){
-      lastTool=null;
-      lastTime=0;
-      setTimeout(()=>{
-        if(tool==='pen')openPenSettings();
-        else openMarkerSettings();
-      },30);
-      return;
-    }
-    lastTool=tool;
-    lastTime=now;
-    setTimeout(()=>{
-      if(lastTool===tool && performance.now()-lastTime>700){
-        lastTool=null;
-        lastTime=0;
-      }
-    },750);
-  }
-
-  // touchend catches iPad Safari reliably; pointerdown remains as a fallback
-  // for browsers that expose pointer events normally.
-  bar.addEventListener('touchend',function(e){
+  // Use the browser's actual dblclick gesture. This is intentionally NOT
+  // implemented on pointerdown/touchend, because iPadOS can synthesize both
+  // event types and make one physical tap look like two taps.
+  bar.addEventListener('dblclick',function(e){
     if(!isLandscapeTouch())return;
     const button=e.target.closest('button[data-v2-tool]');
     if(!button || !bar.contains(button))return;
     const tool=button.dataset.v2Tool;
-    if(tool==='pen'||tool==='highlighter')record(tool);
-  },{capture:true,passive:true});
+    if(tool!=='pen' && tool!=='highlighter')return;
 
-  // Do NOT also listen to pointerdown here: iPad Safari fires both
-  // pointer and touch events for one tap, which would make one tap look
-  // like a double tap. touchend is the single source of truth on touch.
-  window.addEventListener('orientationchange',()=>{
-    lastTool=null;
-    lastTime=0;
-  },{passive:true});
+    e.preventDefault();
+    e.stopPropagation();
+
+    if(tool==='pen')openPenSettings();
+    else openMarkerSettings();
+  },true);
+
+  window.addEventListener('orientationchange',()=>{}, {passive:true});
 })();
