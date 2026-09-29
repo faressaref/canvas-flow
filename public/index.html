@@ -1315,6 +1315,7 @@
     <button type="button" data-v2-tool="highlighter"><span class="v2icon">▰</span><span>Highlight</span></button>
     <button type="button" id="mobileV2Scroll" aria-label="Scroll board"><span class="v2icon">↕</span><span>Scroll</span></button>
     <button type="button" id="mobileV2AI"><span class="v2icon">✦</span><span>AI</span></button>
+    <button type="button" id="mobileV2Upload" data-v2-tool="image" aria-label="Upload file or image"><span class="v2icon">▧</span><span>Upload</span></button>
     <label id="mobileFontSizeControl" title="Font size">
       <span class="v2icon">A</span><input id="mobileFontSize" type="range" min="10" max="72" value="22" aria-label="Font size"><span id="mobileFontSizeValue">22</span>
     </label>
@@ -5455,6 +5456,14 @@ body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
     }
 
     const name=button.dataset.v2Tool;
+    if(name==='image'){
+      const input=document.getElementById('fileInput');
+      if(input){
+        input.value='';
+        input.click();
+      }
+      return;
+    }
     if(name==='select' || name==='pen' || name==='highlighter'){
       syncTool(name);
     }
@@ -5628,6 +5637,14 @@ body.cf-touch-landscape #mobileV2Scroll{
     }
 
     const name=b.dataset.v2Tool;
+    if(name==='image'){
+      const input=document.getElementById('fileInput');
+      if(input){
+        input.value='';
+        input.click();
+      }
+      return;
+    }
     if(name==='select'||name==='pen'||name==='highlighter'){
       if(typeof setTabletScrollMode==='function') setTabletScrollMode(false);
       if(typeof setTool==='function') setTool(name);
@@ -6277,6 +6294,19 @@ body.cf-touch-landscape #mobileV2Scroll{
     border-radius:10px !important;
     padding:9px 4px !important;
     font-size:11px !important;
+  }
+}
+</style>
+
+
+<!-- CanvasFlow: upload button in Elements toolbar -->
+<style id="canvasflow-mobile-upload-button-final">
+@media screen and (orientation:landscape) and (max-height:650px){
+  body.cf-touch-landscape #mobileV2Upload{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
   }
 }
 </style>
