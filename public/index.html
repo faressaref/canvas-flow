@@ -1336,6 +1336,8 @@
     <span class="v2icon">●</span><span>Color</span>
     <input id="mobileV2Color" type="color" value="#18202a" aria-label="Choose color">
   </label>
+    <button type="button" id="mobileV2Undo" aria-label="Undo"><span class="v2icon">↶</span><span>Undo</span></button>
+    <button type="button" id="mobileV2Redo" aria-label="Redo"><span class="v2icon">↷</span><span>Redo</span></button>
   </div>
 
 <div id="mobilePenSettings" aria-hidden="true">
@@ -1884,6 +1886,8 @@ function redo() {
 
 document.getElementById("undoBtn").addEventListener("click", undo);
 document.getElementById("redoBtn").addEventListener("click", redo);
+document.getElementById("mobileV2Undo")?.addEventListener("click", undo);
+document.getElementById("mobileV2Redo")?.addEventListener("click", redo);
 const tabletUndo = document.getElementById("tabletUndo");
 const tabletRedo = document.getElementById("tabletRedo");
 if (tabletUndo) tabletUndo.addEventListener("click", undo);
@@ -2327,7 +2331,11 @@ function eraseAtPoint(e){
       const halfH=Math.max(1,(obj.getScaledHeight ? obj.getScaledHeight() : obj.height||1)/2);
       const dx=Math.abs(p.x-(center?.x ?? obj.left ?? 0));
       const dy=Math.abs(p.y-(center?.y ?? obj.top ?? 0));
-      if(dx <= halfW+radius && dy <= halfH+radius){
+      // Eraser is intentionally limited to hand-drawn strokes.
+      // Images, text, shapes and other objects must never be removed by it.
+      const isFreehand = obj.objectRole === "freehand" ||
+        obj.type === "path" || obj.type === "i-text" && obj.objectRole === "freehand";
+      if(isFreehand && dx <= halfW+radius && dy <= halfH+radius){
         removed.push(obj);
       }
     }catch(_){}
@@ -4205,6 +4213,36 @@ body:not(.landing-active) #mobileQuickPenColors{display:flex !important;visibili
 
 
 
+<style id="canvasflow-mobile-undo-redo-final">
+@media screen and (orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px){
+  body.cf-touch-landscape #mobileV2Undo,
+  body.cf-touch-landscape #mobileV2Redo{
+    display:flex !important;
+    position:static !important;
+    width:48px !important;
+    min-width:48px !important;
+    max-width:48px !important;
+    height:44px !important;
+    flex:0 0 48px !important;
+    margin:0 !important;
+    padding:2px !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:1px !important;
+    border:0 !important;
+    border-radius:10px !important;
+    background:transparent !important;
+    color:#4b5563 !important;
+    font:800 7px/1 system-ui,sans-serif !important;
+    touch-action:manipulation !important;
+  }
+  body.cf-touch-landscape #mobileV2Undo .v2icon,
+  body.cf-touch-landscape #mobileV2Redo .v2icon{font-size:18px !important;line-height:18px !important}
+  body.cf-touch-landscape #mobileV2Undo:disabled,
+  body.cf-touch-landscape #mobileV2Redo:disabled{opacity:.35 !important}
+}
+</style>
 </body>
 
 <style id="mobile-landing-final">
