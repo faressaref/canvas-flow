@@ -5060,6 +5060,121 @@ body.mobile-css-fullscreen #tabletQuickColors{
 
 <script src="/mobile-landscape-tool-settings.js"></script>
 
+
+<script id="canvasflow-ios-landscape-detector">
+(function(){
+  'use strict';
+  function isMobileTouchLandscape(){
+    var ua=navigator.userAgent||'';
+    var ios=/iPad|iPhone|iPod/i.test(ua) ||
+      (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    var android=/Android/i.test(ua);
+    var touch=navigator.maxTouchPoints>0 || 'ontouchstart' in window;
+    return (ios || android) && touch && window.matchMedia('(orientation: landscape)').matches;
+  }
+  function sync(){
+    document.body.classList.toggle('cf-touch-landscape', isMobileTouchLandscape());
+  }
+  sync();
+  window.addEventListener('resize',sync,{passive:true});
+  window.addEventListener('orientationchange',function(){setTimeout(sync,50);},{passive:true});
+})();
+</script>
+
+<style id="canvasflow-mobile-landscape-ios-final">
+/* Last-resort iOS/Android touch-landscape routing.
+   This exists because Safari/iPadOS can report a non-coarse pointer when a
+   trackpad/mouse is present. Desktop/portrait are not targeted. */
+body.cf-touch-landscape #topbar{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+body.cf-touch-landscape #mobilePhoneHeader{
+  display:flex !important;
+  position:fixed !important;
+  top:0 !important;left:0 !important;right:0 !important;
+  width:100% !important;height:52px !important;
+  z-index:2147483000 !important;
+  align-items:center !important;justify-content:space-between !important;
+  padding:4px 12px !important;box-sizing:border-box !important;
+  background:rgba(255,255,255,.97) !important;
+  border-bottom:1px solid #dfe4ea !important;
+  box-shadow:0 1px 8px rgba(0,0,0,.06) !important;
+}
+body.cf-touch-landscape #mobilePhoneHeader .mbrand{
+  display:flex !important;align-items:center !important;
+  flex:0 0 115px !important;min-width:115px !important;
+  margin:0 !important;white-space:nowrap !important;
+  font:900 17px/1 system-ui,sans-serif !important;
+  letter-spacing:-.7px !important;color:#18202a !important;
+}
+body.cf-touch-landscape #mobilePhoneHeader .mbrand span{color:#5b63ff !important;}
+body.cf-touch-landscape #mobilePhoneHeader .mtools{
+  display:flex !important;align-items:center !important;justify-content:flex-end !important;
+  flex:0 0 125px !important;min-width:125px !important;gap:5px !important;
+}
+body.cf-touch-landscape #mobilePhoneHeader button{
+  display:flex !important;align-items:center !important;justify-content:center !important;
+  min-width:58px !important;width:auto !important;height:38px !important;
+  padding:0 8px !important;border:1px solid #dfe4ea !important;
+  border-radius:10px !important;background:#fff !important;color:#39424e !important;
+  font:800 10px/1 system-ui,sans-serif !important;gap:4px !important;
+}
+body.cf-touch-landscape #mobileV2Bar{
+  display:flex !important;position:fixed !important;
+  top:0 !important;bottom:auto !important;left:50% !important;right:auto !important;
+  transform:translateX(-50%) !important;
+  width:min(58vw,620px) !important;max-width:58vw !important;height:52px !important;
+  z-index:2147483001 !important;box-sizing:border-box !important;
+  padding:3px 4px !important;gap:3px !important;
+  align-items:center !important;justify-content:center !important;
+  overflow:hidden !important;flex-wrap:nowrap !important;
+  background:transparent !important;border:0 !important;border-radius:0 !important;
+  box-shadow:none !important;white-space:nowrap !important;
+}
+body.cf-touch-landscape #mobileV2Bar > button,
+body.cf-touch-landscape #mobileV2Bar > label{
+  display:flex !important;flex:0 0 58px !important;
+  min-width:58px !important;width:58px !important;max-width:58px !important;
+  height:44px !important;margin:0 !important;padding:2px !important;
+  box-sizing:border-box !important;flex-direction:column !important;
+  align-items:center !important;justify-content:center !important;gap:1px !important;
+  border:0 !important;border-radius:10px !important;background:transparent !important;
+  color:#4b5563 !important;font:800 7px/1 system-ui,sans-serif !important;
+  pointer-events:auto !important;touch-action:manipulation !important;
+}
+body.cf-touch-landscape #mobileV2Bar > button .v2icon,
+body.cf-touch-landscape #mobileV2Bar > label .v2icon{font-size:18px !important;line-height:18px !important;}
+body.cf-touch-landscape #mobileV2Bar > button.active{background:#18202a !important;color:#fff !important;}
+body.cf-touch-landscape #mobileV2More{display:flex !important;visibility:visible !important;pointer-events:auto !important;}
+body.cf-touch-landscape #mobileV2Menu{z-index:2147483005 !important;}
+body.cf-touch-landscape #mobileQuickPenColors{
+  display:flex !important;position:fixed !important;left:50% !important;right:auto !important;
+  top:57px !important;bottom:auto !important;transform:translateX(-50%) !important;
+  z-index:2147483002 !important;align-items:center !important;justify-content:center !important;
+  flex-direction:row !important;gap:8px !important;width:max-content !important;height:38px !important;
+  padding:5px 8px !important;box-sizing:border-box !important;
+  border:1px solid #dfe4ea !important;border-radius:12px !important;
+  background:rgba(255,255,255,.97) !important;
+  box-shadow:0 6px 18px rgba(0,0,0,.12) !important;
+}
+body.cf-touch-landscape #mobileQuickPenColors button{
+  display:block !important;width:28px !important;height:28px !important;
+  min-width:28px !important;flex:0 0 28px !important;border-radius:50% !important;
+  border:2px solid #fff !important;padding:0 !important;
+  box-shadow:0 1px 5px rgba(0,0,0,.25) !important;
+}
+body.cf-touch-landscape #mobileQuickPenColors button[data-quick-pen-color="#e53935"]{background:#e53935 !important;}
+body.cf-touch-landscape #mobileQuickPenColors button[data-quick-pen-color="#111111"]{background:#111111 !important;}
+body.cf-touch-landscape #mobileQuickPenColors button[data-quick-pen-color="#1976d2"]{background:#1976d2 !important;}
+body.cf-touch-landscape #canvasWrap{
+  padding-top:52px !important;padding-bottom:0 !important;box-sizing:border-box !important;
+}
+body.cf-touch-landscape #mobilePenSettings,
+body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
+</style>
+
 <style id="canvasflow-mobile-landscape-clean-final">
 /* CanvasFlow — authoritative touch landscape layout.
    Uses the EXISTING mobile Elements toolbar. No toolbar is rebuilt here. */
