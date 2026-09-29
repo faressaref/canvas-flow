@@ -1,15 +1,14 @@
 /* CanvasFlow — mobile landscape tool settings
-   Scope: touch devices in landscape ONLY. */
+   Scope: touch/coarse devices in landscape ONLY. */
 (function(){
   'use strict';
+
   const isLandscapeTouch=()=>{
-    const ua=navigator.userAgent||'';
-    const touch=(navigator.maxTouchPoints||0)>0;
-    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
-    const appleTouch=touch && /Macintosh/i.test(ua);
-    return touch && (mobileUA||appleTouch) &&
-      window.matchMedia('(orientation: landscape)').matches;
+    return window.matchMedia(
+      '(orientation: landscape) and (pointer: coarse) and (hover: none)'
+    ).matches;
   };
+
   const bar=document.getElementById('mobileV2Bar');
   if(!bar)return;
 
@@ -43,28 +42,47 @@
     panel.setAttribute('aria-hidden','false');
   }
 
-  let lastTool=null,lastTime=0;
-  bar.addEventListener('pointerup',function(event){
-    if(!isLandscapeTouch()||event.pointerType==='mouse')return;
+  // Use pointerdown because the existing Elements click handler changes tools
+  // on the first tap. This listener runs in capture phase and only records
+  // the tap; it never interferes with the normal tool action.
+  let lastTool=null;
+  let lastTime=0;
+
+  bar.addEventListener('pointerdown',function(event){
+    if(!isLandscapeTouch() || (event.pointerType && event.pointerType==='mouse'))return;
     const button=event.target.closest('button[data-v2-tool]');
-    if(!button||!bar.contains(button))return;
+    if(!button || !bar.contains(button))return;
+
     const tool=button.dataset.v2Tool;
-    if(tool!=='pen'&&tool!=='highlighter')return;
+    if(tool!=='pen' && tool!=='highlighter')return;
+
     const now=performance.now();
-    const isDouble=lastTool===tool&&(now-lastTime)<=700;
+    const isDouble=(lastTool===tool && (now-lastTime)<=650);
+
     if(isDouble){
-      lastTool=null;lastTime=0;
-      if(tool==='pen')openPenSettings();
-      else openMarkerSettings();
+      lastTool=null;
+      lastTime=0;
+      window.setTimeout(function(){
+        if(tool==='pen')openPenSettings();
+        else openMarkerSettings();
+      },0);
       return;
     }
-    lastTool=tool;lastTime=now;
+
+    lastTool=tool;
+    lastTime=now;
     window.setTimeout(function(){
-      if(lastTool===tool&&performance.now()-lastTime>700){
-        lastTool=null;lastTime=0;
+      if(lastTool===tool && performance.now()-lastTime>650){
+        lastTool=null;
+        lastTime=0;
       }
-    },720);
+    },700);
   },true);
 
+  // Reset the detector when the user changes tools or orientation.
+  window.addEventListener('orientationchange',function(){
+    lastTool=null;
+    lastTime=0;
+  },{passive:true});
 
 })();
