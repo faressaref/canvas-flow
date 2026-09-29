@@ -1126,6 +1126,70 @@
   }
 }
 </style>
+<style id="mobile-landscape-pen-marker-final">
+/* Mobile landscape: quick colors centered under the Elements row. */
+@media screen and (orientation:landscape) and (max-width:1100px) and (max-height:700px) and (pointer:coarse){
+  body.cf-phone-landscape #mobileQuickPenColors{
+    display:flex!important;
+    position:fixed!important;
+    left:50%!important;
+    right:auto!important;
+    top:54px!important;
+    bottom:auto!important;
+    transform:translateX(-50%)!important;
+    z-index:2147483002!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    padding:5px 8px!important;
+    min-width:0!important;
+    width:max-content!important;
+    height:38px!important;
+    border:1px solid #dfe4ea!important;
+    border-radius:12px!important;
+    background:rgba(255,255,255,.97)!important;
+    box-shadow:0 6px 18px rgba(0,0,0,.12)!important;
+    backdrop-filter:blur(12px)!important;
+  }
+
+  body.cf-phone-landscape #mobileQuickPenColors button{
+    width:26px!important;
+    height:26px!important;
+    min-width:26px!important;
+    flex:0 0 26px!important;
+    border-radius:50%!important;
+  }
+
+  /* Pen and Marker settings stay above every mobile control. */
+  body.cf-phone-landscape #mobilePenSettings,
+  body.cf-phone-landscape #mobileMarkerSettings{
+    position:fixed!important;
+    inset:0!important;
+    z-index:2147483010!important;
+    display:none;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:14px!important;
+    background:rgba(0,0,0,.28)!important;
+  }
+
+  body.cf-phone-landscape #mobilePenSettings.open,
+  body.cf-phone-landscape #mobileMarkerSettings.open{
+    display:flex!important;
+  }
+
+  body.cf-phone-landscape #mobilePenSettings .mobile-pen-card,
+  body.cf-phone-landscape #mobileMarkerSettings .mobile-marker-card{
+    width:min(390px,calc(100vw - 28px))!important;
+    max-height:calc(100dvh - 28px)!important;
+    overflow:auto!important;
+    border-radius:18px!important;
+    padding:16px!important;
+    box-shadow:0 18px 55px rgba(0,0,0,.25)!important;
+  }
+}
+</style>
+
 </head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
