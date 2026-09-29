@@ -119,8 +119,8 @@ if (!html.includes(detectorMarker)) {
     const phoneLandscape=window.matchMedia('(orientation: landscape)').matches
       && (window.matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints||0)>0)
       && window.matchMedia('(hover: none)').matches
-      && Math.max(window.innerWidth,window.innerHeight)<=1100
-      && Math.min(window.innerWidth,window.innerHeight)<=700;
+      && Math.max(window.innerWidth,window.innerHeight)<=950
+      && Math.min(window.innerWidth,window.innerHeight)<=500;
     document.body.classList.toggle('cf-phone-landscape',phoneLandscape);
   }
   sync();
