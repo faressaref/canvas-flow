@@ -3197,77 +3197,6 @@ updateZoom();
 })();
 
 
-// MOBILE LANDSCAPE TOOLBAR — keep every tool visible side-by-side and working.
-(function mobileLandscapeTools(){
-  const bar=document.getElementById('mobileV2Bar');
-  if(!bar) return;
-
-
-  const defs=[
-    ['select','↖','Select'],['pen','✎','Pen'],['highlighter','▰','Highlight'],
-    ['scroll','↕','Scroll'],['eraser','⌫','Eraser'],['rect','▱','Rectangle'],
-    ['circle','○','Circle'],['line','╱','Line'],['arrow','➜','Arrow'],
-    ['text','T','Text'],['node','◇','Node'],['image','▧','Image'],['ai','✦','AI']
-  ];
-  const landscape=()=>window.matchMedia('(max-height:520px) and (max-width:900px)').matches;
-  let built=false;
-  function build(){
-    if(built) return; built=true;
-    bar.innerHTML='';
-    defs.forEach(([name,icon,label])=>{
-      const b=document.createElement('button'); b.type='button'; b.dataset.v2Tool=name;
-      b.innerHTML=`<span class="v2icon">${icon}</span><span>${label}</span>`;
-      b.addEventListener('click',e=>{
-        e.preventDefault(); e.stopPropagation();
-        if(name==='ai'){
-          const panel=document.getElementById('aiPanel');
-          if(panel) panel.classList.toggle('open');
-          document.getElementById('aiToggle')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
-          return;
-        }
-        if(name==='image'){
-      /* Image is handled by the single capture-phase mobile handler above.
-         Do not open the picker a second time in landscape. */
-      return;
-    }
-        if(name==='scroll'){ window.__mobileScrollOn=!window.__mobileScrollOn; setTabletScrollMode(window.__mobileScrollOn); sync(); return; }
-        setTabletScrollMode(false); setTool(name); sync();
-      });
-      bar.appendChild(b);
-    });
-    // Landscape: keep Font Size, Color and Fullscreen directly in the Elements bar (no More).
-    const font=document.createElement('label');
-    font.className='mobile-v2-font'; font.setAttribute('aria-label','Font size');
-    font.innerHTML='<span class="v2icon">A</span><input id="mobileV2FontLandscape" type="range" min="10" max="72" value="22" aria-label="Font size"><span class="font-value">22</span>';
-    const fi=font.querySelector('input');
-    const mobileFont=document.getElementById('mobileFontSize');
-    if(fi && mobileFont) fi.value=mobileFont.value;
-    fi?.addEventListener('input',()=>{
-      if(mobileFont){ mobileFont.value=fi.value; mobileFont.dispatchEvent(new Event('input',{bubbles:true})); }
-      const out=font.querySelector('.font-value'); if(out) out.textContent=fi.value;
-    });
-    bar.appendChild(font);
-    const color=document.createElement('label');
-    color.className='mobile-v2-color'; color.setAttribute('aria-label','Color');
-    color.innerHTML='<span class="v2icon">●</span><input id="mobileV2ColorLandscape" type="color" aria-label="Color">';
-    const ci=color.querySelector('input');
-    const dc=document.getElementById('color');
-    if(ci && dc) ci.value=dc.value;
-    ci?.addEventListener('input',()=>{ if(dc){dc.value=ci.value;dc.dispatchEvent(new Event('input',{bubbles:true}));dc.dispatchEvent(new Event('change',{bubbles:true}));} });
-    bar.appendChild(color);
-  }
-  function sync(){
-    if(!landscape()) return;
-    build();
-    bar.querySelectorAll('[data-v2-tool]').forEach(b=>b.classList.toggle('active',b.dataset.v2Tool===tool));
-    bar.querySelector('[data-v2-tool="scroll"]')?.classList.toggle('active',!!window.__mobileScrollOn);
-    bar.querySelector('[data-v2-tool="ai"]')?.classList.toggle('active',document.getElementById('aiPanel')?.classList.contains('open'));
-  }
-  window.addEventListener('resize',sync,{passive:true});
-  window.addEventListener('orientationchange',()=>setTimeout(sync,80),{passive:true});
-  sync();
-})();
-
 // ================= MOBILE UX =================
 (function initMobileUX(){
   const isMobile = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
@@ -4277,6 +4206,219 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 /* The mobile quick-color shortcut remains available inside the board. */
 body:not(.landing-active) #mobileQuickPenColors{display:flex !important;visibility:visible !important;pointer-events:auto !important;}
 </style>
+
+<style id="canvasflow-mobile-landscape-clean-final">
+/* CanvasFlow — authoritative touch landscape layout.
+   Uses the EXISTING mobile Elements toolbar. No toolbar is rebuilt here. */
+@media screen and (orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px){
+  html,body{
+    width:100%!important;height:100%!important;
+    min-width:0!important;max-width:100%!important;
+    overflow:hidden!important;
+  }
+
+  /* Desktop/tablet chrome is replaced by the existing mobile landscape header. */
+  body #topbar,
+  body #hint,
+  body #zoom,
+  body #tabletControls,
+  body #tabletAccount,
+  body .device-switch,
+  body #pcMode,
+  body #tabletMode,
+  body #mobileDock,
+  body #mobileQuick,
+  body #mobilePages,
+  body #mobileAI{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+
+  /* Header: logo | existing Elements | Boards + Account */
+  body #mobilePhoneHeader{
+    display:flex!important;
+    position:fixed!important;
+    top:0!important;left:0!important;right:0!important;
+    width:100%!important;height:52px!important;
+    z-index:2147483000!important;
+    box-sizing:border-box!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    padding:4px 12px!important;
+    background:rgba(255,255,255,.97)!important;
+    border-bottom:1px solid #dfe4ea!important;
+    box-shadow:0 1px 8px rgba(0,0,0,.06)!important;
+    backdrop-filter:blur(14px)!important;
+    -webkit-backdrop-filter:blur(14px)!important;
+  }
+
+  body #mobilePhoneHeader .mbrand{
+    display:flex!important;
+    align-items:center!important;
+    flex:0 0 115px!important;
+    min-width:115px!important;
+    margin:0!important;
+    white-space:nowrap!important;
+    font:900 17px/1 system-ui,sans-serif!important;
+    letter-spacing:-.7px!important;
+    color:#18202a!important;
+  }
+  body #mobilePhoneHeader .mbrand span{color:#5b63ff!important;}
+
+  body #mobilePhoneHeader .mtools{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    flex:0 0 125px!important;
+    min-width:125px!important;
+    gap:5px!important;
+    margin:0!important;
+  }
+  body #mobilePhoneHeader button{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-width:58px!important;
+    width:auto!important;
+    height:38px!important;
+    padding:0 8px!important;
+    border:1px solid #dfe4ea!important;
+    border-radius:10px!important;
+    background:#fff!important;
+    color:#39424e!important;
+    font:800 10px/1 system-ui,sans-serif!important;
+    gap:4px!important;
+    box-shadow:0 2px 9px rgba(0,0,0,.05)!important;
+  }
+
+  /* Existing 7 Elements only — never generate/replace children here. */
+  body #mobileV2Bar{
+    display:flex!important;
+    position:fixed!important;
+    top:0!important;
+    bottom:auto!important;
+    left:50%!important;
+    right:auto!important;
+    transform:translateX(-50%)!important;
+    width:min(58vw,620px)!important;
+    max-width:58vw!important;
+    height:52px!important;
+    z-index:2147483001!important;
+    box-sizing:border-box!important;
+    padding:3px 4px!important;
+    gap:3px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:hidden!important;
+    flex-wrap:nowrap!important;
+    background:transparent!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    white-space:nowrap!important;
+    touch-action:manipulation!important;
+  }
+
+  body #mobileV2Bar > button,
+  body #mobileV2Bar > label{
+    display:flex!important;
+    flex:0 0 58px!important;
+    min-width:58px!important;
+    width:58px!important;
+    max-width:58px!important;
+    height:44px!important;
+    margin:0!important;
+    padding:2px!important;
+    box-sizing:border-box!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:1px!important;
+    border:0!important;
+    border-radius:10px!important;
+    background:transparent!important;
+    color:#4b5563!important;
+    font:800 7px/1 system-ui,sans-serif!important;
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+  }
+
+  body #mobileV2Bar > button .v2icon,
+  body #mobileV2Bar > label .v2icon{
+    font-size:18px!important;
+    line-height:18px!important;
+  }
+  body #mobileV2Bar > button.active{
+    background:#18202a!important;
+    color:#fff!important;
+  }
+  body #mobileV2Bar #mobileV2More{
+    display:flex!important;
+    visibility:visible!important;
+    pointer-events:auto!important;
+  }
+
+  /* Keep the More menu available; it is the ORIGINAL menu/logic. */
+  body #mobileV2Menu{
+    z-index:2147483005!important;
+  }
+
+  /* Quick pen colors: centered directly below Elements. */
+  body #mobileQuickPenColors{
+    display:flex!important;
+    position:fixed!important;
+    left:50%!important;
+    right:auto!important;
+    top:57px!important;
+    bottom:auto!important;
+    transform:translateX(-50%)!important;
+    z-index:2147483002!important;
+    align-items:center!important;
+    justify-content:center!important;
+    flex-direction:row!important;
+    gap:8px!important;
+    width:max-content!important;
+    height:38px!important;
+    padding:5px 8px!important;
+    box-sizing:border-box!important;
+    border:1px solid #dfe4ea!important;
+    border-radius:12px!important;
+    background:rgba(255,255,255,.97)!important;
+    box-shadow:0 6px 18px rgba(0,0,0,.12)!important;
+    backdrop-filter:blur(12px)!important;
+    -webkit-backdrop-filter:blur(12px)!important;
+  }
+  body #mobileQuickPenColors button{
+    display:block!important;
+    width:28px!important;
+    height:28px!important;
+    min-width:28px!important;
+    flex:0 0 28px!important;
+    border-radius:50%!important;
+  }
+
+  body #canvasWrap{
+    padding-top:52px!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Settings are the existing containers; only their placement is touched. */
+  body #mobilePenSettings,
+  body #mobileMarkerSettings{
+    z-index:2147483010!important;
+  }
+
+  /* Do not alter AI implementation; only ensure it can layer above this chrome. */
+  body #aiPanel{z-index:2147483020!important;}
+}
+
+/* Landscape phone screens narrower than the full tablet range. */
+@media screen and (orientation:landscape) and (pointer:coarse) and (hover:none) and (max-height:520px){
+  body #mobileV2Bar{width:min(58vw,620px)!important;max-width:58vw!important;}
+}
+</style>
+
 </body>
 
 <style id="mobile-landing-final">
