@@ -3759,7 +3759,11 @@ updateZoom();
 <script id="mobile-pen-longpress-final">
 (function(){
   const bar=()=>document.getElementById('mobileV2Bar');
-  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const isMobile=()=>{
+    const phoneOrTablet=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+    const landscapeTouch=window.matchMedia('(orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px) and (max-height:900px)').matches;
+    return phoneOrTablet || landscapeTouch;
+  };
   const panel=()=>document.getElementById('mobilePenSettings');
   let timer=null, longPressed=false;
   function open(){
@@ -4835,7 +4839,11 @@ body.mobile-css-fullscreen #authModal.open .modal-card{
   const point=(t)=>({x:t.clientX,y:t.clientY});
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
-  const local=(pt)=>{ const r=wrap.getBoundingClientRect(); return {x:pt.x-r.left,y:pt.y-r.top}; };
+  const local=(pt)=>{
+    const target=(typeof canvas!=='undefined' && canvas && canvas.upperCanvasEl) ? canvas.upperCanvasEl : wrap;
+    const r=target.getBoundingClientRect();
+    return {x:pt.x-r.left,y:pt.y-r.top};
+  };
 
   function begin(e){
     if(!isMobile() || e.touches.length!==2) return;
