@@ -3800,65 +3800,85 @@ updateZoom();
 <script id="mobile-pen-longpress-final">
 (function(){
   'use strict';
-  const panel=()=>document.getElementById('mobilePenSettings');
-  let timer=null,activeId=null,activeBtn=null,longPressed=false;
 
-  function isTouchLandscape(){
+  const isLandscapeTouch=()=>{
     const ua=navigator.userAgent||'';
-    const apple=(navigator.maxTouchPoints||0)>0 && /Macintosh/i.test(ua);
-    const mobile=/Android|iPhone|iPad|iPod/i.test(ua);
-    return window.matchMedia('(orientation:landscape)').matches &&
-      (mobile||apple) && (navigator.maxTouchPoints||0)>0;
-  }
-  function isMobile(){
-    return window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || isTouchLandscape();
-  }
-  function clear(){
-    if(timer){clearTimeout(timer);timer=null;}
-    activeId=null;activeBtn=null;
-  }
-  function open(){
-    const p=panel(); if(!p)return;
+    const touch=(navigator.maxTouchPoints||0)>0;
+    const appleTouch=touch && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    return touch && (mobileUA||appleTouch) &&
+      window.matchMedia('(orientation: landscape)').matches;
+  };
+
+  const panel=()=>document.getElementById('mobilePenSettings');
+
+  function openPenSettings(){
+    const p=panel();
+    if(!p)return;
     if(typeof setTool==='function')setTool('pen');
     const input=document.getElementById('mobilePenSize');
     const size=document.getElementById('size');
-    if(input&&size)input.value=size.value||4;
     const out=document.getElementById('mobilePenSizeValue');
+    if(input&&size)input.value=size.value||4;
     if(out)out.textContent=input?.value||'4';
-    p.classList.add('open');p.setAttribute('aria-hidden','false');
-  }
-  function close(){
-    const p=panel();
-    if(p){p.classList.remove('open');p.setAttribute('aria-hidden','true');}
+    p.classList.add('open');
+    p.setAttribute('aria-hidden','false');
   }
 
-  let lastTap=0,lastBtn=null,tapTimer=null;
-  document.addEventListener('pointerdown',e=>{
-    if(!isMobile() || e.pointerType==='mouse') return;
+  function closePenSettings(){
+    const p=panel();
+    if(p){
+      p.classList.remove('open');
+      p.setAttribute('aria-hidden','true');
+    }
+  }
+
+  // One and only one double-tap handler for Pen.
+  let lastPenTap=0;
+  let lastPenButton=null;
+
+  document.addEventListener('click',e=>{
+    if(!isLandscapeTouch())return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
-    if(!b) return;
+    if(!b)return;
+
     const now=Date.now();
-    if(lastBtn===b && now-lastTap<650){
-      lastTap=0; lastBtn=null;
-      if(tapTimer)clearTimeout(tapTimer);
-      e.preventDefault(); e.stopImmediatePropagation();
-      open();
+    const isDouble=b===lastPenButton && (now-lastPenTap)<=700;
+
+    if(isDouble){
+      lastPenTap=0;
+      lastPenButton=null;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      openPenSettings();
       return;
     }
-    lastTap=now; lastBtn=b;
-    if(tapTimer)clearTimeout(tapTimer);
-    tapTimer=setTimeout(()=>{lastTap=0;lastBtn=null;},700);
+
+    lastPenTap=now;
+    lastPenButton=b;
+    window.setTimeout(()=>{
+      if(lastPenButton===b && Date.now()-lastPenTap>700){
+        lastPenTap=0;
+        lastPenButton=null;
+      }
+    },720);
   },true);
 
-  document.getElementById('mobilePenClose')?.addEventListener('click',close);
+  document.getElementById('mobilePenClose')?.addEventListener('click',closePenSettings);
+
   document.getElementById('mobilePenSize')?.addEventListener('input',e=>{
     const n=Math.max(1,Math.min(40,Number(e.target.value)||4));
     const main=document.getElementById('size');
-    if(main){main.value=n;main.dispatchEvent(new Event('input',{bubbles:true}));main.dispatchEvent(new Event('change',{bubbles:true}));}
+    if(main){
+      main.value=n;
+      main.dispatchEvent(new Event('input',{bubbles:true}));
+      main.dispatchEvent(new Event('change',{bubbles:true}));
+    }
     const out=document.getElementById('mobilePenSizeValue');
     if(out)out.textContent=String(n);
     if(typeof applyBrushSettings==='function')applyBrushSettings();
   });
+
   document.getElementById('mobilePenAngle')?.addEventListener('input',e=>{
     const out=document.getElementById('mobilePenAngleValue');
     if(out)out.textContent=e.target.value+'°';
@@ -3866,16 +3886,23 @@ updateZoom();
     if(preview)preview.style.transform='rotate('+e.target.value+'deg)';
     if(typeof applyBrushSettings==='function')applyBrushSettings();
   });
+
   document.getElementById('mobileCalligraphy')?.addEventListener('change',()=>{
     if(typeof applyBrushSettings==='function')applyBrushSettings();
   });
+
   document.querySelectorAll('[data-pen-size]').forEach(b=>b.addEventListener('click',()=>{
     const n=Math.max(1,Math.min(40,Number(b.dataset.penSize)||4));
     const input=document.getElementById('mobilePenSize');
-    if(input)input.value=n;
-    input?.dispatchEvent(new Event('input',{bubbles:true}));
+    if(input){
+      input.value=n;
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    }
   }));
-  panel()?.addEventListener('click',e=>{if(e.target===panel())close();});
+
+  panel()?.addEventListener('click',e=>{
+    if(e.target===panel())closePenSettings();
+  });
 })();
 </script>
 
@@ -4232,22 +4259,44 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   markerOpacity?.addEventListener('input',refreshMarker);
   document.querySelectorAll('[data-marker-size]').forEach(b=>b.addEventListener('click',()=>{ if(markerSize){markerSize.value=b.dataset.markerSize; refreshMarker();} }));
 
-  let lastTap=0,lastBtn=null,tapTimer=null;
-  document.addEventListener('pointerdown',e=>{
-    if(!mobile() || e.pointerType==='mouse') return;
+  // One and only one double-tap handler for Marker.
+  let lastMarkerTap=0;
+  let lastMarkerButton=null;
+
+  document.addEventListener('click',e=>{
+    if(!mobile())return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]');
-    if(!b) return;
+    if(!b)return;
+
+    const ua=navigator.userAgent||'';
+    const touch=(navigator.maxTouchPoints||0)>0;
+    const appleTouch=touch && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    const landscape=touch && (mobileUA||appleTouch) &&
+      window.matchMedia('(orientation: landscape)').matches;
+    if(!landscape)return;
+
     const now=Date.now();
-    if(lastBtn===b && now-lastTap<650){
-      lastTap=0; lastBtn=null;
-      if(tapTimer)clearTimeout(tapTimer);
-      e.preventDefault(); e.stopImmediatePropagation();
-      if(typeof setTool==='function')setTool('highlighter'); openMarker();
+    const isDouble=b===lastMarkerButton && (now-lastMarkerTap)<=700;
+
+    if(isDouble){
+      lastMarkerTap=0;
+      lastMarkerButton=null;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if(typeof setTool==='function')setTool('highlighter');
+      openMarker();
       return;
     }
-    lastTap=now; lastBtn=b;
-    if(tapTimer)clearTimeout(tapTimer);
-    tapTimer=setTimeout(()=>{lastTap=0;lastBtn=null;},700);
+
+    lastMarkerTap=now;
+    lastMarkerButton=b;
+    window.setTimeout(()=>{
+      if(lastMarkerButton===b && Date.now()-lastMarkerTap>700){
+        lastMarkerTap=0;
+        lastMarkerButton=null;
+      }
+    },720);
   },true);
 
   // Re-place after the landscape toolbar rebuilds its contents.
