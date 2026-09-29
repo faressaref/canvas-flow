@@ -5248,3 +5248,137 @@ body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
   body #mobileV2Bar{width:min(58vw,620px)!important;max-width:58vw!important;}
 }
 </style>
+
+
+<!-- CanvasFlow: FINAL LAST-WORD iOS/Android touch landscape UI -->
+<style id="canvasflow-touch-landscape-last-word">
+@media screen and (orientation:landscape) and (max-height:600px) and (pointer:coarse),
+       screen and (orientation:landscape) and (max-height:600px) and (pointer:fine){
+  html body.cf-touch-landscape #topbar,
+  html body.cf-touch-landscape #topbar *{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+
+  html body.cf-touch-landscape #mobilePhoneHeader{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+    position:fixed !important;
+    top:0 !important;left:0 !important;right:0 !important;
+    width:100% !important;height:52px !important;
+    z-index:2147483640 !important;
+    box-sizing:border-box !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    padding:4px 12px !important;
+    background:rgba(255,255,255,.97) !important;
+    border-bottom:1px solid #dfe4ea !important;
+  }
+
+  html body.cf-touch-landscape #mobilePhoneHeader .mbrand,
+  html body.cf-touch-landscape #mobilePhoneHeader .mtools,
+  html body.cf-touch-landscape #mobilePhoneHeader button{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+  }
+
+  html body.cf-touch-landscape #mobileV2Bar{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+    position:fixed !important;
+    top:0 !important;bottom:auto !important;
+    left:50% !important;right:auto !important;
+    transform:translateX(-50%) !important;
+    width:min(58vw,620px) !important;
+    max-width:58vw !important;
+    min-width:406px !important;
+    height:52px !important;
+    z-index:2147483641 !important;
+    box-sizing:border-box !important;
+    padding:3px 4px !important;
+    margin:0 !important;
+    gap:2px !important;
+    align-items:center !important;
+    justify-content:center !important;
+    overflow:visible !important;
+    flex-wrap:nowrap !important;
+    background:transparent !important;
+    border:0 !important;
+    box-shadow:none !important;
+  }
+
+  html body.cf-touch-landscape #mobileV2Bar > button,
+  html body.cf-touch-landscape #mobileV2Bar > label{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    position:relative !important;
+    flex:0 0 58px !important;
+    width:58px !important;
+    min-width:58px !important;
+    max-width:58px !important;
+    height:46px !important;
+    margin:0 !important;
+    padding:2px !important;
+    box-sizing:border-box !important;
+    align-items:center !important;
+    justify-content:center !important;
+    flex-direction:column !important;
+    gap:1px !important;
+    overflow:visible !important;
+    background:transparent !important;
+    border:0 !important;
+    border-radius:10px !important;
+    color:#4b5563 !important;
+    font:800 7px/1 system-ui,sans-serif !important;
+  }
+
+  html body.cf-touch-landscape #mobileV2Bar > button .v2icon,
+  html body.cf-touch-landscape #mobileV2Bar > label .v2icon{
+    display:block !important;
+    visibility:visible !important;
+    font-size:18px !important;
+    line-height:18px !important;
+  }
+
+  html body.cf-touch-landscape #mobileV2Bar > button.active{
+    display:flex !important;
+    background:#18202a !important;
+    color:#fff !important;
+  }
+
+  html body.cf-touch-landscape #mobileV2More{
+    display:flex !important;
+    visibility:visible !important;
+  }
+
+  html body.cf-touch-landscape #mobileQuickPenColors{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+    position:fixed !important;
+    top:57px !important;
+    bottom:auto !important;
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+    z-index:2147483642 !important;
+  }
+
+  html body.cf-touch-landscape #mobileQuickPenColors button{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+  }
+
+  html body.cf-touch-landscape #canvasWrap{
+    padding-top:52px !important;
+    padding-bottom:0 !important;
+  }
+}
+</style>
