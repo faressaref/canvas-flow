@@ -1333,11 +1333,11 @@
       <span class="v2icon">A</span><input id="mobileFontSize" type="range" min="10" max="72" value="22" aria-label="Font size"><span id="mobileFontSizeValue">22</span>
     </label>
   </div>
-<label id="mobileV2ColorControl" aria-label="Color">
+    <label id="mobileV2ColorControl" aria-label="Color">
     <span class="v2icon">●</span><span>Color</span>
     <input id="mobileV2Color" type="color" value="#18202a" aria-label="Choose color">
   </label>
-  <div id="mobilePenSettings" aria-hidden="true">
+<div id="mobilePenSettings" aria-hidden="true">
   <div class="mobile-pen-card">
     <div class="mobile-pen-head"><strong>Pen Settings</strong><button type="button" id="mobilePenClose" aria-label="Close">×</button></div>
     <label>Pen Size <output id="mobilePenSizeValue">4</output>
@@ -6423,24 +6423,45 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:block !important}
 <style id="canvasflow-mobile-landscape-color-shortcut-final">
 @media screen and (orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px){
   html body.cf-touch-landscape #mobileV2ColorControl{
-    display:flex !important; position:fixed !important; top:0 !important;
-    left:calc(50% + min(29vw,310px) + 8px) !important;
-    width:58px !important; min-width:58px !important; max-width:58px !important;
-    height:52px !important; margin:0 !important; padding:3px 4px !important;
-    box-sizing:border-box !important; flex-direction:column !important;
-    align-items:center !important; justify-content:center !important; gap:1px !important;
-    border:0 !important; border-radius:10px !important; background:transparent !important;
-    color:#4b5563 !important; font:800 7px/1 system-ui,sans-serif !important;
-    z-index:2147483003 !important; pointer-events:auto !important; touch-action:manipulation !important;
+    display:flex !important;
+    position:static !important;
+    width:58px !important;
+    min-width:58px !important;
+    max-width:58px !important;
+    height:44px !important;
+    margin:0 !important;
+    padding:2px 4px !important;
+    box-sizing:border-box !important;
+    flex:0 0 58px !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:1px !important;
+    border:0 !important;
+    border-radius:10px !important;
+    background:transparent !important;
+    color:#4b5563 !important;
+    font:800 7px/1 system-ui,sans-serif !important;
+    z-index:auto !important;
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
   }
   html body.cf-touch-landscape #mobileV2ColorControl .v2icon{
-    display:block !important; font-size:18px !important; line-height:18px !important;
+    display:block !important;
+    font-size:18px !important;
+    line-height:18px !important;
   }
   html body.cf-touch-landscape #mobileV2Color{
-    display:block !important; width:30px !important; height:30px !important;
-    min-width:30px !important; margin:-1px 0 0 !important; padding:2px !important;
-    border:1px solid #dfe4ea !important; border-radius:8px !important;
-    background:#fff !important; cursor:pointer !important;
+    display:block !important;
+    width:30px !important;
+    height:30px !important;
+    min-width:30px !important;
+    margin:-1px 0 0 !important;
+    padding:2px !important;
+    border:1px solid #dfe4ea !important;
+    border-radius:8px !important;
+    background:#fff !important;
+    cursor:pointer !important;
   }
 }
 </style>
