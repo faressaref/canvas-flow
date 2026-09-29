@@ -4094,7 +4094,17 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 <script id="mobile-quick-pen-marker-final">
 (function(){
   'use strict';
-  const mobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const mobile=()=>{
+    const phoneOrTablet=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+    const ua=navigator.userAgent||'';
+    const appleTouchDevice=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    const landscapeTouch=window.matchMedia('(orientation:landscape)').matches
+      && (mobileUA || appleTouchDevice)
+      && (window.matchMedia('(pointer:coarse)').matches || (navigator.maxTouchPoints||0)>0)
+      && window.matchMedia('(hover:none)').matches;
+    return phoneOrTablet || landscapeTouch;
+  };
   const palette=document.getElementById('mobileQuickPenColors');
   const markerPanel=document.getElementById('mobileMarkerSettings');
   const markerColor=document.getElementById('mobileMarkerColor');
