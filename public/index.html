@@ -1336,8 +1336,8 @@
     <span class="v2icon">●</span><span>Color</span>
     <input id="mobileV2Color" type="color" value="#18202a" aria-label="Choose color">
   </label>
-    <button type="button" id="mobileV2Undo" aria-label="Undo"><span class="v2icon">↶</span><span>Undo</span></button>
-    <button type="button" id="mobileV2Redo" aria-label="Redo"><span class="v2icon">↷</span><span>Redo</span></button>
+    <button type="button" id="mobileV2Undo" aria-label="Undo" title="Undo"><span class="v2icon">↶</span><span>Undo</span></button>
+    <button type="button" id="mobileV2Redo" aria-label="Redo" title="Redo"><span class="v2icon">↷</span><span>Redo</span></button>
   </div>
 
 <div id="mobilePenSettings" aria-hidden="true">
@@ -1886,8 +1886,12 @@ function redo() {
 
 document.getElementById("undoBtn").addEventListener("click", undo);
 document.getElementById("redoBtn").addEventListener("click", redo);
-document.getElementById("mobileV2Undo")?.addEventListener("click", undo);
-document.getElementById("mobileV2Redo")?.addEventListener("click", redo);
+const mobileUndo=document.getElementById("mobileV2Undo");
+const mobileRedo=document.getElementById("mobileV2Redo");
+mobileUndo?.addEventListener("click", undo);
+mobileRedo?.addEventListener("click", redo);
+mobileUndo?.addEventListener("touchend", e=>{e.preventDefault();undo();},{passive:false});
+mobileRedo?.addEventListener("touchend", e=>{e.preventDefault();redo();},{passive:false});
 const tabletUndo = document.getElementById("tabletUndo");
 const tabletRedo = document.getElementById("tabletRedo");
 if (tabletUndo) tabletUndo.addEventListener("click", undo);
