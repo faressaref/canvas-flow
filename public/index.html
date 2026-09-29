@@ -6174,3 +6174,109 @@ body.cf-touch-landscape #mobileV2Scroll{
   }
 }
 </style>
+
+
+<!-- CanvasFlow: exact mobile Pen card size for Marker card -->
+<style id="canvasflow-marker-exact-mobile-card-final">
+@media screen and (orientation:landscape) and (max-height:650px){
+  html body.cf-touch-landscape #mobileMarkerSettings{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100vh !important;
+    padding:14px !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+    display:none !important;
+    align-items:center !important;
+    justify-content:center !important;
+    background:rgba(0,0,0,.28) !important;
+    z-index:2147483646 !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings.open{
+    display:flex !important;
+  }
+
+  /* EXACT same card width + base box metrics as .mobile-pen-card */
+  html body.cf-touch-landscape #mobileMarkerSettings .mobile-marker-card{
+    width:min(420px,100%) !important;
+    max-width:420px !important;
+    min-width:0 !important;
+    margin:0 !important;
+    padding:16px !important;
+    box-sizing:border-box !important;
+    background:#fff !important;
+    border:1px solid #dfe4ea !important;
+    border-radius:18px !important;
+    box-shadow:0 16px 45px rgba(0,0,0,.22) !important;
+    font-family:inherit !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings .mobile-pen-head{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    margin-bottom:14px !important;
+    font-size:16px !important;
+    direction:rtl !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings .mobile-pen-head button{
+    border:0 !important;
+    background:#f1f3f5 !important;
+    border-radius:9px !important;
+    width:34px !important;
+    min-width:34px !important;
+    height:34px !important;
+    font-size:22px !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings .mobile-marker-card > label{
+    display:block !important;
+    width:100% !important;
+    margin:0 0 11px !important;
+    font-size:13px !important;
+    font-weight:700 !important;
+    direction:rtl !important;
+    text-align:right !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings .mobile-marker-card > label output{
+    float:left !important;
+    font-weight:700 !important;
+    direction:ltr !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings input[type="color"]{
+    display:block !important;
+    width:100% !important;
+    height:42px !important;
+    margin:8px 0 4px !important;
+    box-sizing:border-box !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings input[type="range"]{
+    display:block !important;
+    width:100% !important;
+    margin:13px 0 15px !important;
+    accent-color:#18202a !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings .mobile-pen-presets{
+    display:grid !important;
+    grid-template-columns:repeat(4,1fr) !important;
+    gap:7px !important;
+    direction:rtl !important;
+    margin:0 0 11px !important;
+  }
+
+  html body.cf-touch-landscape #mobileMarkerSettings .mobile-pen-presets button{
+    border:1px solid #dfe4ea !important;
+    background:#fff !important;
+    border-radius:10px !important;
+    padding:9px 4px !important;
+    font-size:11px !important;
+  }
+}
+</style>
