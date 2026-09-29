@@ -993,6 +993,18 @@
   #mobileV2Bar .mobile-v2-font .font-value{font-size:10px;min-width:16px}
 }
 </style>
+<style id="mobile-eraser-settings-css">
+#mobileEraserSettings{display:none;position:fixed;inset:0;z-index:30000;background:rgba(0,0,0,.28);align-items:flex-end;justify-content:center;padding:14px;box-sizing:border-box}
+#mobileEraserSettings.open{display:flex}
+.mobile-eraser-card{width:min(420px,100%) !important;max-width:420px !important}
+#mobileEraserSettings .mobile-pen-presets{margin-top:2px}
+#mobileEraserSettings .mobile-pen-presets button{min-height:40px}
+@media screen and (orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px){
+  #mobileEraserSettings{z-index:2147483010 !important}
+  #mobileEraserSettings.open{display:flex !important;align-items:center !important;justify-content:center !important}
+  #mobileEraserSettings .mobile-eraser-card{width:min(420px,100%) !important;max-width:420px !important;margin:0 !important;padding:16px !important}
+}
+</style>
 <style id="mobile-landing-no-fullscreen">
 @media screen and (max-width:760px){
   #landing #mobileFullscreen,
@@ -1313,6 +1325,7 @@
     <button type="button" data-v2-tool="select"><span class="v2icon">↖</span><span>Select</span></button>
     <button type="button" data-v2-tool="pen"><span class="v2icon">✎</span><span>Pen</span></button>
     <button type="button" data-v2-tool="highlighter"><span class="v2icon">▰</span><span>Highlight</span></button>
+    <button type="button" data-v2-tool="eraser" aria-label="Eraser"><span class="v2icon">◯</span><span>Eraser</span></button>
     <button type="button" id="mobileV2Scroll" aria-label="Scroll board"><span class="v2icon">↕</span><span>Scroll</span></button>
     <button type="button" id="mobileV2AI"><span class="v2icon">✦</span><span>AI</span></button>
     <button type="button" id="mobileV2Upload" data-v2-tool="image" aria-label="Upload file or image"><span class="v2icon">▧</span><span>Upload</span></button>
@@ -1351,7 +1364,22 @@
 
   <!-- Marker settings: long-press Highlight. -->
   <div id="mobileMarkerSettings" aria-hidden="true">
-    <div class="mobile-marker-card">
+    <div id="mobileEraserSettings" aria-hidden="true">
+    <div class="mobile-pen-card mobile-eraser-card">
+      <div class="mobile-pen-head"><strong>Eraser Settings</strong><button type="button" id="mobileEraserClose" aria-label="Close">×</button></div>
+      <label>Eraser Size <output id="mobileEraserSizeValue">24</output>
+        <input id="mobileEraserSize" type="range" min="6" max="120" value="24" step="1">
+      </label>
+      <div class="mobile-pen-presets">
+        <button type="button" data-eraser-size="12">12</button>
+        <button type="button" data-eraser-size="24">24</button>
+        <button type="button" data-eraser-size="48">48</button>
+        <button type="button" data-eraser-size="72">72</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mobile-marker-card">
       <div class="mobile-pen-head"><strong>Marker Settings</strong><button type="button" id="mobileMarkerClose" aria-label="Close">×</button></div>
       <label>Marker Color <output id="mobileMarkerColorValue">#FFD54A</output>
         <input id="mobileMarkerColor" type="color" value="#FFD54A" aria-label="Marker color">
@@ -2281,6 +2309,32 @@ function finishTouchPan(e) { if (touchPan && e.pointerId === touchPan.id) touchP
 wrap.addEventListener("pointerup", finishTouchPan, {capture:true});
 wrap.addEventListener("pointercancel", finishTouchPan, {capture:true});
 
+function getEraserSize(){
+  return Math.max(6, Math.min(120, Number(window.__cfEraserSize)||24));
+}
+function eraseAtPoint(e){
+  const p=canvas.getPointer(e);
+  const radius=getEraserSize()/2;
+  const removed=[];
+  canvas.getObjects().slice().forEach(obj=>{
+    if(obj === canvas.backgroundImage) return;
+    try{
+      const center=obj.getCenterPoint ? obj.getCenterPoint() : null;
+      const halfW=Math.max(1,(obj.getScaledWidth ? obj.getScaledWidth() : obj.width||1)/2);
+      const halfH=Math.max(1,(obj.getScaledHeight ? obj.getScaledHeight() : obj.height||1)/2);
+      const dx=Math.abs(p.x-(center?.x ?? obj.left ?? 0));
+      const dy=Math.abs(p.y-(center?.y ?? obj.top ?? 0));
+      if(dx <= halfW+radius && dy <= halfH+radius){
+        removed.push(obj);
+      }
+    }catch(_){}
+  });
+  if(removed.length){
+    removed.forEach(obj=>canvas.remove(obj));
+    canvas.requestRenderAll();
+    scheduleSave(true);
+  }
+}
 canvas.on("mouse:down", opt => {
   const e = opt.e;
   if (tabletScrollMode) return;
@@ -2294,8 +2348,7 @@ canvas.on("mouse:down", opt => {
   }
 
   if (tool === "eraser") {
-    const target = opt.target;
-    if (target) { canvas.remove(target); canvas.requestRenderAll(); scheduleSave(true); }
+    eraseAtPoint(opt.e);
     return;
   }
   if (e.altKey || e.button === 1) return;
@@ -5464,7 +5517,7 @@ body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
       }
       return;
     }
-    if(name==='select' || name==='pen' || name==='highlighter'){
+    if(name==='select' || name==='pen' || name==='highlighter' || name==='eraser'){
       syncTool(name);
     }
   }
@@ -5645,7 +5698,7 @@ body.cf-touch-landscape #mobileV2Scroll{
       }
       return;
     }
-    if(name==='select'||name==='pen'||name==='highlighter'){
+    if(name==='select'||name==='pen'||name==='highlighter'||name==='eraser'){
       if(typeof setTabletScrollMode==='function') setTabletScrollMode(false);
       if(typeof setTool==='function') setTool(name);
       bar.querySelectorAll('[data-v2-tool]').forEach(x=>x.classList.toggle('active',x.dataset.v2Tool===name));
@@ -6307,6 +6360,82 @@ body.cf-touch-landscape #mobileV2Scroll{
     visibility:visible !important;
     opacity:1 !important;
     pointer-events:auto !important;
+  }
+}
+</style>
+
+
+<style id="canvasflow-eraser-cursor-css">
+#canvasflowEraserCursor{
+  position:fixed;width:24px;height:24px;border:2px solid #18202a;border-radius:50%;
+  pointer-events:none;z-index:2147483000;display:none;box-sizing:border-box;
+  transform:translate(-50%,-50%);background:rgba(255,255,255,.12);
+}
+body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
+</style>
+<script id="canvasflow-eraser-final">
+(function(){
+  'use strict';
+  window.__cfEraserSize=24;
+
+  const bar=document.getElementById('mobileV2Bar');
+  const panel=document.getElementById('mobileEraserSettings');
+  const range=document.getElementById('mobileEraserSize');
+  const output=document.getElementById('mobileEraserSizeValue');
+  const close=document.getElementById('mobileEraserClose');
+  if(!bar || !panel || !range) return;
+
+  const cursor=document.createElement('div');
+  cursor.id='canvasflowEraserCursor';
+  document.body.appendChild(cursor);
+
+  function setSize(v){
+    const n=Math.max(6,Math.min(120,Number(v)||24));
+    window.__cfEraserSize=n;
+    range.value=n;
+    if(output) output.textContent=n;
+    cursor.style.width=n+'px';
+    cursor.style.height=n+'px';
+  }
+  setSize(range.value);
+
+  range.addEventListener('input',()=>setSize(range.value));
+  panel.querySelectorAll('[data-eraser-size]').forEach(b=>{
+    b.addEventListener('click',()=>setSize(b.dataset.eraserSize));
+  });
+  close?.addEventListener('click',()=>{
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden','true');
+  });
+  panel.addEventListener('click',e=>{
+    if(e.target===panel){
+      panel.classList.remove('open');
+      panel.setAttribute('aria-hidden','true');
+    }
+  });
+
+  function updateCursor(e){
+    if(typeof tool!=='undefined' && tool==='eraser'){
+      cursor.style.display='block';
+      cursor.style.left=e.clientX+'px';
+      cursor.style.top=e.clientY+'px';
+    }else cursor.style.display='none';
+  }
+  canvas.on('mouse:move',opt=>updateCursor(opt.e));
+  canvas.on('mouse:out',()=>cursor.style.display='none');
+
+  window.__openEraserSettings=function(){
+    if(typeof setTool==='function') setTool('eraser');
+    setSize(window.__cfEraserSize);
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden','false');
+  };
+})();
+</script>
+<style id="canvasflow-eraser-landscape-visibility">
+@media screen and (orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px){
+  body.cf-touch-landscape #mobileV2Bar [data-v2-tool="eraser"]{
+    display:flex !important;visibility:visible !important;pointer-events:auto !important;
   }
 }
 </style>
