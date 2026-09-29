@@ -77,14 +77,9 @@
     if(tool==='pen'||tool==='highlighter')record(tool);
   },{capture:true,passive:true});
 
-  bar.addEventListener('pointerdown',function(e){
-    if(e.pointerType==='mouse' || !isLandscapeTouch())return;
-    const button=e.target.closest('button[data-v2-tool]');
-    if(!button || !bar.contains(button))return;
-    const tool=button.dataset.v2Tool;
-    if(tool==='pen'||tool==='highlighter')record(tool);
-  },{capture:true,passive:true});
-
+  // Do NOT also listen to pointerdown here: iPad Safari fires both
+  // pointer and touch events for one tap, which would make one tap look
+  // like a double tap. touchend is the single source of truth on touch.
   window.addEventListener('orientationchange',()=>{
     lastTool=null;
     lastTime=0;
