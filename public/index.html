@@ -3801,7 +3801,7 @@ updateZoom();
 
   let lastTap=0,lastBtn=null,tapTimer=null;
   document.addEventListener('pointerdown',e=>{
-    if(!mobile() || e.pointerType==='mouse') return;
+    if(!isMobile() || e.pointerType==='mouse') return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
     if(!b) return;
     const now=Date.now();
