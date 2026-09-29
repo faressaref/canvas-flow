@@ -54,7 +54,7 @@
     if(!button || !bar.contains(button))return;
 
     const tool=button.dataset.v2Tool;
-    if(tool!=='pen' && tool!=='highlighter')return;
+    if(tool!=='pen' && tool!=='highlighter' && tool!=='eraser')return;
 
     const now=Date.now();
     const sameTool=lastTapButton===button && lastTapTool===tool;
