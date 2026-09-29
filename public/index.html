@@ -3799,45 +3799,22 @@ updateZoom();
     if(p){p.classList.remove('open');p.setAttribute('aria-hidden','true');}
   }
 
-  document.addEventListener('pointerdown',e=>{
-    if(!isMobile()||e.pointerType==='mouse')return;
+  let lastTap=0,lastBtn=null,tapTimer=null;
+  document.addEventListener('click',e=>{
+    if(!isMobile())return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
     if(!b)return;
-    clear();
-    activeId=e.pointerId;activeBtn=b;longPressed=false;
-    timer=setTimeout(()=>{
-      if(activeBtn&&activeId!==null){
-        longPressed=true;
-        open();
-      }
-    },650);
-  },true);
-
-  document.addEventListener('pointermove',e=>{
-    if(activeId===null||e.pointerId!==activeId)return;
-    if(Math.abs(e.movementX)>12||Math.abs(e.movementY)>12)clear();
-  },true);
-
-  document.addEventListener('pointerup',e=>{
-    if(activeId!==e.pointerId)return;
-    const wasLong=longPressed;
-    const b=activeBtn;
-    clear();
-    if(wasLong&&b){
-      e.preventDefault();
-      e.stopImmediatePropagation();
+    const now=Date.now();
+    if(lastBtn===b && now-lastTap<500){
+      if(tapTimer)clearTimeout(tapTimer);
+      lastTap=0;lastBtn=null;
+      e.preventDefault();e.stopImmediatePropagation();
+      open();
+      return;
     }
-  },true);
-
-  document.addEventListener('pointercancel',e=>{
-    if(activeId===e.pointerId)clear();
-  },true);
-
-  document.addEventListener('click',e=>{
-    if(!longPressed)return;
-    const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
-    if(b){e.preventDefault();e.stopImmediatePropagation();}
-    longPressed=false;
+    lastTap=now;lastBtn=b;
+    if(tapTimer)clearTimeout(tapTimer);
+    tapTimer=setTimeout(()=>{lastTap=0;lastBtn=null;},550);
   },true);
 
   document.getElementById('mobilePenClose')?.addEventListener('click',close);
@@ -4222,17 +4199,23 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   markerOpacity?.addEventListener('input',refreshMarker);
   document.querySelectorAll('[data-marker-size]').forEach(b=>b.addEventListener('click',()=>{ if(markerSize){markerSize.value=b.dataset.markerSize; refreshMarker();} }));
 
-  let timer=null, longPressed=false;
-  document.addEventListener('pointerdown',e=>{
-    if(!mobile()) return;
-    const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]');
-    if(!b) return;
-    longPressed=false; clearTimeout(timer);
-    timer=setTimeout(()=>{longPressed=true;openMarker();},520);
-  },true);
-  ['pointerup','pointercancel','pointerleave'].forEach(type=>document.addEventListener(type,()=>{if(timer){clearTimeout(timer);timer=null;}},true));
+  let lastTap=0,lastBtn=null,tapTimer=null;
   document.addEventListener('click',e=>{
-    if(longPressed){ const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]'); if(b){e.preventDefault();e.stopImmediatePropagation();} longPressed=false; }
+    if(!mobile())return;
+    const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]');
+    if(!b)return;
+    const now=Date.now();
+    if(lastBtn===b && now-lastTap<500){
+      if(tapTimer)clearTimeout(tapTimer);
+      lastTap=0;lastBtn=null;
+      e.preventDefault();e.stopImmediatePropagation();
+      if(typeof setTool==='function')setTool('highlighter');
+      openMarker();
+      return;
+    }
+    lastTap=now;lastBtn=b;
+    if(tapTimer)clearTimeout(tapTimer);
+    tapTimer=setTimeout(()=>{lastTap=0;lastBtn=null;},550);
   },true);
 
   // Re-place after the landscape toolbar rebuilds its contents.
