@@ -134,5 +134,63 @@ if (!html.includes(detectorMarker)) {
   html = html.trimEnd() + '\n\n' + detector;
 }
 
+
+const finalTabletMarker = '<style id="canvasflow-mobile-landscape-tablet-build-final">';
+if (!html.includes(finalTabletMarker)) {
+  const finalTabletStyle = `<style id="canvasflow-mobile-landscape-tablet-build-final">
+/* Last-pass touch landscape override. Applies to mobile/tablet touch landscape only. */
+@media screen and (orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px){
+  html,body{width:100%!important;height:100%!important;overflow:hidden!important;}
+  body.cf-phone-landscape #topbar,
+  body.cf-phone-landscape #hint,
+  body.cf-phone-landscape #zoom,
+  body.cf-phone-landscape #tabletControls,
+  body.cf-phone-landscape #tabletAccount,
+  body.cf-phone-landscape .device-switch,
+  body.cf-phone-landscape #pcMode,
+  body.cf-phone-landscape #tabletMode{
+    display:none!important;visibility:hidden!important;pointer-events:none!important;
+  }
+  body.cf-phone-landscape #mobilePhoneHeader{
+    display:flex!important;position:fixed!important;top:0!important;left:0!important;right:0!important;
+    height:50px!important;z-index:2147483000!important;align-items:center!important;
+    justify-content:space-between!important;padding:4px 10px!important;box-sizing:border-box!important;
+    background:rgba(255,255,255,.97)!important;border-bottom:1px solid #dfe4ea!important;
+  }
+  body.cf-phone-landscape #mobileV2Bar{
+    display:flex!important;position:fixed!important;top:0!important;bottom:auto!important;
+    left:50%!important;right:auto!important;width:max-content!important;max-width:58%!important;
+    height:50px!important;transform:translateX(-50%)!important;z-index:2147483001!important;
+    padding:3px 4px!important;gap:2px!important;align-items:center!important;justify-content:center!important;
+    background:transparent!important;border:0!important;box-shadow:none!important;overflow:hidden!important;
+    flex-wrap:nowrap!important;touch-action:manipulation!important;
+  }
+  body.cf-phone-landscape #mobileV2Bar>button,
+  body.cf-phone-landscape #mobileV2Bar>label{
+    display:flex!important;flex:0 0 46px!important;min-width:46px!important;width:46px!important;
+    max-width:46px!important;height:42px!important;margin:0!important;padding:2px!important;
+    flex-direction:column!important;align-items:center!important;justify-content:center!important;
+    border-radius:9px!important;background:transparent!important;color:#4b5563!important;
+    font:800 7px/1 system-ui,sans-serif!important;box-sizing:border-box!important;
+  }
+  body.cf-phone-landscape #mobileV2Bar>button.active{background:#18202a!important;color:#fff!important;}
+  body.cf-phone-landscape #mobileV2Bar .v2icon{font-size:18px!important;line-height:18px!important;}
+  body.cf-phone-landscape #canvasWrap{padding-top:50px!important;padding-bottom:0!important;box-sizing:border-box!important;}
+  body.cf-phone-landscape #mobileQuickPenColors{
+    display:flex!important;position:fixed!important;left:50%!important;right:auto!important;
+    top:54px!important;bottom:auto!important;transform:translateX(-50%)!important;
+    z-index:2147483002!important;flex-direction:row!important;gap:7px!important;padding:5px 7px!important;
+    border-radius:14px!important;background:rgba(255,255,255,.98)!important;
+    border:1px solid #dfe4ea!important;box-shadow:0 6px 18px rgba(0,0,0,.12)!important;
+  }
+  body.cf-phone-landscape #mobileQuickPenColors button{
+    width:27px!important;height:27px!important;min-width:27px!important;padding:0!important;border-radius:50%!important;
+  }
+  body.cf-phone-landscape #mobileV2More,
+  body.cf-phone-landscape #mobileV2Menu{display:none!important;}
+}
+</style>`;
+  html = html.trimEnd() + '\n\n' + finalTabletStyle + '\n';
+}
 fs.writeFileSync(file, html, 'utf8');
 console.log('mobile landscape fixed: full Elements toolbar restored; AI untouched');
