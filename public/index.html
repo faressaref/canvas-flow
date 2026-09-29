@@ -3768,7 +3768,15 @@ updateZoom();
       && (mobileUA || appleTouchDevice)
       && (window.matchMedia('(pointer:coarse)').matches || (navigator.maxTouchPoints||0)>0)
       && window.matchMedia('(hover:none)').matches;
-    return phoneOrTablet || landscapeTouch;
+    return phoneOrTablet || landscapeTouch || isLandscapeTouch();
+  };
+  const isLandscapeTouch=()=>{
+    const ua=navigator.userAgent||'';
+    const appleTouch=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    return window.matchMedia('(orientation:landscape)').matches &&
+      (mobileUA||appleTouch) &&
+      (navigator.maxTouchPoints||0)>0;
   };
   const panel=()=>document.getElementById('mobilePenSettings');
   let timer=null, longPressed=false;
@@ -4103,7 +4111,15 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
       && (mobileUA || appleTouchDevice)
       && (window.matchMedia('(pointer:coarse)').matches || (navigator.maxTouchPoints||0)>0)
       && window.matchMedia('(hover:none)').matches;
-    return phoneOrTablet || landscapeTouch;
+    return phoneOrTablet || landscapeTouch || isLandscapeTouch();
+  };
+  const isLandscapeTouch=()=>{
+    const ua=navigator.userAgent||'';
+    const appleTouch=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    return window.matchMedia('(orientation:landscape)').matches &&
+      (mobileUA||appleTouch) &&
+      (navigator.maxTouchPoints||0)>0;
   };
   const palette=document.getElementById('mobileQuickPenColors');
   const markerPanel=document.getElementById('mobileMarkerSettings');
