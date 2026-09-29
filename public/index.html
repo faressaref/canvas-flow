@@ -4855,57 +4855,39 @@ body.mobile-css-fullscreen #authModal.open .modal-card{
   'use strict';
   const wrap=document.getElementById('canvasWrap');
   if(!wrap) return;
-  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
-  const getCanvas=()=>typeof canvas!=='undefined' ? canvas : null;
-  let gesture=null;
-
-  const point=(t)=>({x:t.clientX,y:t.clientY});
+  const isTouchDevice=()=>{
+    const ua=navigator.userAgent||'';
+    const appleTouch=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    return (mobileUA||appleTouch) && (navigator.maxTouchPoints||0)>0;
+  };
+  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || isTouchDevice();
+  const getCanvas=()=>typeof canvas!=='undefined'?canvas:null;
+  const getTarget=()=>getCanvas()?.upperCanvasEl||wrap;
+  const point=e=>({x:e.clientX,y:e.clientY});
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
-  const local=(pt)=>{
-    const target=(typeof canvas!=='undefined' && canvas && canvas.upperCanvasEl) ? canvas.upperCanvasEl : wrap;
-    const r=target.getBoundingClientRect();
-    return {x:pt.x-r.left,y:pt.y-r.top};
-  };
+  const local=p=>{const r=getTarget().getBoundingClientRect();return{x:p.x-r.left,y:p.y-r.top};};
+  const pointers=new Map();
+  let gesture=null,savedDrawingMode=null,savedSelection=null;
 
-  function begin(e){
-    if(!isMobile() || e.touches.length!==2) return;
-    const c=getCanvas(); if(!c) return;
-    const a=point(e.touches[0]), b=point(e.touches[1]), m=mid(a,b);
-    const lp=local(m);
-    const z=c.getZoom();
-    const v=c.viewportTransform.slice();
-
-    // Capture the exact BOARD coordinate under the fingers. Fabric objects
-    // live in this world coordinate system, so changing only the viewport
-    // transform cannot move the actual writing on the board.
-    gesture={
-      startDistance:Math.max(1,dist(a,b)),
-      startZoom:z,
-      worldX:(lp.x-v[4])/z,
-      worldY:(lp.y-v[5])/z,
-      startMid:lp,
-      startViewport:v
-    };
-
-    // Cancel any active drawing gesture before Fabric sees the second finger.
+  function beginGesture(){
+    const c=getCanvas(); if(!c||pointers.size<2||!isMobile()) return;
+    const pts=[...pointers.values()].slice(0,2),m=mid(pts[0],pts[1]),lp=local(m),z=c.getZoom(),v=c.viewportTransform.slice();
+    gesture={startDistance:Math.max(1,dist(pts[0],pts[1])),startZoom:z,worldX:(lp.x-v[4])/z,worldY:(lp.y-v[5])/z,startViewport:v};
+    savedDrawingMode=c.isDrawingMode;
+    savedSelection=c.selection;
     c.isDrawingMode=false;
+    c.selection=false;
     c.discardActiveObject();
     c.requestRenderAll();
-    e.preventDefault();
-    e.stopImmediatePropagation();
   }
 
-  function move(e){
-    if(!gesture || !isMobile() || e.touches.length!==2) return;
+  function moveGesture(){
+    if(!gesture||pointers.size<2) return;
     const c=getCanvas(); if(!c) return;
-    const a=point(e.touches[0]), b=point(e.touches[1]), m=mid(a,b);
-    const lp=local(m);
-    const d=Math.max(1,dist(a,b));
-    const z=Math.max(0.2,Math.min(5,gesture.startZoom*(d/gesture.startDistance)));
-
-    // Keep the SAME board/world point underneath the moving midpoint.
-    // This is the key: zoom changes the camera, not the drawing's position.
+    const pts=[...pointers.values()].slice(0,2),m=mid(pts[0],pts[1]),lp=local(m),d=Math.max(1,dist(pts[0],pts[1]));
+    const z=Math.max(.2,Math.min(4,gesture.startZoom*(d/gesture.startDistance)));
     const v=gesture.startViewport.slice();
     v[0]=z; v[3]=z;
     v[4]=lp.x-(gesture.worldX*z);
@@ -4913,25 +4895,49 @@ body.mobile-css-fullscreen #authModal.open .modal-card{
     c.setViewportTransform(v);
     c.requestRenderAll();
     if(typeof updateZoom==='function') updateZoom();
-
-    e.preventDefault();
-    e.stopImmediatePropagation();
   }
 
-  function end(e){
-    if(gesture && (!e.touches || e.touches.length<2)){
-      // Leave the viewport exactly where the gesture ended. No reset, no fit,
-      // and no restoring the old transform.
-      gesture=null;
+  function endGesture(){
+    if(!gesture||pointers.size>=2) return;
+    const c=getCanvas();
+    if(c){
+      c.isDrawingMode=!!savedDrawingMode;
+      if(savedSelection!==null)c.selection=savedSelection;
+      c.requestRenderAll();
     }
+    gesture=null;savedDrawingMode=null;savedSelection=null;
   }
 
-  // Capture phase + stopImmediatePropagation prevents Fabric/browser handlers
-  // from applying a second transform or scrolling the page during pinch.
-  wrap.addEventListener('touchstart',begin,{capture:true,passive:false});
-  wrap.addEventListener('touchmove',move,{capture:true,passive:false});
-  wrap.addEventListener('touchend',end,{capture:true,passive:true});
-  wrap.addEventListener('touchcancel',end,{capture:true,passive:true});
+  const target=getTarget();
+  target.style.touchAction='none';
+
+  target.addEventListener('pointerdown',e=>{
+    if(!isMobile()||e.pointerType==='mouse') return;
+    pointers.set(e.pointerId,point(e));
+    try{target.setPointerCapture(e.pointerId);}catch(_){}
+    if(pointers.size===2){
+      beginGesture();
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  },{capture:true,passive:false});
+
+  target.addEventListener('pointermove',e=>{
+    if(!isMobile()||e.pointerType==='mouse'||!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId,point(e));
+    if(gesture){
+      moveGesture();
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  },{capture:true,passive:false});
+
+  const release=e=>{
+    if(e.pointerType!=='mouse')pointers.delete(e.pointerId);
+    endGesture();
+  };
+  target.addEventListener('pointerup',release,{capture:true,passive:false});
+  target.addEventListener('pointercancel',release,{capture:true,passive:false});
 })();
 </script>
 
