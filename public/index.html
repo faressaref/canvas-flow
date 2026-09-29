@@ -6371,7 +6371,7 @@ body.cf-touch-landscape #mobileV2Scroll{
   pointer-events:none;z-index:2147483000;display:none;box-sizing:border-box;
   transform:translate(-50%,-50%);background:rgba(255,255,255,.12);
 }
-body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
+body.cf-touch-landscape #canvasflowEraserCursor{display:block !important}
 </style>
 <script id="canvasflow-eraser-final">
 (function(){
@@ -6453,5 +6453,25 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
   });
   canvas.on('mouse:up',()=>{erasing=false;});
   canvas.on('mouse:out',()=>{erasing=false;});
+})();
+</script>
+<script id="canvasflow-eraser-touch-cursor-final">
+(function(){
+  'use strict';
+  const cursor=document.getElementById('canvasflowEraserCursor');
+  const wrap=document.getElementById('canvasWrap');
+  if(!cursor||!wrap)return;
+  const active=()=>document.body.classList.contains('cf-touch-landscape') &&
+    window.matchMedia('(orientation:landscape) and (pointer:coarse) and (hover:none)').matches;
+  function move(x,y){
+    if(!active() || typeof tool==='undefined' || tool!=='eraser'){cursor.style.display='none';return;}
+    const size=Math.max(6,Math.min(120,Number(window.__cfEraserSize)||24));
+    cursor.style.width=size+'px'; cursor.style.height=size+'px';
+    cursor.style.left=x+'px'; cursor.style.top=y+'px'; cursor.style.display='block';
+  }
+  wrap.addEventListener('touchstart',e=>{if(e.touches.length===1)move(e.touches[0].clientX,e.touches[0].clientY);},{capture:true,passive:true});
+  wrap.addEventListener('touchmove',e=>{if(e.touches.length===1)move(e.touches[0].clientX,e.touches[0].clientY);},{capture:true,passive:true});
+  wrap.addEventListener('touchend',()=>{if(active())cursor.style.display='none';},{capture:true,passive:true});
+  wrap.addEventListener('touchcancel',()=>{cursor.style.display='none';},{capture:true,passive:true});
 })();
 </script>
