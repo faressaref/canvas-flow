@@ -3555,50 +3555,35 @@ updateZoom();
   window.createCalligraphyBrush=makeBrush;
 })();
 </script>
-<script id="mobile-pen-longpress-final">
+<script id="mobile-pen-settings-controls-final">
 (function(){
-  const bar=()=>document.getElementById('mobileV2Bar');
-  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
   const panel=()=>document.getElementById('mobilePenSettings');
-  let timer=null, longPressed=false;
-  function open(){
-    const p=panel(); if(!p) return;
-    const input=document.getElementById('mobilePenSize');
-    const size=document.getElementById('size');
-    if(input && size) input.value=size.value||4;
-    const out=document.getElementById('mobilePenSizeValue'); if(out) out.textContent=input?.value||'4';
-    p.classList.add('open'); p.setAttribute('aria-hidden','false');
-  }
   function close(){ const p=panel(); if(p){p.classList.remove('open');p.setAttribute('aria-hidden','true');} }
   function apply(v){
     const n=Math.max(1,Math.min(40,Number(v)||4));
-    const main=document.getElementById('size'); if(main){main.value=n; main.dispatchEvent(new Event('input',{bubbles:true})); main.dispatchEvent(new Event('change',{bubbles:true}));}
-    const out=document.getElementById('mobilePenSizeValue'); if(out) out.textContent=String(n);
+    const main=document.getElementById('size');
+    if(main){main.value=n;main.dispatchEvent(new Event('input',{bubbles:true}));main.dispatchEvent(new Event('change',{bubbles:true}));}
+    const out=document.getElementById('mobilePenSizeValue');
+    if(out) out.textContent=String(n);
     if(typeof applyBrushSettings==='function') applyBrushSettings();
   }
-  document.addEventListener('pointerdown',e=>{
-    if(!isMobile()) return;
-    const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
-    if(!b) return;
-    longPressed=false; clearTimeout(timer);
-    timer=setTimeout(()=>{longPressed=true;open();},520);
-  },true);
-  ['pointerup','pointercancel','pointerleave'].forEach(type=>document.addEventListener(type,e=>{
-    if(timer){ clearTimeout(timer); timer=null; }
-  },true));
-  document.addEventListener('click',e=>{
-    if(longPressed){ const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]'); if(b){e.preventDefault();e.stopImmediatePropagation();} longPressed=false; }
-  },true);
   document.getElementById('mobilePenClose')?.addEventListener('click',close);
   document.getElementById('mobilePenSize')?.addEventListener('input',e=>apply(e.target.value));
   const angle=document.getElementById('mobilePenAngle');
   const angleOut=document.getElementById('mobilePenAngleValue');
   const preview=document.querySelector('#mobileNibPreview span');
-  angle?.addEventListener('input',e=>{ if(angleOut) angleOut.textContent=e.target.value+'°'; if(preview) preview.style.transform='rotate('+e.target.value+'deg)'; if(typeof applyBrushSettings==='function') applyBrushSettings(); });
-  document.getElementById('mobileCalligraphy')?.addEventListener('change',()=>{ if(typeof applyBrushSettings==='function') applyBrushSettings(); });
+  angle?.addEventListener('input',e=>{
+    if(angleOut) angleOut.textContent=e.target.value+'°';
+    if(preview) preview.style.transform='rotate('+e.target.value+'deg)';
+    if(typeof applyBrushSettings==='function') applyBrushSettings();
+  });
+  document.getElementById('mobileCalligraphy')?.addEventListener('change',()=>{
+    if(typeof applyBrushSettings==='function') applyBrushSettings();
+  });
   document.querySelectorAll('[data-pen-size]').forEach(b=>b.addEventListener('click',()=>apply(b.dataset.penSize)));
   document.addEventListener('pointerdown',e=>{
-    const p=panel(); if(p?.classList.contains('open') && e.target===p) close();
+    const p=panel();
+    if(p?.classList.contains('open') && e.target===p) close();
   },true);
 })();
 </script>
@@ -3918,6 +3903,7 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
     const input=document.getElementById('color');
     if(input){ input.value=c; input.dispatchEvent(new Event('input',{bubbles:true})); input.dispatchEvent(new Event('change',{bubbles:true})); }
     if(typeof setTool==='function') setTool('pen');
+    if(typeof applyBrushSettings==='function') applyBrushSettings();
     if(typeof canvas!=='undefined' && canvas.freeDrawingBrush){ canvas.freeDrawingBrush.color=c; }
     document.querySelectorAll('#mobileV2Bar [data-v2-tool]').forEach(x=>x.classList.toggle('active',x.dataset.v2Tool==='pen'));
   }));
@@ -3950,20 +3936,7 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   markerOpacity?.addEventListener('input',refreshMarker);
   document.querySelectorAll('[data-marker-size]').forEach(b=>b.addEventListener('click',()=>{ if(markerSize){markerSize.value=b.dataset.markerSize; refreshMarker();} }));
 
-  let timer=null, longPressed=false;
-  document.addEventListener('pointerdown',e=>{
-    if(!mobile()) return;
-    const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]');
-    if(!b) return;
-    longPressed=false; clearTimeout(timer);
-    timer=setTimeout(()=>{longPressed=true;openMarker();},520);
-  },true);
-  ['pointerup','pointercancel','pointerleave'].forEach(type=>document.addEventListener(type,()=>{if(timer){clearTimeout(timer);timer=null;}},true));
-  document.addEventListener('click',e=>{
-    if(longPressed){ const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]'); if(b){e.preventDefault();e.stopImmediatePropagation();} longPressed=false; }
-  },true);
-
-  // Re-place after the landscape toolbar rebuilds its contents.
+  // Landscape marker settings are opened by the dedicated double-tap handler.\n  // Re-place after the landscape toolbar rebuilds its contents.
   new MutationObserver(()=>setTimeout(placePalette,20)).observe(document.getElementById('mobileV2Bar')||document.body,{childList:true});
 })();
 </script>
@@ -5085,6 +5058,8 @@ body.mobile-css-fullscreen #tabletQuickColors{
 })();
 </script>
 
+<script src="/mobile-landscape-tool-settings.js"></script>
+
 <style id="canvasflow-mobile-landscape-clean-final">
 /* CanvasFlow — authoritative touch landscape layout.
    Uses the EXISTING mobile Elements toolbar. No toolbar is rebuilt here. */
@@ -5146,7 +5121,11 @@ body.mobile-css-fullscreen #tabletQuickColors{
   }
   body #mobileQuickPenColors button{
     display:block!important;width:28px!important;height:28px!important;min-width:28px!important;flex:0 0 28px!important;border-radius:50%!important;
+    border:2px solid #fff!important;padding:0!important;box-shadow:0 1px 5px rgba(0,0,0,.25)!important;cursor:pointer!important;
   }
+  body #mobileQuickPenColors button[data-quick-pen-color="#e53935"]{background:#e53935!important;}
+  body #mobileQuickPenColors button[data-quick-pen-color="#111111"]{background:#111111!important;}
+  body #mobileQuickPenColors button[data-quick-pen-color="#1976d2"]{background:#1976d2!important;}
   body #canvasWrap{padding-top:52px!important;box-sizing:border-box!important;}
   body #mobilePenSettings,body #mobileMarkerSettings{z-index:2147483010!important;}
 }
