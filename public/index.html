@@ -1051,7 +1051,7 @@
 
 <style id="canvasflow-mobile-landscape-toolbar-final">
 /* FINAL MOBILE LANDSCAPE TOP HEADER — phone landscape only. */
-@media screen and (orientation:landscape) and (max-width:1400px) and (max-height:900px) and (pointer:coarse) and (hover:none){
+body.cf-phone-landscape{
   #topbar,
   #hint,
   #zoom,
@@ -1128,7 +1128,7 @@
 </style>
 <style id="mobile-landscape-pen-marker-final">
 /* Mobile landscape: quick colors centered under the Elements row. */
-@media screen and (orientation:landscape) and (max-width:1400px) and (max-height:900px) and (pointer:coarse) and (hover:none){
+body.cf-phone-landscape{
   #mobileQuickPenColors{
     display:flex!important;
     position:fixed!important;
@@ -3761,7 +3761,13 @@ updateZoom();
   const bar=()=>document.getElementById('mobileV2Bar');
   const isMobile=()=>{
     const phoneOrTablet=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
-    const landscapeTouch=window.matchMedia('(orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px) and (max-height:900px)').matches;
+    const ua=navigator.userAgent||'';
+    const appleTouchDevice=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    const landscapeTouch=window.matchMedia('(orientation:landscape)').matches
+      && (mobileUA || appleTouchDevice)
+      && (window.matchMedia('(pointer:coarse)').matches || (navigator.maxTouchPoints||0)>0)
+      && window.matchMedia('(hover:none)').matches;
     return phoneOrTablet || landscapeTouch;
   };
   const panel=()=>document.getElementById('mobilePenSettings');
@@ -4283,6 +4289,23 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 }
 </style>
 
+<script id="canvasflow-mobile-landscape-class-detector">
+(function(){
+  function sync(){
+    const ua=navigator.userAgent||'';
+    const appleTouchDevice=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    const phoneLandscape=window.matchMedia('(orientation: landscape)').matches
+      && (mobileUA || appleTouchDevice)
+      && (window.matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints||0)>0)
+      && window.matchMedia('(hover: none)').matches;
+    document.body.classList.toggle('cf-phone-landscape',phoneLandscape);
+  }
+  sync();
+  window.addEventListener('resize',sync,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(sync,80),{passive:true});
+})();
+</script>
 </body>
 
 <style id="mobile-landing-final">
@@ -4446,7 +4469,7 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 </style>
 <style id="mobile-landscape-final-viewport-ui">
 /* Final phone-landscape viewport controls. Keep desktop/tablet untouched. */
-@media screen and (orientation:landscape) and (max-width:1400px) and (max-height:900px) and (pointer:coarse) and (hover:none){
+body.cf-phone-landscape{
   /* Remove the desktop keyboard hint and desktop zoom widget from the phone canvas. */
   #hint,
   #zoom{
