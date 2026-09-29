@@ -614,7 +614,7 @@
   }
   #mobileV2Bar .mobile-v2-color input{width:100%;height:100%;border:0;padding:0;background:transparent;display:block}
   #mobileV2Bar button.active{background:#fff;color:#111}
-  #mobileV2More{background:#292929 !important;color:#ddd !important}
+
   #mobileV2Scroll{display:flex !important;background:#292929 !important;color:#ddd !important;} 
   #mobileV2Menu{
     left:10px;right:10px;top:130px;bottom:auto;
@@ -959,7 +959,7 @@
   #mobileV2Bar{position:fixed !important;left:6px !important;right:6px !important;top:auto !important;bottom:max(6px,env(safe-area-inset-bottom)) !important;height:58px !important;display:flex !important;gap:3px !important;padding:4px !important;overflow:hidden !important;z-index:1001 !important;box-sizing:border-box !important;}
   #mobileV2Bar button{flex:1 1 0 !important;min-width:0 !important;height:48px !important;font-size:8px !important;padding:2px 1px !important;}
   #mobileV2Bar button .v2icon{font-size:18px !important;line-height:18px !important;}
-  #mobileV2More{display:flex !important;}
+
   #mobileV2Menu{position:fixed !important;left:7px !important;right:7px !important;bottom:calc(68px + env(safe-area-inset-bottom)) !important;top:auto !important;max-height:50dvh !important;overflow:auto !important;display:none !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:6px !important;padding:8px !important;z-index:1002 !important;box-sizing:border-box !important;}
   #mobileV2Menu.open{display:grid !important;}
   #mobileV2Menu button,#mobileV2Menu label{min-height:48px !important;display:flex !important;align-items:center !important;justify-content:center !important;flex-direction:column !important;gap:2px !important;font-size:9px !important;cursor:pointer !important;box-sizing:border-box !important;}
@@ -1332,10 +1332,12 @@
     <label id="mobileFontSizeControl" title="Font size">
       <span class="v2icon">A</span><input id="mobileFontSize" type="range" min="10" max="72" value="22" aria-label="Font size"><span id="mobileFontSizeValue">22</span>
     </label>
-    <button type="button" id="mobileV2More"><span class="v2icon">⋯</span><span>More</span></button>
   </div>
-  <div id="mobileV2Menu" aria-label="More mobile tools"></div>
-<div id="mobilePenSettings" aria-hidden="true">
+<label id="mobileV2ColorControl" aria-label="Color">
+    <span class="v2icon">●</span><span>Color</span>
+    <input id="mobileV2Color" type="color" value="#18202a" aria-label="Choose color">
+  </label>
+  <div id="mobilePenSettings" aria-hidden="true">
   <div class="mobile-pen-card">
     <div class="mobile-pen-head"><strong>Pen Settings</strong><button type="button" id="mobilePenClose" aria-label="Close">×</button></div>
     <label>Pen Size <output id="mobilePenSizeValue">4</output>
@@ -3136,11 +3138,6 @@ updateZoom();
   const desktopColor = document.getElementById('color');
   const panel = document.getElementById('aiPanel');
 
-  const tools = [
-    ['eraser','⌫','Eraser'],['rect','▱','Rectangle'],['circle','○','Circle'],['line','╱','Line'],
-    ['arrow','➜','Arrow'],['text','T','Text'],['node','◇','Node'],['image','▧','Image']
-  ];
-  const moreBtn = document.getElementById('mobileV2More');
 
   function sync(){
     const on=mobile();
@@ -3190,44 +3187,15 @@ updateZoom();
     sync();
   });
 
-  function buildMenu(){
-    if(!menu || menu.dataset.ready) return;
-    menu.dataset.ready='1';
-    tools.forEach(([name,icon,label])=>{
-      const b=document.createElement('button'); b.type='button'; b.dataset.v2Tool=name;
-      b.innerHTML=`<span class="v2icon">${icon}</span><span>${label}</span>`;
-      b.addEventListener('click',e=>{
-        e.preventDefault(); e.stopPropagation();
-        if(name==='image'){
-          pendingImagePoint = pendingImagePoint || (() => { const c=canvas.getCenter(); return {x:c.left,y:c.top}; })();
-          const input=document.getElementById('fileInput');
-          if(input) input.click();
-          setTool?.('select');
-        } else {
-          setTabletScrollMode?.(false); setTool?.(name);
-        }
-        menu.classList.remove('open'); sync();
-      });
-      menu.appendChild(b);
-    });
-    const colorBtn=document.createElement('label');
-    colorBtn.className='mobile-v2-menu-color';
-    colorBtn.innerHTML=`<span class="v2icon">●</span><span>Color</span><input type="color" value="${colorV2?.value || '#18202a'}" aria-label="Color">`;
-    const inp=colorBtn.querySelector('input');
-    inp?.addEventListener('input',()=>{
-      if(colorV2){ colorV2.value=inp.value; colorV2.dispatchEvent(new Event('input',{bubbles:true})); }
-    });
-    menu.appendChild(colorBtn);
-  }
-  moreBtn?.addEventListener('click',e=>{
-    e.preventDefault(); e.stopPropagation();
-    if(!mobile()) return;
-    buildMenu(); menu.classList.toggle('open'); sync();
-  });
-
   colorV2?.addEventListener('input',()=>{
     if(desktopColor){ desktopColor.value=colorV2.value; desktopColor.dispatchEvent(new Event('input',{bubbles:true})); desktopColor.dispatchEvent(new Event('change',{bubbles:true})); }
   });
+  if(colorV2 && desktopColor){
+    colorV2.value=desktopColor.value || colorV2.value;
+    const syncMobileColor=()=>{ colorV2.value=desktopColor.value || colorV2.value; };
+    desktopColor.addEventListener('input',syncMobileColor);
+    desktopColor.addEventListener('change',syncMobileColor);
+  }
 
   scrollBtn?.addEventListener('click',e=>{
     e.preventDefault(); e.stopPropagation();
@@ -4401,7 +4369,7 @@ body:not(.landing-active) #mobileQuickPenColors{display:flex !important;visibili
 
 <style>
 @media (max-width:760px) and (orientation:landscape){
-  #mobileV2More{display:none !important;}
+
   #mobileV2Bar{
     overflow-x:auto !important;
     overflow-y:hidden !important;
@@ -4443,7 +4411,7 @@ body:not(.landing-active) #mobileQuickPenColors{display:flex !important;visibili
 @media screen and (max-height:520px) and (max-width:900px){
   #mobileV2Bar{overflow-x:auto !important; flex-wrap:nowrap !important; justify-content:flex-start !important;}
   #mobileV2Bar > button{flex:0 0 58px !important; min-width:58px !important; width:58px !important;}
-  #mobileV2More{display:none !important;}
+
   #mobileV2Menu{display:none !important;}
 }
 </style>
@@ -5201,7 +5169,7 @@ body.cf-touch-landscape #mobileV2Bar > label{
 body.cf-touch-landscape #mobileV2Bar > button .v2icon,
 body.cf-touch-landscape #mobileV2Bar > label .v2icon{font-size:18px !important;line-height:18px !important;}
 body.cf-touch-landscape #mobileV2Bar > button.active{background:#18202a !important;color:#fff !important;}
-body.cf-touch-landscape #mobileV2More{display:flex !important;visibility:visible !important;pointer-events:auto !important;}
+
 body.cf-touch-landscape #mobileV2Menu{z-index:2147483005 !important;}
 body.cf-touch-landscape #mobileQuickPenColors{
   display:flex !important;position:fixed !important;left:50% !important;right:auto !important;
@@ -5406,11 +5374,6 @@ body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
     color:#fff !important;
   }
 
-  html body.cf-touch-landscape #mobileV2More{
-    display:flex !important;
-    visibility:visible !important;
-  }
-
   html body.cf-touch-landscape #mobileQuickPenColors{
     display:flex !important;
     visibility:visible !important;
@@ -5488,7 +5451,7 @@ body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
     if(!isMobile()) return;
 
     const target=e.target;
-    const button=target.closest('button[data-v2-tool], #mobileV2AI, #mobileV2More');
+    const button=target.closest('button[data-v2-tool], #mobileV2AI');
     if(!button || !bar.contains(button)) return;
 
     // Never expose/activate the old single-finger Scroll mode.
@@ -5499,12 +5462,6 @@ body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
 
     if(button.id==='mobileV2AI'){
       toggleAI();
-      return;
-    }
-
-    if(button.id==='mobileV2More'){
-      // Use the existing More implementation so its menu-building logic stays intact.
-      button.click();
       return;
     }
 
@@ -5667,7 +5624,7 @@ body.cf-touch-landscape #mobileV2Scroll{
   // Direct touch fallback for iOS Safari.
   bar.addEventListener('touchend',function(e){
     if(!active()) return;
-    const b=e.target.closest('button[data-v2-tool],#mobileV2AI,#mobileV2More');
+    const b=e.target.closest('button[data-v2-tool],#mobileV2AI');
     if(!b || !bar.contains(b) || b.id==='mobileV2Scroll') return;
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -5679,13 +5636,6 @@ body.cf-touch-landscape #mobileV2Scroll{
         panel.classList.toggle('open',open);
         document.getElementById('aiToggle')?.classList.toggle('active',open);
       }
-      return;
-    }
-
-    if(b.id==='mobileV2More'){
-      // Reuse the existing More button listener after temporarily treating
-      // this touch-landscape viewport as mobile.
-      b.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
       return;
     }
 
@@ -5767,12 +5717,7 @@ body.cf-touch-landscape #mobileV2Scroll{
 <!-- CanvasFlow: final More + pen-size touch-landscape override -->
 <style id="canvasflow-touch-landscape-controls-final">
 @media screen and (orientation:landscape) and (max-height:600px){
-  body.cf-touch-landscape #mobileV2More{
-    display:flex !important;
-    visibility:visible !important;
-    opacity:1 !important;
-    pointer-events:auto !important;
-  }
+
   body.cf-touch-landscape #mobileV2Menu{
     z-index:2147483647 !important;
     position:fixed !important;
@@ -6475,3 +6420,27 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:block !important}
   wrap.addEventListener('touchcancel',()=>{cursor.style.display='none';},{capture:true,passive:true});
 })();
 </script>
+<style id="canvasflow-mobile-landscape-color-shortcut-final">
+@media screen and (orientation:landscape) and (pointer:coarse) and (hover:none) and (max-width:1400px){
+  html body.cf-touch-landscape #mobileV2ColorControl{
+    display:flex !important; position:fixed !important; top:0 !important;
+    left:calc(50% + min(29vw,310px) + 8px) !important;
+    width:58px !important; min-width:58px !important; max-width:58px !important;
+    height:52px !important; margin:0 !important; padding:3px 4px !important;
+    box-sizing:border-box !important; flex-direction:column !important;
+    align-items:center !important; justify-content:center !important; gap:1px !important;
+    border:0 !important; border-radius:10px !important; background:transparent !important;
+    color:#4b5563 !important; font:800 7px/1 system-ui,sans-serif !important;
+    z-index:2147483003 !important; pointer-events:auto !important; touch-action:manipulation !important;
+  }
+  html body.cf-touch-landscape #mobileV2ColorControl .v2icon{
+    display:block !important; font-size:18px !important; line-height:18px !important;
+  }
+  html body.cf-touch-landscape #mobileV2Color{
+    display:block !important; width:30px !important; height:30px !important;
+    min-width:30px !important; margin:-1px 0 0 !important; padding:2px !important;
+    border:1px solid #dfe4ea !important; border-radius:8px !important;
+    background:#fff !important; cursor:pointer !important;
+  }
+}
+</style>
