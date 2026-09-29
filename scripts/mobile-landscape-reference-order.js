@@ -31,7 +31,7 @@ const styleMarker = '<style id="canvasflow-mobile-landscape-toolbar-final">';
 if (!html.includes(styleMarker)) {
   const finalStyle = `<style id="canvasflow-mobile-landscape-toolbar-final">
 /* FINAL MOBILE LANDSCAPE TOP HEADER — phone landscape only. */
-@media screen and (orientation:landscape) and (max-width:1100px) and (max-height:700px) and (pointer:coarse){
+body.cf-phone-landscape{
   #topbar,
   #hint,
   #zoom,
@@ -116,11 +116,13 @@ if (!html.includes(detectorMarker)) {
 <script id="canvasflow-mobile-landscape-class-detector">
 (function(){
   function sync(){
+    const ua=navigator.userAgent||'';
+    const appleTouchDevice=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
     const phoneLandscape=window.matchMedia('(orientation: landscape)').matches
+      && (mobileUA || appleTouchDevice)
       && (window.matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints||0)>0)
-      && window.matchMedia('(hover: none)').matches
-      && Math.max(window.innerWidth,window.innerHeight)<=1400
-      && Math.min(window.innerWidth,window.innerHeight)<=700;
+      && window.matchMedia('(hover: none)').matches;
     document.body.classList.toggle('cf-phone-landscape',phoneLandscape);
   }
   sync();
