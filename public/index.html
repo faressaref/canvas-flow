@@ -4382,6 +4382,51 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   window.addEventListener('orientationchange',()=>setTimeout(sync,80),{passive:true});
 })();
 </script>
+<script id="mobile-landscape-pen-doubletap-final">
+(function(){
+  'use strict';
+  const isLandscapeMobile=()=>{
+    const ua=navigator.userAgent||'';
+    const touch=(navigator.maxTouchPoints||0)>0;
+    const mobile=/Android|iPhone|iPad|iPod/i.test(ua);
+    const appleTouch=touch && /Macintosh/i.test(ua);
+    return touch && (mobile||appleTouch) &&
+      window.matchMedia('(orientation:landscape)').matches;
+  };
+  const bar=document.getElementById('mobileV2Bar');
+  if(!bar)return;
+  let lastUp=0,lastButton=null;
+  bar.addEventListener('pointerup',function(e){
+    if(!isLandscapeMobile()||e.pointerType==='mouse')return;
+    const button=e.target.closest('button[data-v2-tool="pen"]');
+    if(!button)return;
+    const now=Date.now();
+    if(lastButton===button && now-lastUp<=700){
+      lastUp=0;lastButton=null;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const panel=document.getElementById('mobilePenSettings');
+      if(!panel)return;
+      if(typeof setTool==='function')setTool('pen');
+      const src=document.getElementById('size');
+      const input=document.getElementById('mobilePenSize');
+      const out=document.getElementById('mobilePenSizeValue');
+      if(src&&input)input.value=src.value||4;
+      if(out)out.textContent=input?.value||'4';
+      panel.classList.add('open');
+      panel.setAttribute('aria-hidden','false');
+      return;
+    }
+    lastUp=now;
+    lastButton=button;
+    setTimeout(()=>{
+      if(lastButton===button && Date.now()-lastUp>650){
+        lastUp=0;lastButton=null;
+      }
+    },720);
+  },true);
+})();
+</script>
 </body>
 
 <style id="mobile-landing-final">
