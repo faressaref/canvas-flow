@@ -5382,3 +5382,196 @@ body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
   }
 }
 </style>
+
+
+<!-- CanvasFlow: final mobile touch controls + two-finger navigation -->
+<style id="canvasflow-mobile-touch-final">
+@media screen and (orientation:landscape) and (max-height:600px) {
+  #mobileV2Bar #mobileV2Scroll{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+  #mobileV2Bar > button,
+  #mobileV2Bar > label{
+    flex:0 0 66px !important;
+    min-width:66px !important;
+    width:66px !important;
+  }
+}
+</style>
+
+<script id="canvasflow-mobile-touch-final">
+(function(){
+  'use strict';
+
+  const bar=document.getElementById('mobileV2Bar');
+  if(!bar) return;
+
+  const isMobile=()=>window.matchMedia(
+    '(max-width:760px), (max-height:520px) and (max-width:900px)'
+  ).matches;
+
+  function syncTool(name){
+    if(typeof setTabletScrollMode==='function') setTabletScrollMode(false);
+    if(typeof setTool==='function') setTool(name);
+    bar.querySelectorAll('[data-v2-tool]').forEach(b=>{
+      b.classList.toggle('active',b.dataset.v2Tool===name);
+    });
+  }
+
+  function toggleAI(){
+    const panel=document.getElementById('aiPanel');
+    const toggle=document.getElementById('aiToggle');
+    if(!panel) return;
+    const open=!panel.classList.contains('open');
+    panel.classList.toggle('open',open);
+    toggle?.classList.toggle('active',open);
+    document.getElementById('mobileV2Menu')?.classList.remove('open');
+  }
+
+  function handleTouchEnd(e){
+    if(!isMobile()) return;
+
+    const target=e.target;
+    const button=target.closest('button[data-v2-tool], #mobileV2AI, #mobileV2More');
+    if(!button || !bar.contains(button)) return;
+
+    // Never expose/activate the old single-finger Scroll mode.
+    if(button.id==='mobileV2Scroll') return;
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    if(button.id==='mobileV2AI'){
+      toggleAI();
+      return;
+    }
+
+    if(button.id==='mobileV2More'){
+      // Use the existing More implementation so its menu-building logic stays intact.
+      button.click();
+      return;
+    }
+
+    const name=button.dataset.v2Tool;
+    if(name==='select' || name==='pen' || name==='highlighter'){
+      syncTool(name);
+    }
+  }
+
+  // iOS Safari is more reliable with touchend for these compact controls.
+  // This does not alter the desktop/tablet toolbar.
+  bar.addEventListener('touchend',handleTouchEnd,{capture:true,passive:false});
+
+  // Remove the old single-finger scroll mode on mobile completely.
+  if(isMobile() && typeof setTabletScrollMode==='function'){
+    setTabletScrollMode(false);
+  }
+  window.addEventListener('resize',()=>{
+    if(isMobile() && typeof setTabletScrollMode==='function') setTabletScrollMode(false);
+  },{passive:true});
+})();
+</script>
+
+<script id="canvasflow-two-finger-pan-zoom-final">
+(function(){
+  'use strict';
+  const wrap=document.getElementById('canvasWrap');
+  if(!wrap) return;
+
+  const isMobile=()=>window.matchMedia(
+    '(max-width:760px), (max-height:520px) and (max-width:900px)'
+  ).matches;
+
+  const getCanvas=()=>typeof canvas!=='undefined' ? canvas : null;
+  const pt=t=>({x:t.clientX,y:t.clientY});
+  const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const local=p=>{
+    const r=wrap.getBoundingClientRect();
+    return {x:p.x-r.left,y:p.y-r.top};
+  };
+
+  let gesture=null;
+
+  function begin(e){
+    if(!isMobile() || e.touches.length!==2) return;
+    const c=getCanvas();
+    if(!c) return;
+
+    const a=pt(e.touches[0]), b=pt(e.touches[1]), m=mid(a,b);
+    const p=local(m);
+    const z=c.getZoom();
+    const v=c.viewportTransform.slice();
+
+    gesture={
+      startDistance:Math.max(1,dist(a,b)),
+      startZoom:z,
+      worldX:(p.x-v[4])/z,
+      worldY:(p.y-v[5])/z,
+      startViewport:v
+    };
+
+    // Two fingers always control the camera, never draw/select objects.
+    c.isDrawingMode=false;
+    c.selection=false;
+    c.discardActiveObject();
+    c.requestRenderAll();
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+
+  function move(e){
+    if(!gesture || !isMobile() || e.touches.length!==2) return;
+    const c=getCanvas();
+    if(!c) return;
+
+    const a=pt(e.touches[0]), b=pt(e.touches[1]), m=mid(a,b);
+    const p=local(m);
+    const z=Math.max(
+      0.2,
+      Math.min(5,gesture.startZoom * (
+        dist(a,b)/gesture.startDistance
+      ))
+    );
+
+    // Pinch = zoom. Moving both fingers together = pan.
+    // Keeping worldX/worldY under the moving midpoint gives smooth 2-finger navigation.
+    const v=gesture.startViewport.slice();
+    v[0]=z;
+    v[3]=z;
+    v[4]=p.x-(gesture.worldX*z);
+    v[5]=p.y-(gesture.worldY*z);
+
+    c.setViewportTransform(v);
+    c.requestRenderAll();
+    if(typeof updateZoom==='function') updateZoom();
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+
+  function end(e){
+    if(!gesture) return;
+    if(!e.touches || e.touches.length<2){
+      const c=getCanvas();
+      gesture=null;
+
+      // Restore the currently selected tool after navigation.
+      if(c){
+        const current=typeof tool==='string' ? tool : 'select';
+        c.isDrawingMode=(current==='pen' || current==='highlighter');
+        c.selection=(current==='select' || current==='eraser');
+        c.requestRenderAll();
+      }
+    }
+  }
+
+  wrap.addEventListener('touchstart',begin,{capture:true,passive:false});
+  wrap.addEventListener('touchmove',move,{capture:true,passive:false});
+  wrap.addEventListener('touchend',end,{capture:true,passive:true});
+  wrap.addEventListener('touchcancel',end,{capture:true,passive:true});
+})();
+</script>
