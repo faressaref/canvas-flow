@@ -3766,67 +3766,106 @@ updateZoom();
 </script>
 <script id="mobile-pen-longpress-final">
 (function(){
-  const bar=()=>document.getElementById('mobileV2Bar');
-const isLandscapeTouch=()=>{
+  'use strict';
+  const panel=()=>document.getElementById('mobilePenSettings');
+  let timer=null,activeId=null,activeBtn=null,longPressed=false;
+
+  function isTouchLandscape(){
     const ua=navigator.userAgent||'';
-    const appleTouch=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
-    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    const apple=(navigator.maxTouchPoints||0)>0 && /Macintosh/i.test(ua);
+    const mobile=/Android|iPhone|iPad|iPod/i.test(ua);
     return window.matchMedia('(orientation:landscape)').matches &&
-      (mobileUA||appleTouch) &&
-      (navigator.maxTouchPoints||0)>0;
-  };
-  const isMobile=()=>{
-    const phoneOrTablet=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
-    const ua=navigator.userAgent||'';
-    const appleTouchDevice=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
-    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
-    const landscapeTouch=window.matchMedia('(orientation:landscape)').matches
-      && (mobileUA || appleTouchDevice)
-      && (window.matchMedia('(pointer:coarse)').matches || (navigator.maxTouchPoints||0)>0)
-      && window.matchMedia('(hover:none)').matches;
-    return phoneOrTablet || landscapeTouch || isLandscapeTouch();
-  };
-    const panel=()=>document.getElementById('mobilePenSettings');
-  let timer=null, longPressed=false;
+      (mobile||apple) && (navigator.maxTouchPoints||0)>0;
+  }
+  function isMobile(){
+    return window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || isTouchLandscape();
+  }
+  function clear(){
+    if(timer){clearTimeout(timer);timer=null;}
+    activeId=null;activeBtn=null;
+  }
   function open(){
-    const p=panel(); if(!p) return;
+    const p=panel(); if(!p)return;
+    if(typeof setTool==='function')setTool('pen');
     const input=document.getElementById('mobilePenSize');
     const size=document.getElementById('size');
-    if(input && size) input.value=size.value||4;
-    const out=document.getElementById('mobilePenSizeValue'); if(out) out.textContent=input?.value||'4';
-    p.classList.add('open'); p.setAttribute('aria-hidden','false');
+    if(input&&size)input.value=size.value||4;
+    const out=document.getElementById('mobilePenSizeValue');
+    if(out)out.textContent=input?.value||'4';
+    p.classList.add('open');p.setAttribute('aria-hidden','false');
   }
-  function close(){ const p=panel(); if(p){p.classList.remove('open');p.setAttribute('aria-hidden','true');} }
-  function apply(v){
-    const n=Math.max(1,Math.min(40,Number(v)||4));
-    const main=document.getElementById('size'); if(main){main.value=n; main.dispatchEvent(new Event('input',{bubbles:true})); main.dispatchEvent(new Event('change',{bubbles:true}));}
-    const out=document.getElementById('mobilePenSizeValue'); if(out) out.textContent=String(n);
-    if(typeof applyBrushSettings==='function') applyBrushSettings();
+  function close(){
+    const p=panel();
+    if(p){p.classList.remove('open');p.setAttribute('aria-hidden','true');}
   }
+
   document.addEventListener('pointerdown',e=>{
-    if(!isMobile()) return;
+    if(!isMobile()||e.pointerType==='mouse')return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
-    if(!b) return;
-    longPressed=false; clearTimeout(timer);
-    timer=setTimeout(()=>{longPressed=true;open();},520);
+    if(!b)return;
+    clear();
+    activeId=e.pointerId;activeBtn=b;longPressed=false;
+    timer=setTimeout(()=>{
+      if(activeBtn&&activeId!==null){
+        longPressed=true;
+        open();
+      }
+    },650);
   },true);
-  ['pointerup','pointercancel','pointerleave'].forEach(type=>document.addEventListener(type,e=>{
-    if(timer){ clearTimeout(timer); timer=null; }
-  },true));
+
+  document.addEventListener('pointermove',e=>{
+    if(activeId===null||e.pointerId!==activeId)return;
+    if(Math.abs(e.movementX)>12||Math.abs(e.movementY)>12)clear();
+  },true);
+
+  document.addEventListener('pointerup',e=>{
+    if(activeId!==e.pointerId)return;
+    const wasLong=longPressed;
+    const b=activeBtn;
+    clear();
+    if(wasLong&&b){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  },true);
+
+  document.addEventListener('pointercancel',e=>{
+    if(activeId===e.pointerId)clear();
+  },true);
+
   document.addEventListener('click',e=>{
-    if(longPressed){ const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]'); if(b){e.preventDefault();e.stopImmediatePropagation();} longPressed=false; }
+    if(!longPressed)return;
+    const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
+    if(b){e.preventDefault();e.stopImmediatePropagation();}
+    longPressed=false;
   },true);
+
   document.getElementById('mobilePenClose')?.addEventListener('click',close);
-  document.getElementById('mobilePenSize')?.addEventListener('input',e=>apply(e.target.value));
-  const angle=document.getElementById('mobilePenAngle');
-  const angleOut=document.getElementById('mobilePenAngleValue');
-  const preview=document.querySelector('#mobileNibPreview span');
-  angle?.addEventListener('input',e=>{ if(angleOut) angleOut.textContent=e.target.value+'°'; if(preview) preview.style.transform='rotate('+e.target.value+'deg)'; if(typeof applyBrushSettings==='function') applyBrushSettings(); });
-  document.getElementById('mobileCalligraphy')?.addEventListener('change',()=>{ if(typeof applyBrushSettings==='function') applyBrushSettings(); });
-  document.querySelectorAll('[data-pen-size]').forEach(b=>b.addEventListener('click',()=>apply(b.dataset.penSize)));
-  document.addEventListener('pointerdown',e=>{
-    const p=panel(); if(p?.classList.contains('open') && e.target===p) close();
-  },true);
+  document.getElementById('mobilePenSize')?.addEventListener('input',e=>{
+    const n=Math.max(1,Math.min(40,Number(e.target.value)||4));
+    const main=document.getElementById('size');
+    if(main){main.value=n;main.dispatchEvent(new Event('input',{bubbles:true}));main.dispatchEvent(new Event('change',{bubbles:true}));}
+    const out=document.getElementById('mobilePenSizeValue');
+    if(out)out.textContent=String(n);
+    if(typeof applyBrushSettings==='function')applyBrushSettings();
+  });
+  document.getElementById('mobilePenAngle')?.addEventListener('input',e=>{
+    const out=document.getElementById('mobilePenAngleValue');
+    if(out)out.textContent=e.target.value+'°';
+    const preview=document.querySelector('#mobileNibPreview span');
+    if(preview)preview.style.transform='rotate('+e.target.value+'deg)';
+    if(typeof applyBrushSettings==='function')applyBrushSettings();
+  });
+  document.getElementById('mobileCalligraphy')?.addEventListener('change',()=>{
+    if(typeof applyBrushSettings==='function')applyBrushSettings();
+  });
+  document.querySelectorAll('[data-pen-size]').forEach(b=>b.addEventListener('click',()=>{
+    const n=Math.max(1,Math.min(40,Number(b.dataset.penSize)||4));
+    const input=document.getElementById('mobilePenSize');
+    if(input)input.value=n;
+    input?.dispatchEvent(new Event('input',{bubbles:true}));
+  }));
+  panel()?.addEventListener('click',e=>{if(e.target===panel())close();});
 })();
 </script>
 
@@ -4111,17 +4150,13 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 (function(){
   'use strict';
   const mobile=()=>{
-    const phoneOrTablet=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
     const ua=navigator.userAgent||'';
-    const appleTouchDevice=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
-    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
-    const landscapeTouch=window.matchMedia('(orientation:landscape)').matches
-      && (mobileUA || appleTouchDevice)
-      && (window.matchMedia('(pointer:coarse)').matches || (navigator.maxTouchPoints||0)>0)
-      && window.matchMedia('(hover:none)').matches;
-    return phoneOrTablet || landscapeTouch || isLandscapeTouch();
+    const apple=(navigator.maxTouchPoints||0)>0 && /Macintosh/i.test(ua);
+    const mobile=/Android|iPhone|iPad|iPod/i.test(ua);
+    return window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches ||
+      (window.matchMedia('(orientation:landscape)').matches && (mobile||apple) && (navigator.maxTouchPoints||0)>0);
   };
-    const palette=document.getElementById('mobileQuickPenColors');
+  const palette=document.getElementById('mobileQuickPenColors');
   const markerPanel=document.getElementById('mobileMarkerSettings');
   const markerColor=document.getElementById('mobileMarkerColor');
   const markerSize=document.getElementById('mobileMarkerSize');
