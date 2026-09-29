@@ -68,7 +68,8 @@
       lastTapButton=null;
 
       if(tool==='pen')openPenSettings();
-      else openMarkerSettings();
+      else if(tool==='highlighter')openMarkerSettings();
+      else if(typeof window.__openEraserSettings==='function')window.__openEraserSettings();
       return;
     }
 
