@@ -3073,7 +3073,7 @@ updateZoom();
   document.getElementById('mobileHomeV2')?.addEventListener('click',()=>{ if(window.matchMedia('(max-width:760px)').matches) document.getElementById('landing')?.classList.remove('hidden'); });
 
 (function mobileV2(){
-  const mobile = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const mobile = () => (window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || document.body.classList.contains('cf-touch-landscape'));
   const bar = document.getElementById('mobileV2Bar');
   const menu = document.getElementById('mobileV2Menu');
   const aiBtn = document.getElementById('mobileV2AI');
@@ -3199,7 +3199,7 @@ updateZoom();
 
 // ================= MOBILE UX =================
 (function initMobileUX(){
-  const isMobile = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const isMobile = () => (window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || document.body.classList.contains('cf-touch-landscape'));
   const mobileAI = document.getElementById('mobileAI');
   const mobileAIButton = document.getElementById('mobileAIButton');
   const mobileOpenAI = document.getElementById('mobileOpenAI');
@@ -3379,7 +3379,7 @@ updateZoom();
 
 <script id="mobile-elements-final-interaction-fix">
 (function(){
-  const isPhone = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const isPhone = () => (window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || document.body.classList.contains('cf-touch-landscape'));
   const bar = document.getElementById('mobileV2Bar');
   if(!bar) return;
 
@@ -3438,7 +3438,7 @@ updateZoom();
 (function(){
   /* Scroll button active-state sync */
   document.addEventListener('click', function(e){
-    const mobile=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+    const mobile=(window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || document.body.classList.contains('cf-touch-landscape'));
     if(!mobile) return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="scroll"], #mobileV2Scroll');
     if(!b) return;
@@ -3708,7 +3708,7 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 <script id="canvasflow-fullscreen-final">
 (function(){
   'use strict';
-  var isMobile = function(){ return window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches; };
+  var isMobile = function(){ return (window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || document.body.classList.contains('cf-touch-landscape')); };
   var nativeFS  = function(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement); };
   var cssFS     = function(){ return document.body.classList.contains('mobile-css-fullscreen'); };
   var isFS      = function(){ return nativeFS() || cssFS(); };
@@ -3868,7 +3868,7 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 <script id="mobile-quick-pen-marker-final">
 (function(){
   'use strict';
-  const mobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const mobile=()=>(window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || document.body.classList.contains('cf-touch-landscape'));
   const palette=document.getElementById('mobileQuickPenColors');
   const markerPanel=document.getElementById('mobileMarkerSettings');
   const markerColor=document.getElementById('mobileMarkerColor');
@@ -3943,7 +3943,7 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
 
 <script id="mobile-text-keyboard-lock-final">
 (function(){
-  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const isMobile=()=>(window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || document.body.classList.contains('cf-touch-landscape'));
   const d=document.getElementById('textDialog');
   const ta=document.getElementById('textValue');
   if(!d||!ta) return;
@@ -4667,7 +4667,7 @@ body.mobile-css-fullscreen #authModal.open .modal-card{
   'use strict';
   const wrap=document.getElementById('canvasWrap');
   if(!wrap) return;
-  const isMobile=()=>window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const isMobile=()=>(window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches || document.body.classList.contains('cf-touch-landscape'));
   const getCanvas=()=>typeof canvas!=='undefined' ? canvas : null;
   let gesture=null;
 
@@ -5573,5 +5573,122 @@ body.cf-touch-landscape #mobileMarkerSettings{z-index:2147483010 !important;}
   wrap.addEventListener('touchmove',move,{capture:true,passive:false});
   wrap.addEventListener('touchend',end,{capture:true,passive:true});
   wrap.addEventListener('touchcancel',end,{capture:true,passive:true});
+})();
+</script>
+
+
+<!-- CanvasFlow: final touch-landscape interaction bridge -->
+<style id="canvasflow-touch-landscape-interaction-final">
+body.cf-touch-landscape #mobileV2Scroll{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+</style>
+<script id="canvasflow-touch-landscape-interaction-final">
+(function(){
+  'use strict';
+  const bar=document.getElementById('mobileV2Bar');
+  const wrap=document.getElementById('canvasWrap');
+  if(!bar || !wrap) return;
+
+  const active=()=>document.body.classList.contains('cf-touch-landscape') ||
+    window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+
+  // Make the existing Elements controller recognize iPad/iPhone landscape,
+  // where the viewport can be much wider than 760px.
+  function sync(){ if(active()) bar.style.display='flex'; }
+  sync();
+  window.addEventListener('resize',sync,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(sync,80),{passive:true});
+
+  // Direct touch fallback for iOS Safari.
+  bar.addEventListener('touchend',function(e){
+    if(!active()) return;
+    const b=e.target.closest('button[data-v2-tool],#mobileV2AI,#mobileV2More');
+    if(!b || !bar.contains(b) || b.id==='mobileV2Scroll') return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    if(b.id==='mobileV2AI'){
+      const panel=document.getElementById('aiPanel');
+      if(panel){
+        const open=!panel.classList.contains('open');
+        panel.classList.toggle('open',open);
+        document.getElementById('aiToggle')?.classList.toggle('active',open);
+      }
+      return;
+    }
+
+    if(b.id==='mobileV2More'){
+      // Reuse the existing More button listener after temporarily treating
+      // this touch-landscape viewport as mobile.
+      b.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
+      return;
+    }
+
+    const name=b.dataset.v2Tool;
+    if(name==='select'||name==='pen'||name==='highlighter'){
+      if(typeof setTabletScrollMode==='function') setTabletScrollMode(false);
+      if(typeof setTool==='function') setTool(name);
+      bar.querySelectorAll('[data-v2-tool]').forEach(x=>x.classList.toggle('active',x.dataset.v2Tool===name));
+    }
+  },{capture:true,passive:false});
+
+  // Two-finger navigation: pinch to zoom, move both fingers to pan.
+  let g=null;
+  const canvasObj=()=>typeof canvas!=='undefined'?canvas:null;
+  const point=t=>({x:t.clientX,y:t.clientY});
+  const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const local=p=>{const r=wrap.getBoundingClientRect();return{x:p.x-r.left,y:p.y-r.top};};
+
+  wrap.addEventListener('touchstart',function(e){
+    if(!active() || e.touches.length!==2) return;
+    const c=canvasObj(); if(!c) return;
+    const a=point(e.touches[0]),b=point(e.touches[1]),m=local(midpoint(a,b));
+    const v=c.viewportTransform.slice(),z=c.getZoom();
+    g={
+      d:Math.max(1,distance(a,b)),
+      z,
+      wx:(m.x-v[4])/z,
+      wy:(m.y-v[5])/z,
+      v
+    };
+    c.isDrawingMode=false;
+    c.selection=false;
+    c.discardActiveObject();
+    c.requestRenderAll();
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  },{capture:true,passive:false});
+
+  wrap.addEventListener('touchmove',function(e){
+    if(!g || !active() || e.touches.length!==2) return;
+    const c=canvasObj(); if(!c) return;
+    const a=point(e.touches[0]),b=point(e.touches[1]),m=local(midpoint(a,b));
+    const z=Math.max(.2,Math.min(5,g.z*distance(a,b)/g.d));
+    const v=g.v.slice();
+    v[0]=z;v[3]=z;
+    v[4]=m.x-g.wx*z;
+    v[5]=m.y-g.wy*z;
+    c.setViewportTransform(v);
+    c.requestRenderAll();
+    if(typeof updateZoom==='function') updateZoom();
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  },{capture:true,passive:false});
+
+  wrap.addEventListener('touchend',function(e){
+    if(g && (!e.touches || e.touches.length<2)){
+      const c=canvasObj();g=null;
+      if(c){
+        const t=typeof tool==='string'?tool:'select';
+        c.isDrawingMode=(t==='pen'||t==='highlighter');
+        c.selection=(t==='select'||t==='eraser');
+        c.requestRenderAll();
+      }
+    }
+  },{capture:true,passive:true});
 })();
 </script>
