@@ -3800,21 +3800,21 @@ updateZoom();
   }
 
   let lastTap=0,lastBtn=null,tapTimer=null;
-  document.addEventListener('click',e=>{
-    if(!isMobile())return;
+  document.addEventListener('pointerdown',e=>{
+    if(!mobile() || e.pointerType==='mouse') return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="pen"]');
-    if(!b)return;
+    if(!b) return;
     const now=Date.now();
-    if(lastBtn===b && now-lastTap<500){
+    if(lastBtn===b && now-lastTap<650){
+      lastTap=0; lastBtn=null;
       if(tapTimer)clearTimeout(tapTimer);
-      lastTap=0;lastBtn=null;
-      e.preventDefault();e.stopImmediatePropagation();
+      e.preventDefault(); e.stopImmediatePropagation();
       open();
       return;
     }
-    lastTap=now;lastBtn=b;
+    lastTap=now; lastBtn=b;
     if(tapTimer)clearTimeout(tapTimer);
-    tapTimer=setTimeout(()=>{lastTap=0;lastBtn=null;},550);
+    tapTimer=setTimeout(()=>{lastTap=0;lastBtn=null;},700);
   },true);
 
   document.getElementById('mobilePenClose')?.addEventListener('click',close);
@@ -4200,22 +4200,21 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   document.querySelectorAll('[data-marker-size]').forEach(b=>b.addEventListener('click',()=>{ if(markerSize){markerSize.value=b.dataset.markerSize; refreshMarker();} }));
 
   let lastTap=0,lastBtn=null,tapTimer=null;
-  document.addEventListener('click',e=>{
-    if(!mobile())return;
+  document.addEventListener('pointerdown',e=>{
+    if(!mobile() || e.pointerType==='mouse') return;
     const b=e.target.closest('#mobileV2Bar [data-v2-tool="highlighter"]');
-    if(!b)return;
+    if(!b) return;
     const now=Date.now();
-    if(lastBtn===b && now-lastTap<500){
+    if(lastBtn===b && now-lastTap<650){
+      lastTap=0; lastBtn=null;
       if(tapTimer)clearTimeout(tapTimer);
-      lastTap=0;lastBtn=null;
-      e.preventDefault();e.stopImmediatePropagation();
-      if(typeof setTool==='function')setTool('highlighter');
-      openMarker();
+      e.preventDefault(); e.stopImmediatePropagation();
+      if(typeof setTool==='function')setTool('highlighter'); openMarker();
       return;
     }
-    lastTap=now;lastBtn=b;
+    lastTap=now; lastBtn=b;
     if(tapTimer)clearTimeout(tapTimer);
-    tapTimer=setTimeout(()=>{lastTap=0;lastBtn=null;},550);
+    tapTimer=setTimeout(()=>{lastTap=0;lastBtn=null;},700);
   },true);
 
   // Re-place after the landscape toolbar rebuilds its contents.
