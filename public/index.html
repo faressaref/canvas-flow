@@ -5692,3 +5692,58 @@ body.cf-touch-landscape #mobileV2Scroll{
   },{capture:true,passive:true});
 })();
 </script>
+
+
+<!-- CanvasFlow: final More + pen-size touch-landscape override -->
+<style id="canvasflow-touch-landscape-controls-final">
+@media screen and (orientation:landscape) and (max-height:600px){
+  body.cf-touch-landscape #mobileV2More{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+  }
+  body.cf-touch-landscape #mobileV2Menu{
+    z-index:2147483647 !important;
+  }
+  body.cf-touch-landscape #mobilePenSettings,
+  body.cf-touch-landscape #mobileMarkerSettings{
+    z-index:2147483646 !important;
+  }
+  body.cf-touch-landscape #mobilePenSettings.open,
+  body.cf-touch-landscape #mobileMarkerSettings.open{
+    display:flex !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+  }
+}
+</style>
+
+<script id="canvasflow-touch-landscape-size-final">
+(function(){
+  'use strict';
+  const slider=document.getElementById('mobileFontSize');
+  const value=document.getElementById('mobileFontSizeValue');
+  if(!slider)return;
+
+  // The A slider remains the text-size control. When Pen/Highlight is active,
+  // its value also drives the existing brush size so the visible size control
+  // has an immediate effect on drawing.
+  slider.addEventListener('input',function(){
+    const current=typeof tool==='string'?tool:'select';
+    if(current!=='pen' && current!=='highlighter')return;
+    const n=Math.max(1,Math.min(40,Number(slider.value)||4));
+    const main=document.getElementById('size');
+    if(main){
+      main.value=n;
+      main.dispatchEvent(new Event('input',{bubbles:true}));
+      main.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    const penSize=document.getElementById('mobilePenSize');
+    const penOut=document.getElementById('mobilePenSizeValue');
+    if(penSize)penSize.value=n;
+    if(penOut)penOut.textContent=String(n);
+    if(value)value.textContent=String(n);
+  },true);
+})();
+</script>
