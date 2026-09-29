@@ -3580,7 +3580,15 @@ updateZoom();
 
 <script id="mobile-elements-final-interaction-fix">
 (function(){
-  const isPhone = () => window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+  const isPhone = () => {
+    const small=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
+    const ua=navigator.userAgent||'';
+    const appleTouch=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    const landscapeTouch=window.matchMedia('(orientation:landscape)').matches &&
+      (mobileUA||appleTouch) && (navigator.maxTouchPoints||0)>0;
+    return small || landscapeTouch;
+  };
   const bar = document.getElementById('mobileV2Bar');
   if(!bar) return;
 
@@ -3759,6 +3767,14 @@ updateZoom();
 <script id="mobile-pen-longpress-final">
 (function(){
   const bar=()=>document.getElementById('mobileV2Bar');
+const isLandscapeTouch=()=>{
+    const ua=navigator.userAgent||'';
+    const appleTouch=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
+    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
+    return window.matchMedia('(orientation:landscape)').matches &&
+      (mobileUA||appleTouch) &&
+      (navigator.maxTouchPoints||0)>0;
+  };
   const isMobile=()=>{
     const phoneOrTablet=window.matchMedia('(max-width:760px), (max-height:520px) and (max-width:900px)').matches;
     const ua=navigator.userAgent||'';
@@ -3770,15 +3786,7 @@ updateZoom();
       && window.matchMedia('(hover:none)').matches;
     return phoneOrTablet || landscapeTouch || isLandscapeTouch();
   };
-  const isLandscapeTouch=()=>{
-    const ua=navigator.userAgent||'';
-    const appleTouch=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
-    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
-    return window.matchMedia('(orientation:landscape)').matches &&
-      (mobileUA||appleTouch) &&
-      (navigator.maxTouchPoints||0)>0;
-  };
-  const panel=()=>document.getElementById('mobilePenSettings');
+    const panel=()=>document.getElementById('mobilePenSettings');
   let timer=null, longPressed=false;
   function open(){
     const p=panel(); if(!p) return;
@@ -4113,15 +4121,7 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
       && window.matchMedia('(hover:none)').matches;
     return phoneOrTablet || landscapeTouch || isLandscapeTouch();
   };
-  const isLandscapeTouch=()=>{
-    const ua=navigator.userAgent||'';
-    const appleTouch=(navigator.maxTouchPoints||0)>1 && /Macintosh/i.test(ua);
-    const mobileUA=/Android|iPhone|iPad|iPod/i.test(ua);
-    return window.matchMedia('(orientation:landscape)').matches &&
-      (mobileUA||appleTouch) &&
-      (navigator.maxTouchPoints||0)>0;
-  };
-  const palette=document.getElementById('mobileQuickPenColors');
+    const palette=document.getElementById('mobileQuickPenColors');
   const markerPanel=document.getElementById('mobileMarkerSettings');
   const markerColor=document.getElementById('mobileMarkerColor');
   const markerSize=document.getElementById('mobileMarkerSize');
