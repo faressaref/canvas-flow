@@ -4440,6 +4440,70 @@ body.mobile-css-fullscreen #exitFullscreenBtn { display: flex !important; }
   body.tablet-mode #tabletAccount{display:none!important;}
 }
 </style>
+<style id="mobile-landscape-final-viewport-ui">
+/* Final phone-landscape viewport controls. Keep desktop/tablet untouched. */
+@media screen and (orientation:landscape) and (max-width:950px) and (max-height:600px) and (pointer:coarse){
+  /* Remove the desktop keyboard hint and desktop zoom widget from the phone canvas. */
+  #hint,
+  #zoom{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+
+  /* Quick colors: centered directly under the top Elements row. */
+  #mobileQuickPenColors{
+    display:flex!important;
+    position:fixed!important;
+    left:50%!important;
+    right:auto!important;
+    top:54px!important;
+    bottom:auto!important;
+    transform:translateX(-50%)!important;
+    width:max-content!important;
+    min-width:0!important;
+    height:46px!important;
+    padding:6px 10px!important;
+    gap:9px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    z-index:2147483002!important;
+    background:rgba(255,255,255,.98)!important;
+    border:1px solid #dfe4ea!important;
+    border-radius:14px!important;
+    box-shadow:0 7px 22px rgba(0,0,0,.14)!important;
+  }
+
+  #mobileQuickPenColors button{
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    flex:0 0 32px!important;
+    border-radius:50%!important;
+    border:2px solid #fff!important;
+    box-shadow:0 1px 6px rgba(0,0,0,.24)!important;
+  }
+
+  /*
+   * Two-finger canvas navigation:
+   * the existing robust pinch handler controls ONLY the Fabric viewport transform.
+   * It therefore zooms/pans the camera while keeping every text/object at its
+   * original board/world coordinate.
+   */
+  #canvasWrap,
+  #canvasWrap .canvas-container,
+  #canvasWrap .canvas-container canvas{
+    touch-action:none!important;
+    overscroll-behavior:none!important;
+  }
+
+  /* Never let the text dialog itself participate in canvas panning. */
+  #textDialog{
+    touch-action:auto!important;
+  }
+}
+</style>
+
 </html>
 
 <style>
