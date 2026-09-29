@@ -1,12 +1,12 @@
 /* CanvasFlow — mobile landscape tool settings
-   Scope: touch/coarse devices in landscape ONLY. */
+   Scope: touch devices in landscape. Uses the app's landscape class as a
+   fallback because iPadOS can report a non-coarse pointer. */
 (function(){
   'use strict';
 
   const isLandscapeTouch=()=>{
-    return window.matchMedia(
-      '(orientation: landscape) and (pointer: coarse) and (hover: none)'
-    ).matches;
+    return document.body.classList.contains('cf-touch-landscape') ||
+      window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches;
   };
 
   const bar=document.getElementById('mobileV2Bar');
@@ -19,7 +19,7 @@
     const sourceSize=document.getElementById('size');
     const input=document.getElementById('mobilePenSize');
     const output=document.getElementById('mobilePenSizeValue');
-    if(input&&sourceSize)input.value=sourceSize.value||'4';
+    if(input&&sourceSize)input.value=Math.max(1,Math.min(40,Number(sourceSize.value)||4));
     if(output)output.textContent=input?input.value:'4';
     panel.classList.add('open');
     panel.setAttribute('aria-hidden','false');
@@ -42,47 +42,51 @@
     panel.setAttribute('aria-hidden','false');
   }
 
-  // Use pointerdown because the existing Elements click handler changes tools
-  // on the first tap. This listener runs in capture phase and only records
-  // the tap; it never interferes with the normal tool action.
   let lastTool=null;
   let lastTime=0;
 
-  bar.addEventListener('pointerdown',function(event){
-    if(!isLandscapeTouch() || (event.pointerType && event.pointerType==='mouse'))return;
-    const button=event.target.closest('button[data-v2-tool]');
-    if(!button || !bar.contains(button))return;
-
-    const tool=button.dataset.v2Tool;
-    if(tool!=='pen' && tool!=='highlighter')return;
-
+  function record(tool){
+    if(!isLandscapeTouch())return;
     const now=performance.now();
-    const isDouble=(lastTool===tool && (now-lastTime)<=650);
-
-    if(isDouble){
+    if(lastTool===tool && now-lastTime<=700){
       lastTool=null;
       lastTime=0;
-      window.setTimeout(function(){
+      setTimeout(()=>{
         if(tool==='pen')openPenSettings();
         else openMarkerSettings();
-      },0);
+      },30);
       return;
     }
-
     lastTool=tool;
     lastTime=now;
-    window.setTimeout(function(){
-      if(lastTool===tool && performance.now()-lastTime>650){
+    setTimeout(()=>{
+      if(lastTool===tool && performance.now()-lastTime>700){
         lastTool=null;
         lastTime=0;
       }
-    },700);
-  },true);
+    },750);
+  }
 
-  // Reset the detector when the user changes tools or orientation.
-  window.addEventListener('orientationchange',function(){
+  // touchend catches iPad Safari reliably; pointerdown remains as a fallback
+  // for browsers that expose pointer events normally.
+  bar.addEventListener('touchend',function(e){
+    if(!isLandscapeTouch())return;
+    const button=e.target.closest('button[data-v2-tool]');
+    if(!button || !bar.contains(button))return;
+    const tool=button.dataset.v2Tool;
+    if(tool==='pen'||tool==='highlighter')record(tool);
+  },{capture:true,passive:true});
+
+  bar.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='mouse' || !isLandscapeTouch())return;
+    const button=e.target.closest('button[data-v2-tool]');
+    if(!button || !bar.contains(button))return;
+    const tool=button.dataset.v2Tool;
+    if(tool==='pen'||tool==='highlighter')record(tool);
+  },{capture:true,passive:true});
+
+  window.addEventListener('orientationchange',()=>{
     lastTool=null;
     lastTime=0;
   },{passive:true});
-
 })();
