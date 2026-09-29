@@ -6317,7 +6317,7 @@ body.cf-touch-landscape #mobileV2Scroll{
   pointer-events:none;z-index:2147483000;display:none;box-sizing:border-box;
   transform:translate(-50%,-50%);background:rgba(255,255,255,.12);
 }
-body.cf-touch-landscape #canvasflowEraserCursor{display:block !important}
+body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
 </style>
 <script id="canvasflow-eraser-final">
 (function(){
@@ -6417,8 +6417,11 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:block !important}
   }
   wrap.addEventListener('touchstart',e=>{if(e.touches.length===1)move(e.touches[0].clientX,e.touches[0].clientY);},{capture:true,passive:true});
   wrap.addEventListener('touchmove',e=>{if(e.touches.length===1)move(e.touches[0].clientX,e.touches[0].clientY);},{capture:true,passive:true});
-  wrap.addEventListener('touchend',()=>{if(active())cursor.style.display='none';},{capture:true,passive:true});
-  wrap.addEventListener('touchcancel',()=>{cursor.style.display='none';},{capture:true,passive:true});
+  function hide(){cursor.style.display='none';}
+  wrap.addEventListener('touchend',hide,{capture:true,passive:true});
+  wrap.addEventListener('touchcancel',hide,{capture:true,passive:true});
+  window.addEventListener('blur',hide,{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)hide();},{passive:true});
 })();
 </script>
 <style id="canvasflow-mobile-landscape-color-shortcut-final">
