@@ -1,15 +1,19 @@
 /* CanvasFlow — mobile landscape tool settings
-   Single tap selects Pen/Marker. Double tap opens settings. */
+   Single tap selects Pen/Marker. Two physical taps open settings. */
 (function(){
   'use strict';
 
   const isLandscapeTouch=()=>{
     return document.body.classList.contains('cf-touch-landscape') ||
-      window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches;
+      window.matchMedia('(orientation: landscape) and (pointer: coarse) and (hover: none)').matches;
   };
 
   const bar=document.getElementById('mobileV2Bar');
   if(!bar)return;
+
+  let lastTapTime=0;
+  let lastTapTool='';
+  let lastTapButton=null;
 
   function openPenSettings(){
     const panel=document.getElementById('mobilePenSettings');
@@ -41,22 +45,41 @@
     panel.setAttribute('aria-hidden','false');
   }
 
-  // Use the browser's actual dblclick gesture. This is intentionally NOT
-  // implemented on pointerdown/touchend, because iPadOS can synthesize both
-  // event types and make one physical tap look like two taps.
-  bar.addEventListener('dblclick',function(e){
+  // Touch only: a first tap selects the tool; a second physical tap within
+  // 420ms on the same tool opens its settings. No pointerdown/click timing.
+  bar.addEventListener('touchend',function(e){
     if(!isLandscapeTouch())return;
+
     const button=e.target.closest('button[data-v2-tool]');
     if(!button || !bar.contains(button))return;
+
     const tool=button.dataset.v2Tool;
     if(tool!=='pen' && tool!=='highlighter')return;
 
-    e.preventDefault();
-    e.stopPropagation();
+    const now=Date.now();
+    const sameTool=lastTapButton===button && lastTapTool===tool;
+    const isDouble=sameTool && (now-lastTapTime)<=420;
 
-    if(tool==='pen')openPenSettings();
-    else openMarkerSettings();
+    if(isDouble){
+      e.preventDefault();
+      e.stopPropagation();
+      lastTapTime=0;
+      lastTapTool='';
+      lastTapButton=null;
+
+      if(tool==='pen')openPenSettings();
+      else openMarkerSettings();
+      return;
+    }
+
+    lastTapTime=now;
+    lastTapTool=tool;
+    lastTapButton=button;
   },true);
 
-  window.addEventListener('orientationchange',()=>{}, {passive:true});
+  window.addEventListener('orientationchange',()=>{
+    lastTapTime=0;
+    lastTapTool='';
+    lastTapButton=null;
+  },{passive:true});
 })();
