@@ -1069,6 +1069,76 @@
   #landingPage .logo, #landingPage .brand-logo, #landingPage img[alt*="logo" i]{max-width:110px !important; height:auto !important;}
 }
 </style>
+
+<!-- CanvasFlow Notein-inspired visual system: styling only; existing board, auth, Firebase and AI logic remain intact. -->
+<style id="canvasflow-notein-inspired">
+:root{
+ --cf-accent:#665ce7;--cf-accent-soft:#efedff;--cf-ink:#252637;--cf-muted:#85899a;
+ --cf-line:#e7e8f0;--cf-panel:#fff;--cf-bg:#f5f6fa;--cf-paper:#fffefa;
+ --cf-shadow:0 8px 28px rgba(38,35,82,.07);
+}
+html,body{background:var(--cf-bg)!important;color:var(--cf-ink)!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important}
+#app{background:var(--cf-bg)!important}
+#topbar{background:rgba(255,255,255,.96)!important;border-bottom:1px solid var(--cf-line)!important;box-shadow:0 2px 12px rgba(35,33,70,.035)!important;gap:9px!important}
+.brand{font-size:16px!important;letter-spacing:-.5px!important}
+.brand span{color:var(--cf-accent)!important}
+.toolgroup{border-color:var(--cf-line)!important;background:#f8f8fc!important;border-radius:12px!important}
+button.tool,.iconbtn{border-radius:9px!important;transition:background .14s,color .14s,transform .14s!important}
+button.tool:hover,.iconbtn:hover{background:var(--cf-accent-soft)!important;color:var(--cf-accent)!important}
+button.tool.active{background:var(--cf-accent)!important;color:white!important}
+input[type=range]{accent-color:var(--cf-accent)!important}
+#saveState.saved{color:#32966f!important}
+#workspace{background:#eff0f6!important}
+#canvasWrap{background-color:#f0f1f7!important;background-image:radial-gradient(#d9d9e7 1px,transparent 1px)!important;background-size:23px 23px!important}
+#zoom{border:1px solid var(--cf-line)!important;border-radius:12px!important;box-shadow:var(--cf-shadow)!important;padding:5px!important}
+#zoom button{border-radius:8px!important}
+#hint{border-color:var(--cf-line)!important;border-radius:10px!important;box-shadow:var(--cf-shadow)!important}
+.primary{background:var(--cf-accent)!important;border-radius:10px!important;box-shadow:0 4px 12px rgba(102,92,231,.18)!important}
+.secondary{border-radius:10px!important}
+#landing{background:radial-gradient(ellipse at 15% 0%,#f0eeff 0,transparent 44%),linear-gradient(145deg,#fbfbfe 0%,#f2f3f9 100%)!important}
+.landing-brand{font-size:17px!important;letter-spacing:-.5px!important}
+.landing-brand span{color:var(--cf-accent)!important}
+.landing-title{color:#252538!important;font-weight:800!important;letter-spacing:-.06em!important}
+.landing-sub{color:#777c90!important}
+.mode-card{border:1px solid #e6e5f1!important;background:rgba(255,255,255,.94)!important;border-radius:22px!important;box-shadow:0 12px 38px rgba(45,40,94,.055)!important;transition:transform .18s,border-color .18s,box-shadow .18s!important}
+.mode-card:hover{border-color:#c8c3ff!important;box-shadow:0 18px 46px rgba(45,40,94,.11)!important}
+.mode-icon{background:var(--cf-accent-soft)!important;color:var(--cf-accent)!important;border-radius:15px!important}
+.mode-card h2{letter-spacing:-.04em!important;color:#28283c!important}
+.mode-card p{color:#7d8192!important}
+.mode-card .mode-list{color:#5f6378!important}
+#aiPanel{border:1px solid var(--cf-line)!important;border-radius:17px!important;box-shadow:0 18px 54px rgba(32,29,69,.16)!important}
+.ai-head{background:#fff!important;border-bottom-color:var(--cf-line)!important}
+.ai-title{color:#29283f!important}
+.ai-action{border-color:var(--cf-line)!important;border-radius:10px!important}
+.ai-action:hover,.ai-action.selected{background:var(--cf-accent-soft)!important;border-color:#c9c4ff!important}
+.ai-action.selected{color:var(--cf-accent)!important}
+.ai-result{border-color:var(--cf-line)!important;border-radius:12px!important;background:#fafaff!important}
+#pdfBtn{background:var(--cf-accent)!important;border-radius:9px!important}
+#copyBtn{border-radius:9px!important}
+#authModal,#boardsModal{background:rgba(25,24,48,.38)!important}
+.modal-card{border:1px solid var(--cf-line)!important;border-radius:19px!important;box-shadow:0 24px 75px rgba(24,22,60,.2)!important}
+.auth-tab.active{color:var(--cf-accent)!important}
+.auth-form button,.board-action{background:var(--cf-accent)!important;border-radius:10px!important}
+.board-item{border-color:var(--cf-line)!important;border-radius:12px!important}
+.board-item:hover,.board-item.active{border-color:#bdb7ff!important;background:#f5f3ff!important}
+.account-btn.primary,.save-btn.primary{background:var(--cf-accent)!important;border-color:var(--cf-accent)!important}
+#textDialog{border-color:var(--cf-line)!important;border-radius:15px!important;box-shadow:0 18px 50px rgba(30,28,64,.15)!important}
+#textDialog textarea{border-color:var(--cf-line)!important;border-radius:10px!important}
+#dropOverlay{border-color:var(--cf-accent)!important;border-radius:18px!important}
+body.tablet-mode #topbar .toolgroup{border-radius:15px!important;box-shadow:0 8px 26px rgba(38,35,82,.10)!important}
+body.tablet-mode #topbar button.tool{border-radius:10px!important}
+.tablet-control-card{border-color:var(--cf-line)!important;border-radius:12px!important;box-shadow:0 7px 22px rgba(38,35,82,.09)!important}
+.tablet-scroll-card button.active{background:var(--cf-accent)!important}
+@media(max-width:760px){
+ #topbar{background:#fff!important}
+ #landing{padding:22px 14px!important}
+ .landing-brand{margin-bottom:23px!important}
+ .landing-title{line-height:1.08!important}
+ .mode-card{border-radius:17px!important}
+ #aiPanel{border-radius:15px!important}
+}
+</style>
+
 </head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
