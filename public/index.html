@@ -6648,18 +6648,25 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
  const byId=id=>document.getElementById(id);
  const click=id=>byId(id)?.click();
  function openNotebook(name){
-   const nameBox=byId('boardNameDisplay');
    click('chooseBoard');
-   if(nameBox && name) nameBox.textContent=name;
-   // The actual board collection remains managed by the existing Firebase Boards flow.
+   setTimeout(()=>{
+     click('boardsBtn');
+     setTimeout(()=>{
+       const input=byId('newBoardName');
+       if(input && name) input.value=name;
+       click('newBoardBtn');
+     },180);
+   },250);
  }
+ function openSavedBoards(){click('chooseBoard');setTimeout(()=>click('boardsBtn'),250)}
  byId('cfWhiteboard')?.addEventListener('click',()=>click('chooseBoard'));
  byId('cfNewNote')?.addEventListener('click',()=>openNotebook('New notebook'));
  byId('cfCreate')?.addEventListener('click',()=>openNotebook('New notebook'));
  byId('cfAI')?.addEventListener('click',()=>click('chooseAI'));
  byId('cfAiNav')?.addEventListener('click',()=>click('chooseAI'));
  byId('cfAccount')?.addEventListener('click',()=>{click('chooseBoard');setTimeout(()=>click('authBtn'),250)});
- ['cfBoardsNav','cfMyBoards'].forEach(id=>byId(id)?.addEventListener('click',()=>{click('chooseBoard');setTimeout(()=>click('boardsBtn'),250)}));
+ ['cfBoardsNav','cfMyBoards','cfRecent'].forEach(id=>byId(id)?.addEventListener('click',openSavedBoards));
+ document.querySelectorAll('[data-cf-note]').forEach(card=>card.addEventListener('click',openSavedBoards));
  byId('cfSearch')?.addEventListener('input',e=>{
    const q=e.target.value.toLowerCase();
    document.querySelectorAll('[data-cf-note]').forEach(card=>card.style.display=card.dataset.cfNote.toLowerCase().includes(q)?'':'none');
