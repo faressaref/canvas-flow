@@ -6666,13 +6666,12 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
  byId('cfAiNav')?.addEventListener('click',()=>click('chooseAI'));
  byId('cfAccount')?.addEventListener('click',()=>{click('chooseBoard');setTimeout(()=>click('authBtn'),250)});
  ['cfBoardsNav','cfMyBoards','cfRecent'].forEach(id=>byId(id)?.addEventListener('click',openSavedBoards));
- document.querySelectorAll('[data-cf-note]').forEach(card=>card.addEventListener('click',openSavedBoards));
  byId('cfSearch')?.addEventListener('input',e=>{
    const q=e.target.value.toLowerCase();
    document.querySelectorAll('[data-cf-note]').forEach(card=>card.style.display=card.dataset.cfNote.toLowerCase().includes(q)?'':'none');
    document.querySelectorAll('[data-cf-subject]').forEach(card=>card.style.display=card.dataset.cfSubject.toLowerCase().includes(q)?'':'none');
  });
- document.querySelectorAll('[data-cf-note]').forEach(card=>card.addEventListener('click',()=>openNotebook(card.dataset.cfNote)));
+ document.querySelectorAll('[data-cf-note]').forEach(card=>card.addEventListener('click',openSavedBoards));
  document.querySelectorAll('[data-cf-subject]').forEach(card=>card.addEventListener('click',()=>{const q=card.dataset.cfSubject;byId('cfSearch').value=q;byId('cfSearch').dispatchEvent(new Event('input'))}));
  byId('cfNewSubject')?.addEventListener('click',()=>{const name=prompt('Subject name');if(!name)return;const card=document.createElement('button');card.className='cf-subject-card';card.dataset.cfSubject=name;card.innerHTML='<span class="cf-subject-icon">▤</span><span><strong></strong><small>New subject</small></span><b>›</b>';card.querySelector('strong').textContent=name;byId('cfSubjectGrid').appendChild(card);card.addEventListener('click',()=>{byId('cfSearch').value=name;byId('cfSearch').dispatchEvent(new Event('input'))})});
  byId('cfRecent')?.addEventListener('click',()=>{click('chooseBoard');setTimeout(()=>click('boardsBtn'),250)});
