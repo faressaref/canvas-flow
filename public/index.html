@@ -1139,37 +1139,99 @@ body.tablet-mode #topbar button.tool{border-radius:10px!important}
 }
 </style>
 
+
+<style id="canvasflow-library-shell">
+#landing.cf-library{padding:0!important;display:flex;align-items:stretch!important;justify-content:stretch!important;overflow:hidden!important;background:#f5f6fa!important;color:#28283c!important;text-align:left!important}
+.cf-library-side{width:244px;flex:0 0 244px;display:flex;flex-direction:column;gap:7px;padding:23px 14px 16px;background:#fcfcfe;border-right:1px solid #e8e8f0;min-height:0}
+.cf-brand{display:flex;align-items:center;gap:10px;padding:0 9px 18px;font-size:17px;font-weight:850;letter-spacing:-.6px;color:#29283f}
+.cf-brand em,.cf-mobile-brand em{font-style:normal;color:#665ce7}.cf-brand small{display:block;font-size:8px;letter-spacing:1.8px;color:#a1a2b1;margin-top:3px}
+.cf-brand-icon{width:33px;height:33px;display:grid;place-items:center;border-radius:11px;background:#665ce7;color:white;font-weight:900;box-shadow:0 5px 13px #665ce72a}
+.cf-new{border:0;background:#665ce7;color:#fff;border-radius:11px;padding:12px 13px;font-size:12px;font-weight:800;box-shadow:0 5px 14px #665ce724}
+.cf-nav-label{font-size:9px;font-weight:850;letter-spacing:1.4px;color:#a1a3b2;padding:16px 10px 5px}
+.cf-nav,.cf-subject{border:0;background:transparent;text-align:left;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#676b7e;font-size:12px}
+.cf-nav.active{background:#efedff;color:#665ce7;font-weight:800}.cf-nav span{font-size:12px}
+.cf-subject{padding:8px 12px}.cf-subject i{width:8px;height:8px;border-radius:50%}
+.cf-side-note{margin-top:auto;padding:13px;border:1px solid #e8e7f1;background:white;border-radius:13px;font-size:10px;color:#898b9c;line-height:1.55}.cf-side-note strong{display:block;color:#34344a;font-size:11px;margin-bottom:4px}
+.cf-library-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:auto}
+.cf-library-top{height:62px;flex:0 0 62px;background:#ffffffdf;backdrop-filter:blur(14px);border-bottom:1px solid #e9e9f0;display:flex;align-items:center;gap:13px;padding:0 27px}
+.cf-top-title{font-size:12px;font-weight:750;color:#45465a}.cf-grow{flex:1}
+.cf-library-top input{width:min(250px,30vw);border:1px solid #e7e7f0;background:#f8f8fc;border-radius:10px;padding:10px 12px;font-size:11px;outline:none}
+.cf-library-top input:focus{border-color:#bdb7ff}.cf-profile{width:33px;height:33px;border:0;border-radius:50%;background:#e9e6ff;color:#665ce7;font-weight:850}
+.cf-mobile-brand{display:none;align-items:center;gap:8px;font-weight:850;font-size:14px}.cf-mobile-brand .cf-brand-icon{width:28px;height:28px;border-radius:9px}
+.cf-library-content{width:100%;max-width:1390px;margin:0 auto;padding:31px 32px 22px}
+.cf-welcome{display:flex;align-items:end;gap:22px;margin-bottom:26px}.cf-eyebrow{font-size:9px;font-weight:850;letter-spacing:1.6px;color:#665ce7;margin-bottom:9px}
+.cf-welcome h1{font-size:clamp(28px,3.1vw,39px);line-height:1.1;letter-spacing:-1.6px;margin:0 0 9px;color:#29283e}.cf-welcome p{font-size:12px;color:#898b9c;margin:0}.cf-create{margin-left:auto;white-space:nowrap}
+.cf-section-head{display:flex;align-items:center;justify-content:space-between;margin:22px 0 12px}.cf-section-head h2{font-size:14px;letter-spacing:-.3px;margin:0;color:#34344b}
+.cf-text-button{border:0;background:transparent;color:#77788e;font-size:10px;padding:6px}
+.cf-note-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.cf-note-card{padding:0;text-align:left;border:1px solid #e7e7f0;border-radius:15px;background:white;overflow:hidden;min-width:0;box-shadow:0 6px 22px #27245408;transition:transform .15s,border-color .15s}
+.cf-note-card:hover,.cf-subject-card:hover,.cf-tool-card:hover{transform:translateY(-2px);border-color:#c8c2ff}
+.cf-thumb{height:136px;position:relative;padding:17px 19px;overflow:hidden;background:#f4f5ff}
+.cf-thumb-math{background:#f2f3ff}.cf-thumb-bio{background:#eef8f3}.cf-thumb-geo{background:#fff6e9}
+.cf-lines{height:100%;background:repeating-linear-gradient(to bottom,transparent 0,transparent 19px,#dfe2ef 20px);opacity:.9}
+.cf-hand{position:absolute;top:24px;left:22px;color:#5753a6;font-family:Georgia,serif;font-size:15px;font-style:italic;transform:rotate(-2deg)}
+.cf-thumb-bio .cf-hand{color:#34775f}.cf-thumb-geo .cf-hand{color:#a56b2e}
+.cf-hand small{display:block;font:10px/1.8 system-ui,sans-serif;color:#777d90;margin-top:10px}
+.cf-pages{position:absolute;right:10px;bottom:9px;background:#ffffffc9;border:1px solid #ffffff;border-radius:6px;padding:4px 6px;font-size:8px;color:#85869a}
+.cf-note-meta{padding:12px 13px 13px}.cf-note-meta strong{display:block;font-size:11px;color:#37374d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cf-note-meta span{display:block;font-size:9px;color:#9293a3;margin-top:5px}
+.cf-note-meta b{display:inline-block;margin-top:10px;background:#efedff;color:#665ce7;border-radius:5px;padding:4px 6px;font-size:8px;letter-spacing:.4px}.cf-note-meta b.cf-green{background:#e7f5ee;color:#448a70}.cf-note-meta b.cf-orange{background:#fff0dc;color:#a66d2e}
+.cf-lower-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(250px,.85fr);gap:23px}
+.cf-subject-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.cf-subject-card,.cf-tool-card{display:flex;align-items:center;gap:10px;text-align:left;background:#fff;border:1px solid #e8e8f0;border-radius:12px;padding:11px;min-width:0;transition:transform .15s,border-color .15s}
+.cf-subject-icon{width:35px;height:35px;flex:0 0 35px;display:grid;place-items:center;background:#efedff;color:#665ce7;border-radius:10px;font-size:17px}
+.cf-green-bg{background:#e7f5ee;color:#43876e}.cf-orange-bg{background:#fff0dc;color:#a66d2e}.cf-pink-bg{background:#fbeaf1;color:#bd6f8c}
+.cf-subject-card span:nth-child(2),.cf-tool-card div{min-width:0;flex:1}.cf-subject-card strong,.cf-tool-card strong{display:block;font-size:10px;color:#3c3b50}.cf-subject-card small,.cf-tool-card small{display:block;font-size:8px;color:#9293a3;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cf-subject-card>b,.cf-tool-card>b{color:#9b9bae;font-size:17px}
+.cf-tool-card{width:100%;margin-bottom:8px;padding:11px 12px}.cf-tool-card>span{width:33px;height:33px;display:grid;place-items:center;border-radius:10px;background:#efedff;color:#665ce7;font-size:16px}.cf-tool-card:nth-of-type(3)>span{background:#e7f5ee;color:#43876e}
+.cf-library-foot{font-size:9px;color:#a1a2b1;margin:23px 0 0}
+.cf-hidden-modes{display:none!important}
+@media(max-width:950px){.cf-library-side{width:200px;flex-basis:200px}.cf-library-content{padding:25px 20px}.cf-lower-grid{grid-template-columns:1fr}.cf-tools-section{display:none}.cf-note-grid{gap:10px}.cf-thumb{height:116px}}
+@media(max-width:620px){#landing.cf-library{display:block!important;overflow:auto!important}.cf-library-side{display:none}.cf-library-main{min-height:100%;overflow:visible}.cf-library-top{height:53px;padding:0 13px;gap:9px}.cf-top-title{display:none}.cf-mobile-brand{display:flex}.cf-library-top input{width:clamp(100px,34vw,160px);padding:8px;font-size:10px}.cf-library-content{padding:22px 14px 25px}.cf-welcome{display:block;margin-bottom:22px}.cf-welcome h1{font-size:29px;letter-spacing:-1.1px}.cf-welcome p{font-size:11px;line-height:1.5}.cf-create{margin:16px 0 0;width:100%}.cf-section-head{margin-top:22px}.cf-note-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.cf-note-card:last-child{display:none}.cf-thumb{height:105px;padding:13px}.cf-hand{left:14px;top:19px;font-size:12px}.cf-hand small{font-size:8px;margin-top:7px}.cf-note-meta{padding:10px}.cf-note-meta strong{font-size:10px}.cf-note-meta span{font-size:8px}.cf-subject-grid{gap:7px}.cf-subject-card{padding:9px;gap:7px}.cf-subject-icon{width:30px;height:30px;flex-basis:30px}.cf-subject-card strong{font-size:9px}.cf-subject-card small{font-size:7px}.cf-lower-grid{display:block}.cf-tools-section{display:block}.cf-tool-card{padding:10px}.cf-library-foot{line-height:1.5}}
+</style>
+
 </head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
 
   
-  <section id="landing">
-    <div class="landing-card">
-      <div class="landing-brand">Canvas<span>Flow</span> Study</div>
-      <h1 class="landing-title">What do you want to do?</h1>
-      <p class="landing-sub">اختار طريقة الشغل. لو عندك درس من الكتاب، ارفع صور الصفحات والـ AI يحولها لمذاكرة كاملة.</p>
-      <div class="mode-cards">
-        <div class="mode-card" id="chooseAI">
-          <div class="mode-icon">✦</div>
-          <h2>AI Study Tutor</h2>
-          <p>ارفع صور الدرس بدل ما تكتبه، وخلي الـ AI يستخرج المحتوى ويعملك مذاكرة كاملة.</p>
-          <ul class="mode-list">
-            <li>📷 صور من الكتاب</li><li>📚 ملخص + شرح</li><li>📝 امتحان + Flashcards</li><li>📄 PDF جاهز</li>
-          </ul>
+  <section id="landing" class="cf-library">
+    <aside class="cf-library-side">
+      <div class="cf-brand"><span class="cf-brand-icon">C</span><span>Canvas<em>Flow</em><small>STUDY SPACE</small></span></div>
+      <button class="cf-new" id="cfNewNote">＋ &nbsp; New notebook</button>
+      <div class="cf-nav-label">WORKSPACE</div>
+      <button class="cf-nav active" id="cfHomeNav">⌂ <span>Home</span></button>
+      <button class="cf-nav" id="cfBoardsNav">▤ <span>My saved boards</span></button>
+      <button class="cf-nav" id="cfAiNav">✧ <span>AI Study Tutor</span></button>
+      <div class="cf-nav-label cf-subject-label">YOUR SUBJECTS</div>
+      <button class="cf-subject"><i style="background:#e7a653"></i>Mathematics</button>
+      <button class="cf-subject"><i style="background:#69ad94"></i>Biology</button>
+      <button class="cf-subject"><i style="background:#7887df"></i>Geography</button>
+      <button class="cf-subject"><i style="background:#d887a2"></i>English</button>
+      <div class="cf-side-note"><strong>Your study space</strong><span>Keep your notes, ideas and lessons together.</span></div>
+    </aside>
+    <div class="cf-library-main">
+      <header class="cf-library-top"><span class="cf-mobile-brand"><span class="cf-brand-icon">C</span> Canvas<em>Flow</em></span><span class="cf-top-title">My workspace</span><span class="cf-grow"></span><input id="cfSearch" placeholder="⌕  Search notebooks" aria-label="Search notebooks"><button class="cf-profile" id="cfAccount">F</button></header>
+      <div class="cf-library-content">
+        <div class="cf-welcome"><div><div class="cf-eyebrow">YOUR PERSONAL STUDY SPACE</div><h1>Everything you learn,<br class="cf-desktop-break"> in one place.</h1><p>Pick up where you left off or start a fresh notebook.</p></div><button class="cf-new cf-create" id="cfCreate">＋ Create notebook</button></div>
+        <div class="cf-section-head"><h2>Continue studying</h2><button class="cf-text-button" id="cfRecent">Recent activity ↗</button></div>
+        <div class="cf-note-grid" id="cfNoteGrid">
+          <button class="cf-note-card" data-cf-note="Mathematics — Functions"><div class="cf-thumb cf-thumb-math"><div class="cf-lines"></div><div class="cf-hand">Functions &amp; graphs<small>y = mx + b<br>Domain · Range · Slope</small></div><span class="cf-pages">12 pages</span></div><div class="cf-note-meta"><strong>Mathematics — Functions</strong><span>Notebook preview</span><b>MATHEMATICS</b></div></button>
+          <button class="cf-note-card" data-cf-note="Biology — Cell structure"><div class="cf-thumb cf-thumb-bio"><div class="cf-lines"></div><div class="cf-hand">Cell structure<small>Nucleus · Membrane<br>Mitochondria</small></div><span class="cf-pages">8 pages</span></div><div class="cf-note-meta"><strong>Biology — Cell structure</strong><span>Notebook preview</span><b class="cf-green">BIOLOGY</b></div></button>
+          <button class="cf-note-card" data-cf-note="Geography — Population"><div class="cf-thumb cf-thumb-geo"><div class="cf-lines"></div><div class="cf-hand">Population studies<small>Demographic patterns</small></div><span class="cf-pages">5 pages</span></div><div class="cf-note-meta"><strong>Geography — Population</strong><span>Notebook preview</span><b class="cf-orange">GEOGRAPHY</b></div></button>
         </div>
-        <div class="mode-card" id="chooseBoard">
-          <div class="mode-icon">✎</div>
-          <h2>Whiteboard</h2>
-          <p>افتح مساحة الرسم والمذاكرة التفاعلية وارسم، اكتب، اعمل Mind Maps وحط الصور.</p>
-          <ul class="mode-list">
-            <li>✏️ Pen & Stylus</li><li>🧩 Mind Maps</li><li>🖼️ Images</li><li>🔍 Pan & Zoom</li>
-          </ul>
-        </div>
+        <div class="cf-lower-grid"><section><div class="cf-section-head"><h2>Browse subjects</h2><button class="cf-text-button" id="cfNewSubject">＋ Add subject</button></div><div class="cf-subject-grid" id="cfSubjectGrid">
+          <button class="cf-subject-card" data-cf-subject="Mathematics"><span class="cf-subject-icon">∑</span><span><strong>Mathematics</strong><small>Open subject workspace</small></span><b>›</b></button>
+          <button class="cf-subject-card" data-cf-subject="Biology"><span class="cf-subject-icon cf-green-bg">♧</span><span><strong>Biology</strong><small>Open subject workspace</small></span><b>›</b></button>
+          <button class="cf-subject-card" data-cf-subject="Geography"><span class="cf-subject-icon cf-orange-bg">◎</span><span><strong>Geography</strong><small>Open subject workspace</small></span><b>›</b></button>
+          <button class="cf-subject-card" data-cf-subject="English"><span class="cf-subject-icon cf-pink-bg">文</span><span><strong>English</strong><small>Open subject workspace</small></span><b>›</b></button>
+        </div></section>
+        <section class="cf-tools-section"><div class="cf-section-head"><h2>Study tools</h2></div><button class="cf-tool-card" id="cfWhiteboard"><span>✎</span><div><strong>Infinite whiteboard</strong><small>Write, draw, add images and mind maps</small></div><b>›</b></button><button class="cf-tool-card" id="cfAI"><span>✧</span><div><strong>AI Study Tutor</strong><small>Turn lesson material into study resources</small></div><b>›</b></button><button class="cf-tool-card" id="cfMyBoards"><span>▤</span><div><strong>Saved boards</strong><small>Open boards linked to your account</small></div><b>›</b></button></section></div>
+        <p class="cf-library-foot">CanvasFlow Study · Notebook library preview · Existing whiteboard and account data are preserved.</p>
       </div>
     </div>
+    <div class="cf-hidden-modes" aria-hidden="true">
+      <div class="mode-card" id="chooseAI"></div><div class="mode-card" id="chooseBoard"></div>
+    </div>
   </section>
-
   <div id="app">
     <header id="topbar">
       <div class="brand">Canvas<span>Flow</span></div>
@@ -6580,5 +6642,36 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
   }
 }
 </style>
+
+<script id="canvasflow-library-actions">
+(function(){
+ const byId=id=>document.getElementById(id);
+ const click=id=>byId(id)?.click();
+ function openNotebook(name){
+   const nameBox=byId('boardNameDisplay');
+   click('chooseBoard');
+   if(nameBox && name) nameBox.textContent=name;
+   // The actual board collection remains managed by the existing Firebase Boards flow.
+ }
+ byId('cfWhiteboard')?.addEventListener('click',()=>click('chooseBoard'));
+ byId('cfNewNote')?.addEventListener('click',()=>openNotebook('New notebook'));
+ byId('cfCreate')?.addEventListener('click',()=>openNotebook('New notebook'));
+ byId('cfAI')?.addEventListener('click',()=>click('chooseAI'));
+ byId('cfAiNav')?.addEventListener('click',()=>click('chooseAI'));
+ byId('cfAccount')?.addEventListener('click',()=>{click('chooseBoard');setTimeout(()=>click('authBtn'),250)});
+ ['cfBoardsNav','cfMyBoards'].forEach(id=>byId(id)?.addEventListener('click',()=>{click('chooseBoard');setTimeout(()=>click('boardsBtn'),250)}));
+ byId('cfSearch')?.addEventListener('input',e=>{
+   const q=e.target.value.toLowerCase();
+   document.querySelectorAll('[data-cf-note]').forEach(card=>card.style.display=card.dataset.cfNote.toLowerCase().includes(q)?'':'none');
+   document.querySelectorAll('[data-cf-subject]').forEach(card=>card.style.display=card.dataset.cfSubject.toLowerCase().includes(q)?'':'none');
+ });
+ document.querySelectorAll('[data-cf-note]').forEach(card=>card.addEventListener('click',()=>openNotebook(card.dataset.cfNote)));
+ document.querySelectorAll('[data-cf-subject]').forEach(card=>card.addEventListener('click',()=>{const q=card.dataset.cfSubject;byId('cfSearch').value=q;byId('cfSearch').dispatchEvent(new Event('input'))}));
+ byId('cfNewSubject')?.addEventListener('click',()=>{const name=prompt('Subject name');if(!name)return;const card=document.createElement('button');card.className='cf-subject-card';card.dataset.cfSubject=name;card.innerHTML='<span class="cf-subject-icon">▤</span><span><strong></strong><small>New subject</small></span><b>›</b>';card.querySelector('strong').textContent=name;byId('cfSubjectGrid').appendChild(card);card.addEventListener('click',()=>{byId('cfSearch').value=name;byId('cfSearch').dispatchEvent(new Event('input'))})});
+ byId('cfRecent')?.addEventListener('click',()=>{click('chooseBoard');setTimeout(()=>click('boardsBtn'),250)});
+ byId('cfHomeNav')?.addEventListener('click',()=>{byId('cfSearch').value='';byId('cfSearch').dispatchEvent(new Event('input'))});
+})();
+</script>
+
 </body>
 </html>
