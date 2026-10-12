@@ -6806,7 +6806,7 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
     if(typeof addImageFileToCanvas==='function'){
       await addImageFileToCanvas(file);
       if(typeof setTool==='function') setTool('pen');
-      $('clearSelection')?.click();
+      if(typeof canvas !== 'undefined'){canvas.discardActiveObject();canvas.requestRenderAll();}
       showStatus('الصورة المرجعية اتحطت في مشروع السكيتش. تقدر ترسم فوقها بالقلم.');
     }else showStatus('المشروع اتعمل، لكن أداة إضافة الصور مش جاهزة.',true);
   });
@@ -6828,7 +6828,7 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
         if((file.type||'').startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(file.name)){
           if(typeof addImageFileToCanvas!=='function')throw new Error('أداة الصور مش جاهزة');
           await addImageFileToCanvas(file);
-          $('clearSelection')?.click();
+          if(typeof canvas !== 'undefined'){canvas.discardActiveObject();canvas.requestRenderAll();}
           if(typeof scheduleSave==='function')scheduleSave(true);
         }else if(file.type==='application/pdf' || /\.pdf$/i.test(file.name)){
           await importPdfAsPages(file);
