@@ -1188,6 +1188,7 @@ body.tablet-mode #topbar button.tool{border-radius:10px!important}
 @media(max-width:620px){#landing.cf-library{display:block!important;overflow:auto!important}.cf-library-side{display:none}.cf-library-main{min-height:100%;overflow:visible}.cf-library-top{height:53px;padding:0 13px;gap:9px}.cf-top-title{display:none}.cf-mobile-brand{display:flex}.cf-library-top input{width:clamp(100px,34vw,160px);padding:8px;font-size:10px}.cf-library-content{padding:22px 14px 25px}.cf-welcome{display:block;margin-bottom:22px}.cf-welcome h1{font-size:29px;letter-spacing:-1.1px}.cf-welcome p{font-size:11px;line-height:1.5}.cf-create{margin:16px 0 0;width:100%}.cf-section-head{margin-top:22px}.cf-note-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.cf-note-card:last-child{display:none}.cf-thumb{height:105px;padding:13px}.cf-hand{left:14px;top:19px;font-size:12px}.cf-hand small{font-size:8px;margin-top:7px}.cf-note-meta{padding:10px}.cf-note-meta strong{font-size:10px}.cf-note-meta span{font-size:8px}.cf-subject-grid{gap:7px}.cf-subject-card{padding:9px;gap:7px}.cf-subject-icon{width:30px;height:30px;flex-basis:30px}.cf-subject-card strong{font-size:9px}.cf-subject-card small{font-size:7px}.cf-lower-grid{display:block}.cf-tools-section{display:block}.cf-tool-card{padding:10px}.cf-library-foot{line-height:1.5}}
 </style>
 
+<style id="canvasflow-library-visibility-fix">#landing.cf-library.library-hidden{display:none!important}</style>
 </head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
@@ -2828,6 +2829,7 @@ const brandHome = document.querySelector("#topbar .brand");
 function enterApp(openAI=false){
   localStorage.setItem(ENTRY_STATE_KEY, "1");
   document.body.classList.remove("landing-active");
+  landing.classList.add("library-hidden");
   landing.style.display = "none";
   app.classList.add("entered");
   requestAnimationFrame(() => {
@@ -2843,6 +2845,7 @@ function returnToLanding(){
   saveLocalDraft();
   localStorage.removeItem(ENTRY_STATE_KEY);
   document.body.classList.add("landing-active");
+  landing.classList.remove("library-hidden");
   landing.style.display = "flex";
   app.classList.remove("entered");
   aiPanel.classList.remove("open");
@@ -2857,10 +2860,12 @@ document.querySelector('#mobilePhoneHeader .mbrand')?.addEventListener('click', 
 // the user intentionally clicks the CanvasFlow brand.
 if(localStorage.getItem(ENTRY_STATE_KEY)==="1") {
   document.body.classList.remove("landing-active");
+  landing.classList.add("library-hidden");
   landing.style.display = "none";
   app.classList.add("entered");
 } else {
   document.body.classList.add("landing-active");
+  landing.classList.remove("library-hidden");
 }
 
 // ===================== AI STUDY TUTOR =====================
