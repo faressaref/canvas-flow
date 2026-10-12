@@ -6684,6 +6684,227 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
 })();
 </script>
 
+
+<script id="canvasflow-project-launchers">
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const landing = $('landing');
+  if(!landing || $('cfProjectLaunchers')) return;
+
+  const style = document.createElement('style');
+  style.id = 'cf-project-launcher-styles';
+  style.textContent = `
+    #cfProjectLaunchers{margin:0 0 28px;text-align:left}
+    #cfProjectLaunchers .cf-launcher-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}
+    #cfProjectLaunchers h2{margin:0;font-size:18px;letter-spacing:-.025em;color:#18202a}
+    #cfProjectLaunchers .cf-launcher-sub{font-size:11px;color:#7a8490;margin-top:4px}
+    #cfProjectLaunchers .cf-launcher-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    #cfProjectLaunchers .cf-launcher{display:flex;align-items:flex-start;gap:12px;min-width:0;min-height:118px;padding:17px;border:1px solid #dfe4ea;border-radius:16px;background:rgba(255,255,255,.96);text-align:left;cursor:pointer;box-shadow:0 5px 20px rgba(0,0,0,.035);transition:border-color .15s,transform .15s,box-shadow .15s;color:#18202a}
+    #cfProjectLaunchers .cf-launcher:hover{border-color:#bfc4ff;transform:translateY(-2px);box-shadow:0 10px 26px rgba(52,59,90,.09)}
+    #cfProjectLaunchers .cf-launcher-icon{display:flex;align-items:center;justify-content:center;flex:0 0 42px;width:42px;height:42px;border-radius:12px;background:#eef0ff;font-size:22px}
+    #cfProjectLaunchers .cf-launcher-copy{min-width:0}
+    #cfProjectLaunchers .cf-launcher-copy strong{display:block;font-size:14px;margin:2px 0 5px}
+    #cfProjectLaunchers .cf-launcher-copy small{display:block;font-size:11px;line-height:1.5;color:#7a8490}
+    #cfProjectLaunchers .cf-launcher-copy em{display:inline-block;margin-top:8px;color:#5b63ff;font-size:10px;font-style:normal;font-weight:800}
+    #cfProjectLaunchers .cf-launcher-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+    #cfProjectLaunchers .cf-launcher-actions button{border:1px solid #e0e4eb;background:#f8f9fb;border-radius:8px;padding:7px 8px;font-size:10px;font-weight:800;color:#424b59;cursor:pointer}
+    #cfProjectLaunchers .cf-launcher-actions button:hover{border-color:#bfc4ff;background:#f2f3ff}
+    #cfProjectLaunchers .cf-launcher.upload .cf-launcher-icon{background:#e7f5ee}
+    #cfProjectLaunchers .cf-launcher.sketch .cf-launcher-icon{background:#fff0e4}
+    #cfProjectImportStatus{display:none;margin-top:9px;padding:9px 11px;border:1px solid #dfe4ea;border-radius:9px;background:#fff;color:#697383;font-size:11px}
+    #cfProjectImportStatus.show{display:block}
+    @media(max-width:760px){#cfProjectLaunchers{margin-bottom:22px}#cfProjectLaunchers .cf-launcher-head{align-items:flex-start}#cfProjectLaunchers .cf-launcher-grid{grid-template-columns:1fr;gap:9px}#cfProjectLaunchers .cf-launcher{min-height:0;padding:13px}#cfProjectLaunchers .cf-launcher-icon{flex-basis:38px;width:38px;height:38px}#cfProjectLaunchers .cf-launcher-copy strong{font-size:13px}}
+  `;
+  document.head.appendChild(style);
+
+  const welcome = landing.querySelector('.cf-welcome');
+  if(!welcome) return;
+  const section = document.createElement('section');
+  section.id = 'cfProjectLaunchers';
+  section.innerHTML = `
+    <div class="cf-launcher-head"><div><h2>Create a project</h2><div class="cf-launcher-sub">Choose how you want to work — each project stays separate.</div></div></div>
+    <div class="cf-launcher-grid">
+      <article class="cf-launcher sketch">
+        <span class="cf-launcher-icon">✎</span>
+        <div class="cf-launcher-copy"><strong>Sketch</strong><small>Start a freehand sketch or draw over a reference image.</small>
+          <div class="cf-launcher-actions"><button type="button" id="cfStartSketch">Blank sketch</button><button type="button" id="cfSketchReference">Sketch from image</button></div>
+        </div>
+      </article>
+      <button class="cf-launcher" type="button" id="cfStartBoard">
+        <span class="cf-launcher-icon">▦</span><span class="cf-launcher-copy"><strong>Board</strong><small>Open a fresh infinite board for notes, mind maps, writing and images.</small><em>＋ New board</em></span>
+      </button>
+      <button class="cf-launcher upload" type="button" id="cfImportProject">
+        <span class="cf-launcher-icon">⇧</span><span class="cf-launcher-copy"><strong>Import PDF or images</strong><small>Each selected file opens in its own project. PDF pages become separate board pages.</small><em>Choose files ↗</em></span>
+      </button>
+    </div>
+    <div id="cfProjectImportStatus" role="status" aria-live="polite"></div>
+    <input id="cfSketchReferenceInput" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.svg" hidden>
+    <input id="cfProjectFilesInput" type="file" accept="image/*,.pdf,.png,.jpg,.jpeg,.webp,.svg,.heic,.heif" multiple hidden>
+  `;
+  welcome.insertAdjacentElement('afterend',section);
+
+  const status = $('cfProjectImportStatus');
+  const showStatus = (message, error=false) => {
+    status.textContent = message;
+    status.style.color = error ? '#b42318' : '#697383';
+    status.classList.add('show');
+  };
+  const sleep = ms => new Promise(resolve=>setTimeout(resolve,ms));
+  async function waitForNewBoard(previousId){
+    const start = Date.now();
+    while(Date.now()-start < 15000){
+      if(window.currentBoardId && window.currentBoardId !== previousId) return true;
+      await sleep(150);
+    }
+    return !!window.currentBoardId;
+  }
+  async function createProject(name, mode){
+    if(!window.currentUser){
+      $('cfAccount')?.click();
+      showStatus('سجّل الدخول الأول عشان نقدر نحفظ المشروع في حسابك.', true);
+      return false;
+    }
+    const previousId = window.currentBoardId || null;
+    $('chooseBoard')?.click();
+    await sleep(250);
+    $('boardsBtn')?.click();
+    await sleep(250);
+    const nameInput = $('newBoardName');
+    if(!nameInput || !$('newBoardBtn')){
+      showStatus('مش قادر أفتح إنشاء مشروع دلوقتي. جرّب تاني.', true);
+      return false;
+    }
+    nameInput.value = name;
+    $('newBoardBtn').click();
+    const created = await waitForNewBoard(previousId);
+    if(!created){
+      showStatus('المشروع ما اتفتحش. اتأكد من اتصال الحساب وجرب تاني.', true);
+      return false;
+    }
+    $('boardsModal')?.classList.remove('open');
+    $('landing')?.classList.add('library-hidden');
+    document.body.classList.remove('landing-active');
+    $('app')?.classList.add('entered');
+    if(mode === 'sketch'){
+      if(typeof window.setTool === 'function') window.setTool('pen');
+      document.querySelectorAll('#topbar [data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='pen'));
+      document.querySelectorAll('#mobileV2Bar [data-v2-tool]').forEach(b=>b.classList.toggle('active',b.dataset.v2Tool==='pen'));
+    } else if(typeof window.setTool === 'function') window.setTool('select');
+    return true;
+  }
+
+  $('cfStartSketch').addEventListener('click',async()=>{
+    const ok=await createProject('Sketch — '+new Date().toLocaleDateString(), 'sketch');
+    if(ok) showStatus('السكيتش جاهز ✍ ابدأ ارسم بالقلم.');
+  });
+  $('cfSketchReference').addEventListener('click',()=>$('cfSketchReferenceInput').click());
+  $('cfSketchReferenceInput').addEventListener('change',async e=>{
+    const file=e.target.files?.[0];e.target.value='';if(!file)return;
+    const ok=await createProject('Sketch — '+file.name.replace(/\.[^.]+$/,''), 'sketch');
+    if(!ok)return;
+    if(typeof window.addImageFileToCanvas==='function'){
+      await window.addImageFileToCanvas(file);
+      if(typeof window.setTool==='function') window.setTool('pen');
+      $('clearSelection')?.click();
+      showStatus('الصورة المرجعية اتحطت في مشروع السكيتش. تقدر ترسم فوقها بالقلم.');
+    }else showStatus('المشروع اتعمل، لكن أداة إضافة الصور مش جاهزة.',true);
+  });
+  $('cfStartBoard').addEventListener('click',async()=>{
+    const ok=await createProject('Board — '+new Date().toLocaleDateString(),'board');
+    if(ok)showStatus('البورد الجديد جاهز. ابدأ كتابة أو رسم.');
+  });
+  $('cfImportProject').addEventListener('click',()=>$('cfProjectFilesInput').click());
+  $('cfProjectFilesInput').addEventListener('change',async e=>{
+    const files=Array.from(e.target.files||[]);e.target.value='';
+    if(!files.length)return;
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      showStatus('جاري إنشاء مشروع مستقل: '+file.name+' ('+(i+1)+'/'+files.length+')');
+      const title=file.name.replace(/\.[^.]+$/,'') || file.name;
+      const ok=await createProject(title,'import');
+      if(!ok)break;
+      try{
+        if((file.type||'').startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(file.name)){
+          if(typeof window.addImageFileToCanvas!=='function')throw new Error('أداة الصور مش جاهزة');
+          await window.addImageFileToCanvas(file);
+          $('clearSelection')?.click();
+          if(typeof window.scheduleSave==='function')window.scheduleSave(true);
+        }else if(file.type==='application/pdf' || /\.pdf$/i.test(file.name)){
+          await importPdfAsPages(file);
+        }else{
+          throw new Error('الملف ده مش مدعوم حاليًا. استخدم PDF أو صورة.');
+        }
+      }catch(err){
+        console.error('CanvasFlow project import:',err);
+        showStatus('تعذّر استيراد '+file.name+': '+(err.message||'خطأ غير معروف'),true);
+        break;
+      }
+    }
+    if(files.length)showStatus('خلصنا استيراد الملفات. كل ملف اتعمله مشروع منفصل.');
+  });
+
+  let pdfLibPromise=null;
+  function loadPdfLibrary(){
+    if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+    if(pdfLibPromise)return pdfLibPromise;
+    pdfLibPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload=()=>{if(!window.pdfjsLib){reject(new Error('مكتبة قراءة PDF مش جاهزة'));return;}window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';resolve(window.pdfjsLib)};
+      script.onerror=()=>reject(new Error('فشل تحميل قارئ PDF'));
+      document.head.appendChild(script);
+    });
+    return pdfLibPromise;
+  }
+  async function importPdfAsPages(file){
+    const lib=await loadPdfLibrary();
+    const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;
+    const pages=[];
+    const originalName=window.currentBoardName||file.name;
+    for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
+      showStatus('جاري تجهيز صفحة '+pageNo+' من '+pdf.numPages+' في '+file.name);
+      const page=await pdf.getPage(pageNo);
+      const base=page.getViewport({scale:1});
+      const scale=Math.min(1.5,1200/Math.max(base.width,base.height));
+      const viewport=page.getViewport({scale});
+      const raster=document.createElement('canvas');
+      raster.width=Math.ceil(viewport.width);raster.height=Math.ceil(viewport.height);
+      const ctx=raster.getContext('2d',{alpha:false});
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,raster.width,raster.height);
+      await page.render({canvasContext:ctx,viewport}).promise;
+      let source=raster.toDataURL('image/png');
+      if(window.storage && window.currentUser){
+        try{
+          const ref=window.storage.ref('pdf-imports/'+window.currentUser.uid+'/'+Date.now()+'_page_'+pageNo+'.png');
+          await ref.putString(source,'data_url');
+          source=await ref.getDownloadURL();
+        }catch(uploadError){console.warn('PDF page storage failed; using local raster',uploadError);}
+      }
+      await new Promise((resolve,reject)=>{
+        fabric.Image.fromURL(source,img=>{
+          if(!img){reject(new Error('فشل تجهيز صفحة PDF رقم '+pageNo));return;}
+          img.set({left:Math.max(0,(canvas.getWidth()-img.width)/2),top:20,objectRole:'image',fileName:file.name+' — page '+pageNo,srcUrl:source,selectable:true,evented:true});
+          canvas.clear();canvas.add(img);canvas.discardActiveObject();canvas.requestRenderAll();
+          pages.push(canvas.toJSON(['objectRole','srcUrl','nodeId','arrowHead','fileName']));
+          resolve();
+        },{crossOrigin:'anonymous'});
+      });
+      try{raster.width=1;raster.height=1;}catch(_){}
+    }
+    if(!pages.length)throw new Error('ملف PDF مفيهوش صفحات قابلة للقراءة');
+    window.boardPages=pages;
+    window.boardPageIndex=0;
+    window.boardPagesReady=true;
+    await new Promise(resolve=>canvas.loadFromJSON(pages[0],()=>{canvas.requestRenderAll();resolve()}));
+    if(typeof window.renderBoardPages==='function')window.renderBoardPages();
+    if(typeof window.scheduleSave==='function')window.scheduleSave(true);
+    if(typeof window.saveNow==='function')await window.saveNow(true,originalName);
+    showStatus('تم استيراد '+pdf.numPages+' صفحة من ملف PDF كمشروع متعدد الصفحات.');
+  }
+})();
+</script>
+
 <script src="/handwriting-auto.js"></script>
 </body>
 </html>
