@@ -64,7 +64,8 @@ function promptForMode(mode) {
     flashcards: "Create active-recall flashcards. Each card should have a focused question and a concise answer. Prioritize high-value facts and concepts.",
     recall: "Start an active-recall session. Ask ONE question at a time, starting easy and increasing difficulty. Do not reveal answers until the student answers. Since this request is one API call, return the first question plus a short instruction to answer it.",
     mindmap: "Turn the lesson into a hierarchical text mind map: central topic -> main branches -> sub-branches -> key facts. Keep it easy to convert into whiteboard nodes.",
-    studyplan: "Create a practical study plan for this exact lesson: study blocks, order of topics, active recall prompts, spaced review, and a final self-test."
+    studyplan: "Create a practical study plan for this exact lesson: study blocks, order of topics, active recall prompts, spaced review, and a final self-test.",
+    transcribe: "Transcribe the handwritten text in the supplied image as accurately as possible. Support Arabic and English, including mixed-language writing. Preserve the original language, spelling, punctuation, symbols, and line breaks. Do not translate, summarize, correct, explain, or add any preamble. Return only the transcription. If a portion is unreadable, mark only that portion as [غير واضح] for Arabic text or [illegible] for English text."
   };
   return prompts[mode] || prompts.summary;
 }
