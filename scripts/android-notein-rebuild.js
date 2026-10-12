@@ -22,6 +22,8 @@ const css = `
   --cf-radius:18px;
 }
 html,body{background:var(--cf-bg)!important;color:var(--cf-ink)!important}
+/* The library uses !important display rules, so inline display:none cannot hide it. */
+#landing.cf-library.library-hidden{display:none!important}
 button,input,select,textarea{font-family:inherit}
 button{ -webkit-tap-highlight-color:transparent; }
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #665ce755!important;outline-offset:2px}
