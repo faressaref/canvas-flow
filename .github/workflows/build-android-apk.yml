@@ -1,0 +1,85 @@
+name: Build CanvasFlow Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/android-notein-rebuild
+    paths:
+      - "public/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "android-app/**"
+      - ".github/workflows/build-android-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Build CanvasFlow web assets
+        run: |
+          npm ci
+          npm run build
+          mkdir -p android-app/www/vendor
+          cp -R public/. android-app/www/
+          curl -fsSL https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js -o android-app/www/vendor/fabric.min.js
+          curl -fsSL https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js -o android-app/www/vendor/jspdf.umd.min.js
+          curl -fsSL https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js -o android-app/www/vendor/html2canvas.min.js
+          curl -fsSL https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js -o android-app/www/vendor/firebase-app-compat.js
+          curl -fsSL https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js -o android-app/www/vendor/firebase-firestore-compat.js
+          curl -fsSL https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js -o android-app/www/vendor/firebase-storage-compat.js
+          curl -fsSL https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js -o android-app/www/vendor/firebase-auth-compat.js
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const file = 'android-app/www/index.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const replacements = {
+            'https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js': './vendor/fabric.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': './vendor/jspdf.umd.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js': './vendor/html2canvas.min.js',
+            'https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js': './vendor/firebase-app-compat.js',
+            'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js': './vendor/firebase-firestore-compat.js',
+            'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js': './vendor/firebase-storage-compat.js',
+            'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js': './vendor/firebase-auth-compat.js'
+          };
+          for (const [remote, local] of Object.entries(replacements)) html = html.split(remote).join(local);
+          fs.writeFileSync(file, html);
+          NODE
+
+      - name: Install Capacitor and generate Android project
+        working-directory: android-app
+        run: |
+          npm install
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android-app/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CanvasFlow-debug-apk
+          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
