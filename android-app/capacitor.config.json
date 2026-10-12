@@ -1,0 +1,9 @@
+{
+  "appId": "com.fares.canvasflow",
+  "appName": "CanvasFlow",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  }
+}
