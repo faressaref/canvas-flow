@@ -6754,18 +6754,18 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
   async function waitForNewBoard(previousId){
     const start = Date.now();
     while(Date.now()-start < 15000){
-      if(window.currentBoardId && window.currentBoardId !== previousId) return true;
+      if(typeof currentBoardId !== 'undefined' && currentBoardId && currentBoardId !== previousId) return true;
       await sleep(150);
     }
-    return !!window.currentBoardId;
+    return typeof currentBoardId !== 'undefined' && !!currentBoardId;
   }
   async function createProject(name, mode){
-    if(!window.currentUser){
+    if(typeof currentUser === 'undefined' || !currentUser){
       $('cfAccount')?.click();
       showStatus('سجّل الدخول الأول عشان نقدر نحفظ المشروع في حسابك.', true);
       return false;
     }
-    const previousId = window.currentBoardId || null;
+    const previousId = typeof currentBoardId !== 'undefined' ? currentBoardId : null;
     $('chooseBoard')?.click();
     await sleep(250);
     $('boardsBtn')?.click();
@@ -6787,10 +6787,10 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
     document.body.classList.remove('landing-active');
     $('app')?.classList.add('entered');
     if(mode === 'sketch'){
-      if(typeof window.setTool === 'function') window.setTool('pen');
+      if(typeof setTool === 'function') setTool('pen');
       document.querySelectorAll('#topbar [data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='pen'));
       document.querySelectorAll('#mobileV2Bar [data-v2-tool]').forEach(b=>b.classList.toggle('active',b.dataset.v2Tool==='pen'));
-    } else if(typeof window.setTool === 'function') window.setTool('select');
+    } else if(typeof setTool === 'function') setTool('select');
     return true;
   }
 
@@ -6803,9 +6803,9 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
     const file=e.target.files?.[0];e.target.value='';if(!file)return;
     const ok=await createProject('Sketch — '+file.name.replace(/\.[^.]+$/,''), 'sketch');
     if(!ok)return;
-    if(typeof window.addImageFileToCanvas==='function'){
-      await window.addImageFileToCanvas(file);
-      if(typeof window.setTool==='function') window.setTool('pen');
+    if(typeof addImageFileToCanvas==='function'){
+      await addImageFileToCanvas(file);
+      if(typeof setTool==='function') setTool('pen');
       $('clearSelection')?.click();
       showStatus('الصورة المرجعية اتحطت في مشروع السكيتش. تقدر ترسم فوقها بالقلم.');
     }else showStatus('المشروع اتعمل، لكن أداة إضافة الصور مش جاهزة.',true);
@@ -6826,10 +6826,10 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
       if(!ok)break;
       try{
         if((file.type||'').startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(file.name)){
-          if(typeof window.addImageFileToCanvas!=='function')throw new Error('أداة الصور مش جاهزة');
-          await window.addImageFileToCanvas(file);
+          if(typeof addImageFileToCanvas!=='function')throw new Error('أداة الصور مش جاهزة');
+          await addImageFileToCanvas(file);
           $('clearSelection')?.click();
-          if(typeof window.scheduleSave==='function')window.scheduleSave(true);
+          if(typeof scheduleSave==='function')scheduleSave(true);
         }else if(file.type==='application/pdf' || /\.pdf$/i.test(file.name)){
           await importPdfAsPages(file);
         }else{
@@ -6861,7 +6861,7 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
     const lib=await loadPdfLibrary();
     const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;
     const pages=[];
-    const originalName=window.currentBoardName||file.name;
+    const originalName=(typeof currentBoardName !== 'undefined' && currentBoardName)||file.name;
     for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
       showStatus('جاري تجهيز صفحة '+pageNo+' من '+pdf.numPages+' في '+file.name);
       const page=await pdf.getPage(pageNo);
@@ -6874,9 +6874,9 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
       ctx.fillStyle='#fff';ctx.fillRect(0,0,raster.width,raster.height);
       await page.render({canvasContext:ctx,viewport}).promise;
       let source=raster.toDataURL('image/png');
-      if(window.storage && window.currentUser){
+      if(typeof storage !== 'undefined' && storage && typeof currentUser !== 'undefined' && currentUser){
         try{
-          const ref=window.storage.ref('pdf-imports/'+window.currentUser.uid+'/'+Date.now()+'_page_'+pageNo+'.png');
+          const ref=storage.ref('pdf-imports/'+currentUser.uid+'/'+Date.now()+'_page_'+pageNo+'.png');
           await ref.putString(source,'data_url');
           source=await ref.getDownloadURL();
         }catch(uploadError){console.warn('PDF page storage failed; using local raster',uploadError);}
@@ -6893,13 +6893,13 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
       try{raster.width=1;raster.height=1;}catch(_){}
     }
     if(!pages.length)throw new Error('ملف PDF مفيهوش صفحات قابلة للقراءة');
-    window.boardPages=pages;
-    window.boardPageIndex=0;
-    window.boardPagesReady=true;
+    boardPages=pages;
+    boardPageIndex=0;
+    boardPagesReady=true;
     await new Promise(resolve=>canvas.loadFromJSON(pages[0],()=>{canvas.requestRenderAll();resolve()}));
-    if(typeof window.renderBoardPages==='function')window.renderBoardPages();
-    if(typeof window.scheduleSave==='function')window.scheduleSave(true);
-    if(typeof window.saveNow==='function')await window.saveNow(true,originalName);
+    if(typeof renderBoardPages==='function')renderBoardPages();
+    if(typeof scheduleSave==='function')scheduleSave(true);
+    if(typeof saveNow==='function')await saveNow(true,originalName);
     showStatus('تم استيراد '+pdf.numPages+' صفحة من ملف PDF كمشروع متعدد الصفحات.');
   }
 })();
