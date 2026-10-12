@@ -190,7 +190,7 @@ input[type=range]{accent-color:var(--cf-accent)!important}
 </style>`;
 
 if (!html.includes(marker)) {
-  html = html.replace("</head>", css + "\\n</head>");
+  html = html.replace("</head>", css + "\n</head>");
 } else {
   const start = html.indexOf(marker);
   const end = html.indexOf("</style>", start);
