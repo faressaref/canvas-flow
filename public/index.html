@@ -6767,56 +6767,7 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
 
 
 
-<script id="canvasflow-notein-library-behavior">
-(function(){
- const $=id=>document.getElementById(id);
- const content=document.querySelector('.cf-library-content');
- const section=$('cfProjectLaunchers');
- if(!content||!section||$('cfLibraryTabs'))return;
- const tabs=document.createElement('nav');
- tabs.id='cfLibraryTabs';
- tabs.setAttribute('aria-label','Library filters');
- tabs.innerHTML='<button type="button" class="active" data-filter="all">All</button><button type="button" data-filter="pdf">PDF</button><button type="button" data-filter="note">Note</button><button type="button" data-filter="folder">Folder</button><span class="cf-tab-spacer"></span><button type="button" class="cf-tab-icon" title="Color options" aria-label="Color options">🌈</button><button type="button" class="cf-tab-icon" id="cfViewToggle" title="Change view">☷</button><button type="button" id="cfSortBtn">☰ &nbsp; Sort</button>';
- section.insertAdjacentElement('afterend',tabs);
- const actions=document.createElement('div');
- actions.id='cfFloatingActions';
- actions.innerHTML='<div id="cfQuickMenu"><button type="button" data-action="sketch">✎ &nbsp; New sketch</button><button type="button" data-action="reference">▧ &nbsp; Sketch from image</button><button type="button" data-action="board">▦ &nbsp; New board</button><button type="button" data-action="import">⇧ &nbsp; Import PDF / images</button></div><button id="cfQuickSketch" type="button" aria-label="New sketch">✎</button><button id="cfQuickCreate" type="button" aria-label="Create project">＋</button>';
- document.body.appendChild(actions);
- const menu=$('cfQuickMenu');
- $('cfQuickCreate').addEventListener('click',()=>menu.classList.toggle('open'));
- $('cfQuickSketch').addEventListener('click',()=>$('cfStartSketch')?.click());
- menu.querySelectorAll('button[data-action]').forEach(b=>b.addEventListener('click',()=>{
-   menu.classList.remove('open');
-   const map={sketch:'cfStartSketch',reference:'cfSketchReference',board:'cfStartBoard',import:'cfImportProject'};
-   $(map[b.dataset.action])?.click();
- }));
- document.addEventListener('click',e=>{if(!actions.contains(e.target))menu.classList.remove('open')});
- const cards=Array.from(document.querySelectorAll('[data-cf-note]'));
- tabs.querySelectorAll('button[data-filter]').forEach(btn=>btn.addEventListener('click',()=>{
-   tabs.querySelectorAll('button[data-filter]').forEach(x=>x.classList.toggle('active',x===btn));
-   const filter=btn.dataset.filter;
-   cards.forEach((card,i)=>{
-     const title=(card.dataset.cfNote||'').toLowerCase();
-     const isPdf=/pdf|document|امتحان|اجابات/.test(title)||i===1;
-     card.style.display=filter==='all'||(filter==='pdf'&&isPdf)||(filter==='note'&&!isPdf)||(filter==='folder'&&false)?'':'none';
-   });
-   if(filter==='folder'){
-     const status=$('cfProjectImportStatus');if(status){status.textContent='Folders will be available here when folder projects are enabled.';status.classList.add('show')}
-   }
- }));
- $('cfSortBtn').addEventListener('click',()=>{
-   const grid=$('cfNoteGrid');if(!grid)return;
-   const sorted=Array.from(grid.children).sort((a,b)=>(a.dataset.cfNote||'').localeCompare(b.dataset.cfNote||''));
-   sorted.forEach(card=>grid.appendChild(card));
- });
- $('cfViewToggle').addEventListener('click',()=>{
-   const grid=$('cfNoteGrid');if(!grid)return;
-   const compact=grid.dataset.compact!=='1';grid.dataset.compact=compact?'1':'0';
-   grid.style.gridTemplateColumns=compact?'1fr':'';
-   grid.querySelectorAll('.cf-thumb').forEach(x=>x.style.height=compact?'70px':'');
- });
-})();
-</script>
+
 
 <script id="canvasflow-project-launchers">
 (function(){
@@ -7037,6 +6988,57 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
   }
 })();
 </script>
+<script id="canvasflow-notein-library-behavior">
+(function(){
+ const $=id=>document.getElementById(id);
+ const content=document.querySelector('.cf-library-content');
+ const section=$('cfProjectLaunchers');
+ if(!content||!section||$('cfLibraryTabs'))return;
+ const tabs=document.createElement('nav');
+ tabs.id='cfLibraryTabs';
+ tabs.setAttribute('aria-label','Library filters');
+ tabs.innerHTML='<button type="button" class="active" data-filter="all">All</button><button type="button" data-filter="pdf">PDF</button><button type="button" data-filter="note">Note</button><button type="button" data-filter="folder">Folder</button><span class="cf-tab-spacer"></span><button type="button" class="cf-tab-icon" title="Color options" aria-label="Color options">🌈</button><button type="button" class="cf-tab-icon" id="cfViewToggle" title="Change view">☷</button><button type="button" id="cfSortBtn">☰ &nbsp; Sort</button>';
+ section.insertAdjacentElement('afterend',tabs);
+ const actions=document.createElement('div');
+ actions.id='cfFloatingActions';
+ actions.innerHTML='<div id="cfQuickMenu"><button type="button" data-action="sketch">✎ &nbsp; New sketch</button><button type="button" data-action="reference">▧ &nbsp; Sketch from image</button><button type="button" data-action="board">▦ &nbsp; New board</button><button type="button" data-action="import">⇧ &nbsp; Import PDF / images</button></div><button id="cfQuickSketch" type="button" aria-label="New sketch">✎</button><button id="cfQuickCreate" type="button" aria-label="Create project">＋</button>';
+ document.body.appendChild(actions);
+ const menu=$('cfQuickMenu');
+ $('cfQuickCreate').addEventListener('click',()=>menu.classList.toggle('open'));
+ $('cfQuickSketch').addEventListener('click',()=>$('cfStartSketch')?.click());
+ menu.querySelectorAll('button[data-action]').forEach(b=>b.addEventListener('click',()=>{
+   menu.classList.remove('open');
+   const map={sketch:'cfStartSketch',reference:'cfSketchReference',board:'cfStartBoard',import:'cfImportProject'};
+   $(map[b.dataset.action])?.click();
+ }));
+ document.addEventListener('click',e=>{if(!actions.contains(e.target))menu.classList.remove('open')});
+ const cards=Array.from(document.querySelectorAll('[data-cf-note]'));
+ tabs.querySelectorAll('button[data-filter]').forEach(btn=>btn.addEventListener('click',()=>{
+   tabs.querySelectorAll('button[data-filter]').forEach(x=>x.classList.toggle('active',x===btn));
+   const filter=btn.dataset.filter;
+   cards.forEach((card,i)=>{
+     const title=(card.dataset.cfNote||'').toLowerCase();
+     const isPdf=/pdf|document|امتحان|اجابات/.test(title)||i===1;
+     card.style.display=filter==='all'||(filter==='pdf'&&isPdf)||(filter==='note'&&!isPdf)||(filter==='folder'&&false)?'':'none';
+   });
+   if(filter==='folder'){
+     const status=$('cfProjectImportStatus');if(status){status.textContent='Folders will be available here when folder projects are enabled.';status.classList.add('show')}
+   }
+ }));
+ $('cfSortBtn').addEventListener('click',()=>{
+   const grid=$('cfNoteGrid');if(!grid)return;
+   const sorted=Array.from(grid.children).sort((a,b)=>(a.dataset.cfNote||'').localeCompare(b.dataset.cfNote||''));
+   sorted.forEach(card=>grid.appendChild(card));
+ });
+ $('cfViewToggle').addEventListener('click',()=>{
+   const grid=$('cfNoteGrid');if(!grid)return;
+   const compact=grid.dataset.compact!=='1';grid.dataset.compact=compact?'1':'0';
+   grid.style.gridTemplateColumns=compact?'1fr':'';
+   grid.querySelectorAll('.cf-thumb').forEach(x=>x.style.height=compact?'70px':'');
+ });
+})();
+</script>
+
 
 <script src="/handwriting-auto.js"></script>
 </body>
