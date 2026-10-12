@@ -1189,6 +1189,87 @@ body.tablet-mode #topbar button.tool{border-radius:10px!important}
 </style>
 
 <style id="canvasflow-library-visibility-fix">#landing.cf-library.library-hidden{display:none!important}</style>
+
+<style id="canvasflow-notein-library-ui">
+/* Notein-inspired library home; editor and existing project data remain untouched. */
+#landing.cf-library{background:#1d1d1f!important;color:#f0f0f2!important}
+.cf-library-side{display:none!important}
+.cf-library-main{background:#1d1d1f!important;overflow-y:auto!important;scrollbar-width:thin;scrollbar-color:#414145 #1d1d1f}
+.cf-library-top{height:65px;flex:0 0 65px;background:#1d1d1f!important;border-bottom:1px solid #2b2b2e!important;padding:0 27px!important;color:#f0f0f2}
+.cf-mobile-brand{display:flex!important;color:#f2f2f3!important}
+.cf-brand-icon{background:#5147ff!important;box-shadow:none!important}
+.cf-top-title{display:none!important}
+.cf-library-top input{background:#29292c!important;border:1px solid #39393d!important;color:#f5f5f6!important;border-radius:24px!important}
+.cf-library-top input::placeholder{color:#9b9ba2}
+.cf-profile{background:#5147ff!important;color:white!important}
+.cf-library-content{max-width:none!important;padding:16px 28px 100px!important}
+.cf-welcome{display:none!important}
+.cf-section-head{margin:0 0 22px!important;padding:0 2px}
+.cf-section-head h2{color:#f1f1f2!important;font-size:14px!important}
+#cfRecent{color:#a5a5ab!important}
+.cf-note-grid{grid-template-columns:repeat(auto-fill,minmax(142px,1fr))!important;gap:25px 26px!important}
+.cf-note-card{border:0!important;border-radius:2px!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;cursor:pointer}
+.cf-note-card:hover{transform:translateY(-2px)}
+.cf-thumb{height:190px!important;border-radius:2px!important;padding:0!important;box-shadow:0 1px 2px #0006!important}
+.cf-thumb-math{background:#f4f2eb!important}
+.cf-thumb-bio{background:#e6f0eb!important}
+.cf-thumb-geo{background:#f0d08b!important}
+.cf-lines{margin:10px;height:calc(100% - 20px);background:repeating-linear-gradient(to bottom,transparent 0,transparent 18px,#d6d7d8 19px)!important}
+.cf-hand{left:14px!important;top:24px!important;color:#45454b!important;font-size:13px!important;max-width:calc(100% - 25px);overflow:hidden}
+.cf-hand small{font-size:9px!important;color:#68686e!important}
+.cf-pages{right:7px!important;bottom:7px!important;background:#ffffffd9!important;color:#4e4e55!important;border-radius:2px!important}
+.cf-note-meta{padding:10px 2px 0!important;position:relative}
+.cf-note-meta strong{color:#e8e8eb!important;font-size:12px!important;white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:30px}
+.cf-note-meta span{display:inline-block!important;color:#a3a3a9!important;font-size:10px!important;margin-top:4px!important}
+.cf-note-meta b{display:none!important}
+.cf-lower-grid{display:none!important}
+.cf-library-foot{color:#77777e!important}
+#cfProjectLaunchers{margin:0 0 26px!important}
+#cfProjectLaunchers .cf-launcher-head{display:none!important}
+#cfProjectLaunchers .cf-launcher-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important}
+#cfProjectLaunchers .cf-launcher{min-height:82px!important;align-items:center!important;padding:12px!important;border-color:#38383c!important;background:#252528!important;color:#f1f1f3!important;border-radius:12px!important;box-shadow:none!important}
+#cfProjectLaunchers .cf-launcher-icon{width:36px!important;height:36px!important;flex-basis:36px!important;background:#333338!important;color:#d5d4ff!important}
+#cfProjectLaunchers .cf-launcher-copy strong{color:#f2f2f4!important;font-size:12px!important}
+#cfProjectLaunchers .cf-launcher-copy small{color:#a5a5ac!important;font-size:10px!important}
+#cfProjectLaunchers .cf-launcher-copy em{color:#a7a0ff!important}
+#cfProjectLaunchers .cf-launcher-actions button{background:#303034!important;border-color:#46464b!important;color:#e5e5e9!important}
+#cfProjectLaunchers .cf-launcher.upload .cf-launcher-icon{background:#303c36!important;color:#b6edcd!important}
+#cfProjectLaunchers .cf-launcher.sketch .cf-launcher-icon{background:#3d3330!important;color:#ffd1ad!important}
+#cfLibraryTabs{display:flex;align-items:center;gap:0;min-height:54px;margin:0 0 24px;border-bottom:1px solid #343437}
+#cfLibraryTabs button{position:relative;border:0;background:transparent;color:#aaaab1;padding:0 15px;height:54px;font-size:14px;font-weight:750;cursor:pointer}
+#cfLibraryTabs button.active{color:#f4f4f6}
+#cfLibraryTabs button.active:after{content:"";position:absolute;bottom:-1px;left:10px;right:10px;height:3px;border-radius:3px 3px 0 0;background:#2688ff}
+#cfLibraryTabs .cf-tab-spacer{flex:1}
+#cfLibraryTabs .cf-tab-icon{font-size:17px;padding:0 10px;color:#c2c2c8}
+#cfLibraryTabs #cfSortBtn{padding-right:4px}
+#cfFloatingActions{position:fixed;right:28px;bottom:27px;z-index:1200;display:flex;flex-direction:column;align-items:center;gap:16px}
+#cfFloatingActions button{border:0;cursor:pointer;display:grid;place-items:center;border-radius:50%;color:#fff;box-shadow:0 5px 18px #0005}
+#cfQuickSketch{width:46px;height:46px;background:#326ca0;font-size:21px}
+#cfQuickCreate{width:60px;height:60px;background:#5147ff;font-size:31px}
+#cfQuickMenu{position:absolute;right:0;bottom:126px;display:none;flex-direction:column;gap:8px;min-width:190px;padding:10px;border:1px solid #424247;border-radius:14px;background:#29292d;box-shadow:0 12px 35px #0008}
+#cfQuickMenu.open{display:flex}
+#cfQuickMenu button{display:flex;grid-template-columns:none;justify-content:flex-start;gap:10px;width:100%;height:auto;padding:12px;border-radius:9px;background:#333338;font-size:12px;text-align:left;box-shadow:none}
+@media(max-width:620px){
+ .cf-library-top{height:56px!important;flex-basis:56px!important;padding:0 13px!important}
+ .cf-library-content{padding:13px 13px 110px!important}
+ .cf-library-top input{width:min(42vw,170px)!important}
+ .cf-note-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:22px 12px!important}
+ .cf-thumb{height:clamp(112px,35vw,180px)!important}
+ .cf-note-meta{padding-top:7px!important}
+ .cf-note-meta strong{font-size:10px!important;min-height:28px}
+ .cf-note-meta span{font-size:8px!important}
+ #cfProjectLaunchers .cf-launcher-grid{grid-template-columns:1fr!important;gap:8px!important}
+ #cfProjectLaunchers .cf-launcher{min-height:66px!important;padding:10px!important}
+ #cfProjectLaunchers .cf-launcher-copy small{font-size:9px!important}
+ #cfLibraryTabs{min-height:48px;margin-bottom:17px}
+ #cfLibraryTabs button{height:48px;padding:0 10px;font-size:12px}
+ #cfLibraryTabs .cf-tab-icon{display:none}
+ #cfFloatingActions{right:16px;bottom:18px;gap:12px}
+ #cfQuickSketch{width:42px;height:42px}
+ #cfQuickCreate{width:56px;height:56px}
+}
+</style>
+
 </head>
 <body>
   <div id="firebaseWarning">⚠️ Firebase not configured — your work will NOT be saved. Please add your Firebase config.</div>
@@ -6684,6 +6765,58 @@ body.cf-touch-landscape #canvasflowEraserCursor{display:none !important}
 })();
 </script>
 
+
+
+<script id="canvasflow-notein-library-behavior">
+(function(){
+ const $=id=>document.getElementById(id);
+ const content=document.querySelector('.cf-library-content');
+ const section=$('cfProjectLaunchers');
+ if(!content||!section||$('cfLibraryTabs'))return;
+ const tabs=document.createElement('nav');
+ tabs.id='cfLibraryTabs';
+ tabs.setAttribute('aria-label','Library filters');
+ tabs.innerHTML='<button type="button" class="active" data-filter="all">All</button><button type="button" data-filter="pdf">PDF</button><button type="button" data-filter="note">Note</button><button type="button" data-filter="folder">Folder</button><span class="cf-tab-spacer"></span><button type="button" class="cf-tab-icon" title="Color options" aria-label="Color options">🌈</button><button type="button" class="cf-tab-icon" id="cfViewToggle" title="Change view">☷</button><button type="button" id="cfSortBtn">☰ &nbsp; Sort</button>';
+ section.insertAdjacentElement('afterend',tabs);
+ const actions=document.createElement('div');
+ actions.id='cfFloatingActions';
+ actions.innerHTML='<div id="cfQuickMenu"><button type="button" data-action="sketch">✎ &nbsp; New sketch</button><button type="button" data-action="reference">▧ &nbsp; Sketch from image</button><button type="button" data-action="board">▦ &nbsp; New board</button><button type="button" data-action="import">⇧ &nbsp; Import PDF / images</button></div><button id="cfQuickSketch" type="button" aria-label="New sketch">✎</button><button id="cfQuickCreate" type="button" aria-label="Create project">＋</button>';
+ document.body.appendChild(actions);
+ const menu=$('cfQuickMenu');
+ $('cfQuickCreate').addEventListener('click',()=>menu.classList.toggle('open'));
+ $('cfQuickSketch').addEventListener('click',()=>$('cfStartSketch')?.click());
+ menu.querySelectorAll('button[data-action]').forEach(b=>b.addEventListener('click',()=>{
+   menu.classList.remove('open');
+   const map={sketch:'cfStartSketch',reference:'cfSketchReference',board:'cfStartBoard',import:'cfImportProject'};
+   $(map[b.dataset.action])?.click();
+ }));
+ document.addEventListener('click',e=>{if(!actions.contains(e.target))menu.classList.remove('open')});
+ const cards=Array.from(document.querySelectorAll('[data-cf-note]'));
+ tabs.querySelectorAll('button[data-filter]').forEach(btn=>btn.addEventListener('click',()=>{
+   tabs.querySelectorAll('button[data-filter]').forEach(x=>x.classList.toggle('active',x===btn));
+   const filter=btn.dataset.filter;
+   cards.forEach((card,i)=>{
+     const title=(card.dataset.cfNote||'').toLowerCase();
+     const isPdf=/pdf|document|امتحان|اجابات/.test(title)||i===1;
+     card.style.display=filter==='all'||(filter==='pdf'&&isPdf)||(filter==='note'&&!isPdf)||(filter==='folder'&&false)?'':'none';
+   });
+   if(filter==='folder'){
+     const status=$('cfProjectImportStatus');if(status){status.textContent='Folders will be available here when folder projects are enabled.';status.classList.add('show')}
+   }
+ }));
+ $('cfSortBtn').addEventListener('click',()=>{
+   const grid=$('cfNoteGrid');if(!grid)return;
+   const sorted=Array.from(grid.children).sort((a,b)=>(a.dataset.cfNote||'').localeCompare(b.dataset.cfNote||''));
+   sorted.forEach(card=>grid.appendChild(card));
+ });
+ $('cfViewToggle').addEventListener('click',()=>{
+   const grid=$('cfNoteGrid');if(!grid)return;
+   const compact=grid.dataset.compact!=='1';grid.dataset.compact=compact?'1':'0';
+   grid.style.gridTemplateColumns=compact?'1fr':'';
+   grid.querySelectorAll('.cf-thumb').forEach(x=>x.style.height=compact?'70px':'');
+ });
+})();
+</script>
 
 <script id="canvasflow-project-launchers">
 (function(){
